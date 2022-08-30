@@ -1,0 +1,515 @@
+COMMAND REPORT;
+!----------------------------------------------------------------------
+! 
+!         This command reads the file created by RECORD command  and
+! generates a table listing all jobs in the file satisifying all the
+! conditions given by the following switches:
+! 
+! /ACCOUNT:"acct string"
+!         Only jobs charged to the given account will be included in
+!         the report.  The default is *, i.e., all accounts.
+! 	
+! /ALL
+!         Create a report file with a line for each job.  If all  is
+!         not specified only accumulated cpu time will be printed.
+! 
+! /BATCH
+!         Only batch jobs will be included in the report. Batch jobs
+!         are those having a line number greater than 125.
+! 
+! /FINAL:date & time
+!         Only jobs which logged out  before the specified date  and
+!         time will  be  included in  the  report.  Default  is  the
+!         current date at time 00:00:01.
+! 
+! /INITIAL:date & time
+!         Only jobs which  logged out after  the specified date  and
+!         time will be included in the report.  The defaults are the
+!         same as for /FINAL.
+! 
+! /INTERACTIVE
+!         Only interactive jobs are included in the report. A job is
+!         considered to be interactive if it has a line number  less
+!         than or equal to 125.  If neither /INTERACTIVE nor  /BATCH
+!         are specified, both types of jobs will be included.
+! 
+! /USER:username
+!         Only jobs  of  the  specified user  are  included  in  the
+!         report. The default for this switch is *, i.e., all users.
+! 
+! The format for the command is:
+! 
+!         REPORT {/switches} recordfile {reportfile}
+! 
+! If the report  file is not  given, it  is taken to  be TTY:.   The
+! report file is formatted for printing on a 132 column printer.
+!---------------------------------------------------------------------
+! 
+!  John Downing, University of Utah, Chemistry dept., 1/28/81
+! 
+! 
+BEGIN
+STRING NAME,XREC,XREP,BTAD,FTAD,ACCNT,LINE_OUT;
+STRING IN_DAT,IN_CPUS,TEMP;
+STRING REC,RECU,IN_DATE,IN_ACCNT,IN_LINE,IN_CPU,IN_USER,IN_CONN;
+STRING IN_TIME;
+INTEGER B_JOB,I_JOB,ALL_OUTPUT,POSIT,DATE_OK,ACCNT_OK,NAME_OK,JOB_OK;
+INTEGER CHECK,NN,HH,MM,SS,TIME_SUM,OUT_CHN,IN_CHN;
+EXTERNAL STRING PROCEDURE UNIFORM_RECORD, NEXT_FIELD;
+EXTERNAL PROCEDURE HEADER,RECORD_OUT;
+EXTERNAL INTEGER PROCEDURE DATE_DIFF;
+!
+! Set up defaults for switches
+!
+NAME="*";
+ACCNT="*";
+B_JOB=1;
+I_JOB=1;
+ALL_OUTPUT=0;
+BTAD="01-Jan-50 00:00:01";
+FTAD="01-Jan-99 00:00:01";
+!
+! Begin switch parse
+!
+GUIDE "on statistics";
+REP:
+PARSE(
+  FILE (HELP "Record filename", DEFAULT_GEN -, DEFAULT_DEV "PS",
+        DEFAULT_DIR $USERNAME, DEFAULT_NAM "RECORD",
+        DEFAULT_EXT "LOG" ):  GOTO GOTFLE;
+  SWITCH (WORDS(	INITIAL::1,
+			USER::2,
+			FINAL::3,
+			ACCOUNT::4,
+			BATCH:5,
+			INTERACTIVE:6,
+			ALL:7
+				),HELP "switches",STDHELP):
+    BEGIN
+	CASE $VALUE FROM 1 TO 7 OF
+		BEGIN
+		[1]: PARSE(KEYWORD(WORDS(NOW:1,TODAY:2),
+		     DEFAULT "NOW", HELP "date and time to begin"):
+			CASE $VALUE FROM 1 TO 2 OF
+			BEGIN
+			[1]: BTAD=$OUTPUTTAD($CURTAD);
+			[2]: BTAD=$DATE+" 00:00:01";
+			END;
+			DAYTIME (STDHELP):BTAD=$ATOM;
+			DAYTIME ( DATE,HELP "date"):
+				BTAD=$ATOM+" 00:00:01";
+			DAYTIME (TIME, HELP "time"): 
+				BTAD=$DATE+" "+$ATOM);
+		[2]: PARSE (USERNAME (HELP "username"):NAME=$ATOM);
+		[3]: PARSE(KEYWORD(WORDS(NOW:1,TODAY:2),
+		     DEFAULT "NOW", HELP "date and time to finish"):
+			CASE $VALUE FROM 1 TO 2 OF
+			BEGIN
+			[1]: FTAD=$OUTPUTTAD($CURTAD);
+			[2]: FTAD=$DATE+" 00:00:01";
+			END;
+			DAYTIME(STDHELP):BTAD=$ATOM;
+			DAYTIME(DATE, HELP "date"):
+				FTAD=$ATOM+ " 00:00:01";
+			DAYTIME(TIME, HELP "time"):
+				FTAD=$DATE+" "+$ATOM);
+		[4]: PARSE(QUOTEDSTRING (HELP "account"):ACCNT=$ATOM);
+		[5]: BEGIN
+		     I_JOB=0;
+		     B_JOB=1;
+		     END;
+		[6]: BEGIN
+		     I_JOB=1;
+		     B_JOB=0;
+		     END;
+		[7]: ALL_OUTPUT=1;
+		END;  
+		GOTO REP;
+	END;  
+OTHERWISE: ABORT "file specifications expected");
+GOTFLE:
+  XREC=$FILEL;
+  GUIDE "to report file";
+  PARSE FILE (HELP "report filename",Default_Dev "TTY"):XREP=$FILEL;
+  PARSE EOL:NOP;
+!
+! Initialize I/O and accumulators
+!
+OUT_CHN = $OPEN(XREP,$OUTPUT);
+IN_CHN =  $OPEN(XREC,$INPUT);
+HH=0;
+MM=0;
+SS=0;
+!
+! Write input switch values. Also write header line for table
+! if /all was specified
+!
+CALL HEADER(BTAD,NAME,FTAD,ACCNT,ALL_OUTPUT,B_JOB,I_JOB,OUT_CHN);
+!
+!  Read the RECORD file, write summary table if /all, and accumulate
+!  cpu times.
+!
+UNTIL $EOF(IN_CHN) <>0 DO
+BEGIN
+REC=$READ(IN_CHN);
+!
+! Strip <CR>
+!
+NN=$LENGTH(REC)-1;
+REC=REC[1:NN];
+	IF $LENGTH(REC)<>0 THEN 
+	BEGIN
+!
+! Replace spaces in the line read with a single $ to make
+! searching easier
+!
+		RECU=UNIFORM_RECORD(REC);
+!
+! Pick out each field of line
+!
+		POSIT=1;
+		IN_ACCNT=NEXT_FIELD(RECU,"$",POSIT);
+		IN_DAT=NEXT_FIELD(RECU,"$",POSIT);
+		IN_TIME=NEXT_FIELD(RECU,"$",POSIT);
+		IN_DATE=IN_DAT+" "+IN_TIME;
+		IN_LINE=NEXT_FIELD(RECU,"$",POSIT);
+		IN_CPU=NEXT_FIELD(RECU,"$",POSIT);
+		IN_USER=NEXT_FIELD(RECU,"$",POSIT);
+		IN_CONN=NEXT_FIELD(RECU,"$",POSIT);
+!
+! Check if date of logout is between specified dates
+! and set date ok switch accordingly
+!
+	IF DATE_DIFF(BTAD,IN_DATE)>=0
+	   THEN IF DATE_DIFF(IN_DATE,FTAD)>=0
+	   THEN DATE_OK=1 ELSE DATE_OK=0
+	   ELSE DATE_OK=0;
+!
+! Check if user name matches specified user name and
+! set name ok switch accordingly
+!
+	IF NAME="*" THEN NAME_OK=1
+		    ELSE IF NAME=IN_USER THEN NAME_OK=1
+					 ELSE NAME_OK=0;
+!
+! Check if account string matches specified account string
+! and set account ok switch accordingly
+!
+	IF ACCNT="*" THEN ACCNT_OK=1
+		     ELSE IF ACCNT=IN_ACCNT THEN ACCNT_OK=1
+				 	    ELSE ACCNT_OK=0;
+!
+! Check line number to determine if it was a batch or interactive
+! job. It is assumed to be an interactive job if the line number
+! is <= 125. This constant may need to be adjusted if changes are
+! made in the system.
+!
+	JOB_OK=0;
+	IF I_JOB=1 THEN IF $INTEGER(IN_LINE)<=125  THEN JOB_OK=1;
+	IF B_JOB=1 THEN IF $INTEGER(IN_LINE)>125  THEN JOB_OK=1;
+!
+!
+!  AND the switches
+!
+	CHECK=DATE_OK*NAME_OK*ACCNT_OK*JOB_OK;
+!
+! And if the job satisfies all of them, include it in the report
+!
+	IF CHECK<> 0 THEN BEGIN
+!
+! Set up cpu time string to extract hours, minutes, and seconds
+!
+		IN_CPUS=":"+IN_CPU+":";
+!
+! Accumulate hour, minute and second fields separately
+!
+		POSIT=1;
+		HH=HH+$INTEGER(NEXT_FIELD(IN_CPUS,":",POSIT));
+		MM=MM+$INTEGER(NEXT_FIELD(IN_CPUS,":",POSIT));
+		SS=SS+$INTEGER(NEXT_FIELD(IN_CPUS,":",POSIT));
+!
+! If /ALL specified, write job information to summary table
+!
+		IF ALL_OUTPUT =1 THEN
+!
+! Put job information into format
+! and write it to table
+!
+		CALL RECORD_OUT(IN_ACCNT,IN_DAT,IN_LINE,IN_CPU,IN_USER,
+				IN_TIME,IN_CONN,OUT_CHN);
+		END;
+	END;
+END;
+!
+! Convert accumulated time to seconds and write it
+!
+TIME_SUM=HH*3600+MM*60+SS;
+LINE_OUT=$CRLF+$CRLF+$CRLF+" TOTAL CPU TIME "+
+	 $STRING(TIME_SUM)+" SECONDS";
+CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Close I/O and quit
+!
+CALL $CLOSE(OUT_CHN);
+CALL $CLOSE(IN_CHN);
+END
+PROCEDURE HEADER(STRING BTAD,NAME,FTAD,ACCNT;INTEGER ALL_OUTPUT,B_JOB,
+		 I_JOB,OUT_CHN);
+BEGIN
+!
+!
+! Procedure writes switch values and, if /ALL, also the header line
+! for the summary table
+!
+!
+STRING LINE_OUT,B,I;
+INTEGER N;
+!
+! First write title line
+!
+! Centered in a 132 column wide field
+!
+! For different widths, change the centering constant 58 below
+!
+N=1;
+LINE_OUT="";
+UNTIL N=58 DO BEGIN
+		LINE_OUT=LINE_OUT+" ";
+		N=N+1;
+	      END;
+!
+! Append title line
+!
+LINE_OUT=LINE_OUT+"CPU TIME SUMMARY";
+CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Skip lines
+!
+LINE_OUT=$CRLF+$CRLF+$CRLF;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Write switch values, reformatting where necessary
+!
+IF B_JOB=1 THEN B="YES"
+	   ELSE B="NO";
+IF I_JOB=1 THEN I="YES"
+	   ELSE I="NO";
+LINE_OUT="FOR PERIOD BEGINNING  "+BTAD;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+LINE_OUT="AND ENDING            "+FTAD;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+LINE_OUT="USER NAME             "+NAME;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+LINE_OUT="ACCOUNT               "+ACCNT;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+LINE_OUT="INCLUDING BATCH       "+B;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+LINE_OUT="INCLUDING INTERACTIVE "+I;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Skip lines
+!
+LINE_OUT=$CRLF+$CRLF+$CRLF;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Write summary table column heads if /ALL
+!
+IF ALL_OUTPUT=1 THEN
+	BEGIN
+!
+!	Build line
+!
+	LINE_OUT=" ACCOUNT              DATE              ";
+	LINE_OUT=LINE_OUT+"TIME           LINE              CPU";
+	LINE_OUT=LINE_OUT+"              USER           ";
+	LINE_OUT=LINE_OUT+"CONNECTED DIRECTORY";
+!
+! And write it
+!
+	CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Underline column headers
+!
+	N=1;
+	LINE_OUT="";
+	UNTIL N=130 DO BEGIN
+			LINE_OUT=LINE_OUT+"-";
+			N=N+1;
+		       END;
+!
+! Write underlining
+!
+	CALL $WRITE(OUT_CHN,LINE_OUT);
+	END;
+!
+! Go back to where you came from
+!
+END
+PROCEDURE RECORD_OUT(STRING IN_ACCNT,IN_DATE,IN_LINE,IN_CPU,IN_USER,
+			    IN_TIME,IN_CONN; INTEGER OUT_CHN);
+BEGIN
+!
+! Take fields extracted from the job description line and put them
+! in the format of the summary table
+!
+STRING LINE_OUT,SPACE;
+EXTERNAL STRING PROCEDURE ADD_SPACES;
+SPACE=" ";
+!
+! skip 1 space
+!
+LINE_OUT=SPACE;
+!
+! Concatenate spaces to the fields to make them of the proper
+! width, and concatenate the result to the report line being
+! built.
+!
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_ACCNT,21);
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_DATE,18);
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_TIME,18);
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_LINE,18);
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_CPU,17);
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_USER,18);
+LINE_OUT=LINE_OUT+IN_CONN;
+!
+! Write the summary table line just built
+!
+CALL $WRITE(OUT_CHN,LINE_OUT);
+END
+STRING PROCEDURE ADD_SPACES(STRING FIELD;INTEGER FIELD_LENGTH);
+BEGIN
+!
+! Concatenates spaces to the end of the string FIELD until its length
+! is FIELD_LENGTH. At least one space is concatenated even if 
+! $LENGTH(FIELD)=FIELD_LENGTH
+!
+STRING SPACE,LINE_OUT;
+INTEGER NSPC,N,LEN;
+SPACE=" ";
+!
+! Transfer argument to temp string
+!
+LINE_OUT=FIELD;
+!
+! Get length
+!
+LEN=$LENGTH(LINE_OUT);
+!
+! Calculate number of spaces to concatenate
+!
+NSPC=FIELD_LENGTH-LEN;
+IF NSPC <= 0 THEN NSPC=1;
+N=1;
+!
+! Concatenate required number of spaces
+!
+UNTIL N>=NSPC DO BEGIN
+		LINE_OUT=LINE_OUT+SPACE;
+		N=N+1;
+		END;
+!
+! Return padded field
+!
+RETURN LINE_OUT;
+END
+STRING PROCEDURE NEXT_FIELD(STRING LINE,DELIM;INTEGER POSIT);
+!
+!**********************************************************************
+!
+!	PROCEDURE TO EXTRACT SUCCESSIVE FIELDS SEPARATED BY
+! 	DELIMITERS FROM A LINE.
+!	THE STRING ARGUMENTS SUPPLY THE TEXT LINE AND THE DELIMITER
+!	RESPECTIVELY. THE ARGUMENT POSIT ON INPUT IS THE LINE POSITION
+!	TO BEGIN SEARCHING AT. ON OUTPUT, IT POINTS TO THE BEGINNING
+!	OF THE DELIMITER WHICH TERMINATED THE SEARCH (A DELIMITER NEED
+!	NOT BE A SINGLE CHARACTER). IF NO DELIMITER IS FOUND, THE
+!	NULL STRING IS RETURNED, AND POSIT IS SET TO 0. IF ONLY ONE
+!	DELIMITER IS FOUND, THE CONTENTS OF LINE FROM THE POSITION
+!	FOLLOWING THAT DELIMITER TO THE END OF LINE ARE RETURNED AND
+!	POSIT IS SET TO $LENGTH(LINE).
+!	A NULL LINE CAUSES THE RETURNED STRING TO BE NULL AND POSIT TO
+!	BE SET TO 0 REGARDLESS OF THE DELIMITER.
+!	A NULL DELIMITER SETS THE RETURNED STRING TO BE NULL AND LEAVES
+!	POSIT UNCHANGED.
+!	IF THE ONLY DELIMITER FOUND IS AT THE END OF THE LINE, A NULL
+!	STRING IS RETURNED, AND POSIT IS SET TO $LENGTH(LINE).
+!
+!
+!
+!
+!	JOHN DOWNING, UNIV. OF UTAH, CHEM. DEPT., 01/22/81
+!
+!**********************************************************************
+!
+BEGIN
+INTEGER P1,LEN,P2,DLEN;
+DLEN=$LENGTH(DELIM);
+P1=$SEARCH(LINE,DELIM,POSIT)+DLEN;
+IF P1=DLEN THEN BEGIN
+		POSIT=0;
+		RETURN "";
+		END;
+P2=$SEARCH(LINE,DELIM,P1);
+IF P2=0 THEN P2=$LENGTH(LINE)+1;
+POSIT=P2;
+LEN=P2-P1;
+IF LEN=0 THEN RETURN ""
+	 ELSE RETURN LINE[P1:LEN];
+END
+STRING PROCEDURE UNIFORM_RECORD(STRING INPUT_LINE);
+BEGIN
+!
+!*********************************************************************
+!
+!	PROCEDURE RETURNS STRING WHICH IS ARGUMENT INPUT_LINE WITH ALL
+!	STRINGS OF SPACES REPLACED BY A SINGLE "$".
+!
+!	ALSO, THE FIRST CHARACTER OF THE RETURNED STRING AS WELL AS THE
+!	LAST WILL BE A $ REGARDLESS OF THE PRESENCE OF SPACES IN THOSE
+!	POSITIONS OF INPUT_LINE
+!
+!
+!	THE RETURNED STRING IS SUITABLE FOR SEARCHING BY PROCEDURE
+!	NEXT_FIELD WITH THE DELIMITER $.
+! JOHN W. DOWNING, UNIV. OF UTAH, CHEM. DEPT, 1/26/81
+!
+!**********************************************************************
+!
+STRING UTMP,LAST_CHAR;
+INTEGER LEN,N;
+LEN=$LENGTH(INPUT_LINE);
+N=1;
+UTMP="";
+LAST_CHAR="$";
+UNTIL N>LEN DO 	BEGIN
+		IF INPUT_LINE[N:1] <> " " THEN
+					  BEGIN
+					  UTMP=UTMP+INPUT_LINE[N:1];
+					  LAST_CHAR=INPUT_LINE[N:1];
+					  END
+					  ELSE
+						IF LAST_CHAR <>" " THEN
+						BEGIN
+						UTMP=UTMP+"$";
+						LAST_CHAR= " ";
+						END;
+N=N+1;
+END;
+N=$LENGTH(UTMP);
+IF UTMP[N:1] <> "$" THEN UTMP=UTMP+"$";
+IF UTMP[1:1] <> "$" THEN UTMP="$"+UTMP;
+RETURN UTMP;
+END
+INTEGER PROCEDURE DATE_DIFF(STRING DATE1,DATE2);
+BEGIN
+!
+! Procedure returns the time difference between date/time strings
+! stored in arguments DATE1 and DATE2. The difference is in system
+! clock ticks, i.e., 262144 ticks/day
+!
+INTEGER I1,I2;
+I1=$INPUTTAD(DATE1);
+I2=$INPUTTAD(DATE2);
+RETURN I2-I1;
+END
+    

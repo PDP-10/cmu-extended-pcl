@@ -1,0 +1,58 @@
+ Command:
+         RECORD;
+ 	
+ RECORD writes  the  following information  to  a user  specified  file
+ (defaults to  PS:<USER-DIR>RECORD.LOG.-2 :  Date  and time,  TTY  line
+ number, program  name, cpu  time, username,  and connected  directory.
+ Note that a  temporary file is  created and deleted  on the  directory
+ PS:<TEMP>.
+ 	
+ The intended purpose of the command is to gather usage statistics  for
+ a given user group.   It can accomplish this  by the insertion of  the
+ command:
+ 	
+ 	RECORD <a-statistics-directory>
+ 	
+ into the  logout.cmd file  on the  users directory  or on  a  superior
+ directory of the user.  This will cause the statistics to be  appended
+ to the file RECORD.LOG.-2 on the directory.
+ 
+ 	Use as a Statistics Mechanism for user group UU
+ 	
+ For this to work properly, the  protection codes of the various  files
+ and directories involved must be:
+ 	
+      <UU>		    DIRECTORY PROTECTION 774000 (access for users
+ 	      		         UU.* controlled by file protection codes)
+ 
+      <UU>LOGOUT.CMD	    FILE PROTECTION 774000      (read access only)
+ 
+      <UU.RECORD>	    DIRECTORY PROTECTION 774000
+ 
+      <UU.RECORD>USED.CPU  FILE PROTECTION 770400 (append access by UU.*)
+ 	
+ and  insert  the  line  "RECORD  <UU.RECORD>USED.CPU"  into  the  file
+ LOGOUT.CMD on the directory PS:<UU>.
+ 	
+ This  arrangement  prevents  the   users  UU.*  from  corrupting   the
+ statistics gathered insofar  as possible. A  malicious user could  use
+ the command  RECORD from  his  terminal without  logging out  and  add
+ entries to the record file  appearing  to  have gotten more  CPU  than
+ really was used, but no user can remove entries from  the  record file
+ once they have been made.
+ 
+ However, if the user  creates a file LOGOUT.CMD  in his own  directory
+ and neglects to include a RECORD  command therein, his usage will  not
+ be trapped.
+ 
+ 
+ The statistics file must already exist on <UU.RECORD> since the user's
+ access to it is controlled by the file protection code rather than the
+ directory protection code. Therefore if the file is migrated, it  must
+ be recreated.
+ 
+ The USED.CPU file may be analyzed by the Fortran program REPORT.
+ 
+ Note that this command will not work properly if it is invoked from  a
+ TAKE file, but it does work ok from an indirect file.
+ 

@@ -1,0 +1,34 @@
+COMMAND foo;
+
+BEGIN
+
+EXTERNAL STRING PROCEDURE
+	filedevice,
+	filedirectory,
+	fileextension,
+	filegeneration,
+	filename,
+	filenode;
+
+INTEGER 
+	InFileId;
+
+STRING
+	record;
+
+InFileId = $Open ("TTY:",$Input);
+
+record = $READ(InFileId);
+
+WHILE $EOF(InFileId) = 0 DO
+	BEGIN
+	DISPLAY "Filenode=	""" + filenode(record) + """";
+	DISPLAY "Filedevice=	""" + filedevice(record) + """";
+	DISPLAY "Filedirectory=	""" + filedirectory(record) + """";
+	DISPLAY "Filename=	""" + filename(record) + """";
+	DISPLAY "Fileextension=	""" + fileextension(record) + """";
+	DISPLAY "Filegeneration=""" + filegeneration(record) + """";
+	record = $READ(InFileId)
+	END;
+CALL $Close (InFileId)
+END;

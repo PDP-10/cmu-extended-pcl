@@ -1,0 +1,4504 @@
+;	  0001	! UPD ID= 74, PS:<5-0.PCL.LOCAL>EXECPU.B36.12,   6-Jan-83 13:10:25 by DEBAR
+;	  0002	![fun54] Merge fundp edits to PCL with PCL5
+;	  0003	!<5.1.EXEC>EXECPU.B36.3, 13-Nov-82 09:07:41, Edit by PA0B
+;	  0004	!(Hopefully) make $DECnet_Node work on non-DECnet systems.
+;	  0005	!Since I don't have any, this has never been tested...
+;	  0006	!<5.1.EXEC>EXECPU.B36.2, 30-Oct-82 23:15:19, Edit by PA0B
+;	  0007	!Allow optional second argument to $INTEGER.  This argument
+;	  0008	!is the radix; if omitted, the default is 10.
+;	  0009	!<4.EXEC>EXECPU.B36.19,  8-Mar-82 01:09:02, Edit by PA0B
+;	  0010	!Add $DECnet_Node, which returns the local DECnet node name
+;	  0011	!and $ARPAnet_Node, which returns the local ARPAnet node
+;	  0012	!name (or a null string if the system is not an Arpanet
+;	  0013	!host).  Add $Resume_Output, which resumes output to .PRIOU
+;	  0014	!which was aborted by ^O (note: ^O aborts output to COJFN,
+;	  0015	!so it is not clear whether this is the right thing to do).
+;	  0016	! UPD ID= 65, PS:<5-0.PCL.LOCAL>EXECPU.B36.11,  24-Nov-82 23:24:08 by DEBAR
+;	  0017	! [fun50] Allow $fileSet to accept string spec of file (see [fun49]
+;	  0018	! UPD ID= 64, PS:<5-0.PCL.LOCAL>EXECPU.B36.10,  24-Nov-82 18:07:50 by DEBAR
+;	  0019	! [fun49] Filenames in $fileinfo
+;	  0020	! UPD ID= 54, PS:<5-0.PCL.LOCAL>EXECPU.B36.9,  12-Nov-82 23:55:44 by DEBAR
+;	  0021	! [fun44] Allow pcegop to return ANY type of argument
+;	  0022	! UPD ID= 44, PS:<5-0.PCL.LOCAL>EXECPU.B36.8,   3-Nov-82 17:13:38 by DEBAR
+;	  0023	! [FUN24-1] Fix bug in $directorylist
+;	  0024	! UPD ID= 37, PS:<5-0.PCL.LOCAL>EXECPU.B36.7,  27-Oct-82 22:22:57 by DEBAR
+;	  0025	! [fun33] Problem with fileinfo_i when using wild-cards.
+;	  0026	! UPD ID= 33, PS:<5-0.PCL.LOCAL>EXECPU.B36.6,  21-Oct-82 21:58:02 by DEBAR
+;	  0027	! [fun30] Make $fileinfo_i,_s accept other argument forms
+;	  0028	! UPD ID= 29, PS:<5-0.PCL.LOCAL>EXECPU.B36.5,  21-Oct-82 10:15:24 by DEBAR
+;	  0029	! UPD ID= 23, PS:<5-0.PCL.LOCAL>EXECPU.B36.3,  19-Oct-82 21:08:17 by DEBAR
+;	  0030	! [fun26]
+;	  0031	! [fun26] radix in $integer
+;	  0032	! UPD ID= 20, PS:<5-0.PCL.LOCAL>EXECPU.B36.2,  10-Oct-82 17:53:05 by DEBAR
+;	  0033	! [fun24] add DirectoryList function to pcl
+;	  0034	! UPD ID= 13, V4:<5-0.PCL.LOCAL>EXECPU.B36.1,  30-Sep-82 17:08:40 by DEBAR
+;	  0035	!<4.EXEC>EXECPU.B36.18,  6-Apr-81 17:29:18, Edit by DK32
+;	  0036	!Permit prompt-setting outside PCL
+;	  0037	!<4.EXEC>EXECPU.B36.17, 24-Mar-81 20:16:36, Edit by DK32
+;	  0038	!Have $PromptReg set CSB correctly
+;	  0039	!<4.EXEC>EXECPU.B36.16,  9-Mar-81 17:31:27, Edit by DK32
+;	  0040	!More prompts
+;	  0041	!<4.EXEC>EXECPU.B36.15,  5-Mar-81 17:11:00, Edit by DK32
+;	  0042	!Allow for longer filenames, Make prompt variables
+;	  0043	!return original prompts also
+;	  0044	!<4.EXEC>EXECPU.B36.14,  1-Mar-81 12:40:09, Edit by DK32
+;	  0045	!Changes for Bliss 2.1
+;	  0046	!<4.EXEC>EXECPU.B36.13, 23-Jan-81 13:35:43, Edit by DK32
+;	  0047	!Allow longer filenames in $Filex
+;	  0048	!<4.EXEC>EXECPU.B36.12,  7-Jan-81 18:09:06, Edit by DK32
+;	  0049	!Append mode to $Open
+;	  0050	!<4.EXEC>EXECPU.B36.11, 22-Dec-80 23:16:08, Edit by DK32
+;	  0051	!Use Exec linkage, Release JFN in $NextFile,
+;	  0052	!$Typeahead_Count
+;	  0053	!<4.EXEC>EXECPU.B36.10, 10-Dec-80 21:25:14, Edit by DK32
+;	  0054	!Fix some error messages, $Wait
+;	  0055	!<4.EXEC>EXECPU.B36.9,  9-Dec-80 16:03:57, Edit by DK32
+;	  0056	!Rework $LastError, $ConnectedDirectory, $Filexxx,
+;	  0057	!$Account to dynamically allocate string space
+;	  0058	!<4.EXEC>EXECPU.B36.8,  5-Dec-80 16:15:41, Edit by DK32
+;	  0059	!$File_Dev ... $File_Typ
+;	  0060	!<4.EXEC>EXECPU.B36.7, 26-Nov-80 13:57:16, Edit by DK32
+;	  0061	!Set CMRTY when $PromptReg changed
+;	  0062	!<4.EXEC>EXECPU.B36.6, 30-Oct-80 16:40:56, Edit by DK32
+;	  0063	!$Account, Runtime channel list
+;	  0064	!<4.EXEC>EXECPU.B36.5, 21-Oct-80 16:25:45, Edit by DK32
+;	  0065	!$FileInfo
+;	  0066	!<4.EXEC>EXECPU.B36.4, 18-Oct-80 15:53:15, Edit by DK32
+;	  0067	!Parse List and NextFile, Fix count in $SearchRaised
+;	  0068	!<4.EXEC>EXECPU.B36.3,  7-Oct-80 15:18:21, Edit by DK32
+;	  0069	!New $FileV etc for parsed file list
+;	  0070	!<4.EXEC>EXECPU.B36.2,  2-Oct-80 19:26:43, Edit by DK32
+;	  0071	!Prompt strings
+;	  0072	!<4.EXEC>EXECPU.B36.1, 26-Sep-80 14:03:47, Edit by DK32
+;	  0073	!Create module, Add I/O services
+;	  0074	MODULE EXECPU =
+;	  0075	BEGIN
+;	  0076	
+;	  0077	!++
+;	  0078	!
+;	  0079	!  This is the first attempt at the Programmable Command Language utilities
+;	  0080	!
+;	  0081	!  Dave King, Carnegie-Mellon University Computation Center
+;	  0082	!
+;	  0083	!  September, 1980
+;	  0084	!
+;	  0085	!  Copyright (C) 1980, Carnegie-Mellon University
+;	  0086	!
+;	  0087	!--
+;	  0088	
+;	  0089	!++
+;	  0090	!    This module contains the system service routines which are provided
+;	  0091	!  as part of the standard Exec.
+;	  0092	!--
+;	  0093	
+;	  0094	!
+;	  0095	! Standard definitions
+;	  0096	!
+;	  0097	
+;	  0098	LIBRARY 'EXECPD';		!Get common definitions
+;	  0099	LIBRARY 'BLI:TENDEF';		!There are JSYS's in this module
+;	  0100	LIBRARY 'BLI:MONSYM';
+; WARN#050	........1  L1:0100
+; Name already declared in this block:  $CHLFD
+; WARN#050	........1  L1:0100
+; Name already declared in this block:  $CHCRT
+; WARN#050	........1  L1:0100
+; Name already declared in this block:  $CHFFD
+;	  0101	SWITCHES LINKAGE(EXEC);
+;	  0102	
+;	  0103	BUILTIN JSYS;
+;	  0104	
+;	  0105	!
+;	  0106	! Table of contents:
+;	  0107	!
+;	  0108	
+;	  0109	FORWARD ROUTINE
+;	  0110	    DINIDC,			! Integer procedure $MERGETAD
+;	  0111	    DINCTI,			! Integer procedure $CVCTI
+;	  0112	    DINSTI,			! Integer procedure $INTEGER
+;	  0113	    DINSCH,			! Integer procedure $SEARCH
+;	  0114	    DINSCR,			! Integer procedure $SEARCHRAISED
+;	  0115	    DINSCC,			! Common search routine
+;	  0116	    DINITD,			! Integer procedure $INPUTTAD
+;	  0117	    DINITC,			! String procedure $CVITC
+;	  0118	    DIVCTD,			! Variable $CURTAD
+;	  0119	    DIVLEC,			! Variable $LASTERRCODE
+;	  0120	    DIVTTN,			! Variable $TermNumber
+;	  0121	    DIVTWD,			! Variable $TERMWIDTH
+;	  0122	    DIVNUL,			! Variable $NUL
+;	  0123	    DIVLER,			! Variable $LASTERROR
+;	  0124	    DIVTAD,			! Variables $TIME and $DATE
+;	  0125	    DIVTIM,			! Variable $TIME
+;	  0126	    DIVDAT,			! Variable $DATE
+;	  0127	    DIVCDR,			! Variable $ConnectedDirectory
+;	  0128	    DIVPMR,			! Variable $PromptReg
+;	  0129	    DIVPMS,			! Variable $PromptSub
+;	  0130	    DIVPME,			! Variable $PromptEnb
+;	  0131	    DIVPMU,			! Variable $PromptEnbSub
+;	  0132	    DIVPMC,			! Common $Prompt routine
+;	  0133	    DIVFNV,			! Variable $FileV
+;	  0134	    DIVFNM,			! Variable $FileN
+;	  0135	    DIVFNS,			! Variable $FileS
+;	  0136	    DIVFNL,			! Variable $FileL
+;	  0137	    DIVFNC,			! Common $File routine
+;	  0138	    DINOPN,			! Integer procedure $Open
+;	  0139	    DINCLS: NOVALUE,		! Procedure $Close
+;	  0140	    DINRED,			! String procedure $Read
+;	  0141	    DINEOF,			! Integer procedure $EOF
+;	  0142	    DINWRT: NOVALUE,		! Procedure $Write
+;	  0143	    DINNFL,			! Integer procedure $NextFile
+;	  0144	    dinndl,                     ! [fun24] integer procedure $nextdirectory
+;	  0145	    DINFII,			! Integer procedure $FileInfo_I
+;	  0146	    DINFIS,			! String procedure $FileInfo_S
+;	  0147	    DINFDV,			! String procedure $File_Dev
+;	  0148	    DINFDR,			! String procedure $File_Dir
+;	  0149	    DINFNM,			! String procedure $File_Nam
+;	  0150	    DINFTY,			! String procedure $File_Typ
+;	  0151	    dinfgn,                     ! [fun49] $file_gen
+;	  0152	    DINJFN,			! Common JFNS routine
+;	  0153	    DIUJFN : exec1,             ! [fun49] get jfn from channel, $parse, string
+;	  0154	    dindir,                     ! [fun24] String procedure $directory
+;	  0155	    DIVACC,			! Variable $Account
+;	  0156	    DINWAI: NOVALUE,		! Procedure $Wait
+;	  0157	    DIVTAH,			! Integer $Typeahead_Count
+;	  0158	    DIVDND,			! Variable $DECnet_Node
+;	  0159	    DIVAND,			! Variable $ARPAnet_Node
+;	  0160	    DINROU: NOVALUE;		! Procedure $Resume_Output
+;	  0161	
+;	  0162	!
+;	  0163	! Macros:
+;	  0164	!
+;	  0165	
+;	  0166	MACRO ERROR(TXT) = PCEERR(UPLIT(%ASCIZ TXT)) %;
+;	  0167	
+;	  0168	!
+;	  0169	! External references:
+;	  0170	!
+;	  0171	
+;	  0172	EXTERNAL ROUTINE
+;	  0173	    PCEERR,			! EXECPX Report execution error
+;	  0174	    PCEAST,			! EXECPX Allocate string space
+;	  0175	    PCECST,			! EXECPX Make copy of a string
+;	  0176	    PCEGOP : exec1,             ! [fun44] EXECPX Get value of operand
+;	  0177	    PCEFST: NOVALUE,		! EXECPX Free string storage
+;	  0178	    PCMGMM,			! EXECPM General memory allocator
+;	  0179	    PCMSTI,			! CVTDBO routine
+;	  0180	    RETMEM,			! EXECSU General memory release
+;	  0181	    SUBBP;			! EXECSU Subtract two byte pointers
+;	  0182	
+;	  0183	EXTERNAL
+;	  0184	    PCCURC: REF ECB_BLK,	! Current Execution Context Block
+;	  0185	    PCLPMT: VECTOR,		! Prompt string table
+;	  0186	    XDICT,			! Permanent storage pool
+;	  0187	    REDPMT: VECTOR,		! Regular prompt table
+;	  0188	    JOBNO,			! Job number of this job
+;	  0189	    CUSRNO,			! User number
+;	  0190	    CSBUFP: STR_VAL;		! Temporary string buffer pointer
+;	  0191	
+;	  0192	GLOBAL ROUTINE DINIDC(AP,CNT) =	! Integer procedure $MERGETAD
+;	  0193	
+;	  0194	!++
+;	  0195	! Functional description:
+;	  0196	!	Convert five integers (Year, Month, Day of month, Hour, Minute)
+;	  0197	!	into an internal date and time.
+;	  0198	!
+;	  0199	! Formal parameters:
+;	  0200	!	Usual for system procedure
+;	  0201	!
+;	  0202	! Implicit inputs:
+;	  0203	!	User's integers
+;	  0204	!
+;	  0205	! Implicit outputs:
+;	  0206	!	None
+;	  0207	!
+;	  0208	! Routine value:
+;	  0209	!	TAD
+;	  0210	!
+;	  0211	! Side effects:
+;	  0212	!	None
+;	  0213	!
+;	  0214	!--
+;	  0215	
+;	  0216	    BEGIN
+;	  0217	    EXTERNAL REGISTER Z=0;
+;	  0218	    LOCAL
+;	  0219		RR2: HLF_WRD,		! Temporaries
+;	  0220		RR3: HLF_WRD,
+;	  0221		RR4;
+;	  0222	    IF .CNT NEQ 5 THEN ERROR('Bad arguments to $MERGETAD');
+;	  0223	    RR4 = PCEGOP(.(.AP+4), STE_TYP_INT) * 60
+;	  0224		  + PCEGOP(.(.AP+3), STE_TYP_INT) * 3600;
+;	  0225	    RR3[HLF_LFT] = PCEGOP(.(.AP+2), STE_TYP_INT);
+;	  0226	    RR3[HLF_RGT] = 0;
+;	  0227	    RR2[HLF_RGT] = PCEGOP(.(.AP+1), STE_TYP_INT);
+;	  0228	    RR2[HLF_LFT] = PCEGOP(.(.AP), STE_TYP_INT);
+;	  0229		BEGIN
+;	  0230		BUILTIN JSYS;
+;	  0231		REGISTER R2=2,R3=3,R4=4;
+;	  0232		R2 = .RR2;
+;	  0233		R3 = .RR3;
+;	  0234		R4 = .RR4;
+;	  0235		IF NOT JSYS(1,IDCNV,R2,R3,R4) THEN R2 = 0;
+;	  0236		RR2 = .R2
+;	  0237		END;
+;	  0238	    .RR2
+;	  0239	    END;
+
+
+	TITLE	EXECPU
+	TWOSEG
+
+
+	.REQUEST  SYS:B362LB.REL
+
+
+	RELOC	400000
+P.AAA:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","M","E"		; o $ME
+	BYTE	(7)"R","G","E","T","A"		; RGETA
+	BYTE	(7)"D",000,000,000,000		; D
+
+
+	EXTERN	PCEERR, PCEAST, PCECST, PCEGOP, PCEFST, PCMGMM, PCMSTI, RETMEM, SUBBP, PCCURC, PCLPMT
+	EXTERN	XDICT, REDPMT, JOBNO, CUSRNO, CSBUFP
+
+
+AC0=	0
+AC1=	1
+AC2=	2
+AC3=	3
+AC4=	4
+AC5=	5
+AC6=	6
+AC7=	7
+AC10=	10
+AC11=	11
+AC12=	12
+AC13=	13
+AC14=	14
+FP=	15
+AC16=	16
+SP=	17
+
+
+U.1:
+DINIDC::PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,5				; CNT,5
+	JRST	L.1				; L.1
+	MOVEI	AC1,P.AAA			; AC1,P.AAA
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.1:	MOVE	AC1,4(AC14)			; AC1,4(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC13,AC1			; AC13,AC1
+	IMULI	AC13,74				; AC13,74
+	MOVE	AC1,3(AC14)			; AC1,3(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	IMULI	AC1,7020			; AC1,7020
+	MOVE	AC11,AC13			; RR4,AC13
+	ADD	AC11,AC1			; RR4,AC1
+	MOVE	AC1,2(AC14)			; AC1,2(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	HRL	AC12,AC1			; RR3,AC1
+	HRRI	AC12,0				; RR3,0
+	MOVE	AC1,1(AC14)			; AC1,1(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	HRR	AC13,AC1			; RR2,AC1
+	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	HRL	AC13,AC1			; RR2,AC1
+	MOVE	AC2,AC13			; R2,RR2
+	MOVE	AC3,AC12			; R3,RR3
+	MOVE	AC4,AC11			; R4,RR4
+	JSYS	223				; 223
+	JRST	L.2				; L.2
+	JRST	L.3				; L.3
+L.2:	SETZ	AC2,				; R2,
+L.3:	MOVE	AC13,AC2			; RR2,R2
+	MOVE	AC1,AC13			; AC1,RR2
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POPJ	SP,				; SP,
+
+; Routine Size:  47 words
+
+
+;	  0240	
+;	  0241	GLOBAL ROUTINE DINCTI(AP,CNT) =	! Internal procedure CVCTI
+;	  0242	
+;	  0243	!++
+;	  0244	! Functional description:
+;	  0245	!	Return to integer format of the character in String1.
+;	  0246	!
+;	  0247	! Formal parameters:
+;	  0248	!	Usual for system procedure
+;	  0249	!
+;	  0250	! Implicit inputs:
+;	  0251	!	User's string
+;	  0252	!
+;	  0253	! Implicit outputs:
+;	  0254	!	None
+;	  0255	!
+;	  0256	! Routine value:
+;	  0257	!	Character input
+;	  0258	!
+;	  0259	! Side effects:
+;	  0260	!	None
+;	  0261	!
+;	  0262	!--
+;	  0263	
+;	  0264	    BEGIN
+;	  0265	    EXTERNAL REGISTER Z=0;
+;	  0266	    LOCAL
+;	  0267		STR: STR_VAL,		! String value
+;	  0268		CHR;			! Character
+;	  0269	    IF .CNT NEQ 1 THEN ERROR('Bad arguments to $CVCTI');
+;	  0270	    STR = PCEGOP(.(.AP),STE_TYP_STR);
+;	  0271	    CHR = CH$RCHAR(BYTPTR(.STR[STV_ADR]));
+;	  0272	    IF .(.AP) EQL OPN_TMP_STR THEN PCEFST(.STR);
+;	  0273	    .CHR
+;	  0274	    END;
+
+
+P.AAB:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","C","V"		; o $CV
+	BYTE	(7)"C","T","I",000,000		; CTI
+
+
+U.2:
+DINCTI::PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,1				; CNT,1
+	JRST	L.4				; L.4
+	MOVEI	AC1,P.AAB			; AC1,P.AAB
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.4:	MOVE	AC13,0(AC14)			; AC13,0(AP)
+	MOVE	AC1,AC13			; AC1,AC13
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEI	AC2,0(AC1)			; HLF,0(STR)
+	HRLI	AC2,-337100			; HLF,-337100
+	ILDB	AC14,AC2			; CHR,AC2
+	CAIN	AC13,-100000			; AC13,-100000
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+	MOVE	AC1,AC14			; AC1,CHR
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+
+; Routine Size:  20 words
+
+
+;	  0275	
+;	  0276	GLOBAL ROUTINE DINSTI(AP,CNT) =	! Integer procedure $integer
+;	  0277	
+;	  0278	!++
+;	  0279	! Functional description:
+;	  0280	!	Return the integer value of the number contained in String1,
+;	  0281	!       according to the radix given by Integer2
+;	  0282	!	Errors are ignored.
+;	  0283	!
+;	  0284	! Formal parameters:
+;	  0285	!	Usual for system procedure
+;	  0286	!
+;	  0287	! Implicit inputs:
+;	  0288	!	User's string
+;	  0289	!
+;	  0290	! Implicit outputs:
+;	  0291	!	None
+;	  0292	!
+;	  0293	! Routine value:
+;	  0294	!	Number
+;	  0295	!
+;	  0296	! Side effects:
+;	  0297	!	None
+;	  0298	!
+;	  0299	!--
+;	  0300	
+;	  0301	    BEGIN
+;	  0302	    EXTERNAL REGISTER Z=0;
+;	  0303	                                ! [fun26]+ radix allowed for $integer
+;	  0304	    LOCAL
+;	  0305		STR: STR_VAL,		! String
+;	  0306	        RADIX,                  ! Radix
+;	  0307		NUM;			! Accumulated number
+;	  0308	    if .cnt eql 1 then
+;	  0309	       radix = 10
+;	  0310	    else if .cnt eql 2 then begin
+;	  0311	       radix = pcegop (.(.ap+1), ste_typ_int);  ! get radix
+;	  0312	       if (.radix lss 1 or .radix gtr 10) then
+;	  0313	          error ('Invalid radix in $Integer');
+;	  0314	       end
+;	  0315	    else
+;	  0316	       error ('Bad arguments to $Integer');
+;	  0317	    STR = PCEGOP(..AP,STE_TYP_STR);     ! get string
+;	  0318	    IF .STR[STV_LEN] EQL 0 THEN RETURN 0;
+;	  0319		BEGIN                   ! convert to number
+;	  0320		REGISTER
+;	  0321		    R1=1,R2=2,R3=3;
+;	  0322		R1 = BYTPTR(.STR[STV_ADR]);
+;	  0323		R3 = .radix;
+;	  0324		IF NOT JSYS(1,NIN,R1,R2,R3) THEN R2=0;
+;	  0325		NUM = .R2
+;	  0326		END;
+;	  0327	    IF ..AP EQL OPN_TMP_STR THEN PCEFST(.STR);
+;	  0328	    .NUM
+;	  0329	    END;
+
+
+P.AAC:	BYTE	(7)"I","n","v","a","l"		; Inval
+	BYTE	(7)"i","d"," ","r","a"		; id ra
+	BYTE	(7)"d","i","x"," ","i"		; dix i
+	BYTE	(7)"n"," ","$","I","n"		; n $In
+	BYTE	(7)"t","e","g","e","r"		; teger
+	BYTE	(7)000,000,000,000,000
+P.AAD:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","I","n"		; o $In
+	BYTE	(7)"t","e","g","e","r"		; teger
+	BYTE	(7)000,000,000,000,000
+
+
+U.3:
+DINSTI::PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIE	AC2,1				; CNT,1
+	JRST	L.5				; L.5
+	MOVEI	AC13,12				; RADIX,12
+	JRST	L.9				; L.9
+L.5:	CAIE	AC2,2				; CNT,2
+	JRST	L.7				; L.7
+	MOVE	AC1,1(AC14)			; AC1,1(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC13,AC1			; RADIX,AC1
+	JUMPLE	AC13,L.6			; RADIX,L.6
+	CAIG	AC13,12				; RADIX,12
+	JRST	L.9				; L.9
+L.6:	MOVEI	AC1,P.AAC			; AC1,P.AAC
+	JRST	L.8				; L.8
+L.7:	MOVEI	AC1,P.AAD			; AC1,P.AAD
+L.8:	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.9:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC4,AC1				; STR,AC1
+	TLNE	AC4,-1				; STR,-1
+	JRST	L.10				; L.10
+	SETZ	AC1,				; AC1,
+	JRST	L.14				; L.14
+L.10:	MOVEI	AC1,0(AC4)			; HLF,0(STR)
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC3,AC13			; R3,RADIX
+	JSYS	225				; 225
+	JRST	L.11				; L.11
+	JRST	L.12				; L.12
+L.11:	SETZ	AC2,				; R2,
+L.12:	MOVE	AC13,AC2			; NUM,R2
+	MOVEI	AC1,-100000			; AC1,-100000
+	CAME	AC1,0(AC14)			; AC1,0(AP)
+	JRST	L.13				; L.13
+	MOVE	AC1,AC4				; AC1,STR
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.13:	MOVE	AC1,AC13			; AC1,NUM
+L.14:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+
+; Routine Size:  45 words
+
+
+;	  0330	
+;	  0331	GLOBAL ROUTINE DINSCH(AP,CNT) =	! Internal procedure SEARCH
+;	  0332	
+;	  0333	!++
+;	  0334	! Functional description:
+;	  0335	!	Search String1 for an instance of String2; return index of
+;	  0336	!	first character of match, or 0 if not found.  If Integer3
+;	  0337	!	provided, start search with Integer3'th character (first is 1)
+;	  0338	!
+;	  0339	! Formal parameters:
+;	  0340	!	Usual for system procedure
+;	  0341	!
+;	  0342	! Implicit inputs:
+;	  0343	!	User's strings
+;	  0344	!
+;	  0345	! Implicit outputs:
+;	  0346	!	None
+;	  0347	!
+;	  0348	! Routine value:
+;	  0349	!	Index or 0
+;	  0350	!
+;	  0351	! Side effects:
+;	  0352	!	None
+;	  0353	!
+;	  0354	!--
+;	  0355	
+;	  0356	    BEGIN
+;	  0357	    EXTERNAL REGISTER Z=0;
+;	  0358	    IF .CNT LSS 2 OR .CNT GTR 3 THEN ERROR('Bad arguments to $SEARCH');
+;	  0359	    DINSCC(.AP,.CNT,0)
+;	  0360	    END;
+
+
+P.AAE:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","S","E"		; o $SE
+	BYTE	(7)"A","R","C","H",000		; ARCH
+
+
+U.4:
+DINSCH::PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC2			; CNT,AC2
+	MOVE	AC13,AC1			; AP,AC1
+	CAIGE	AC14,2				; CNT,2
+	JRST	L.15				; L.15
+	CAIG	AC14,3				; CNT,3
+	JRST	L.16				; L.16
+L.15:	MOVEI	AC1,P.AAE			; AC1,P.AAE
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.16:	MOVE	AC1,AC13			; AC1,AP
+	MOVE	AC2,AC14			; AC2,CNT
+	SETZ	AC3,				; AC3,
+	PUSHJ	SP,U.6				; SP,DINSCC
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+
+; Routine Size:  17 words
+
+
+;	  0361	
+;	  0362	GLOBAL ROUTINE DINSCR(AP,CNT) =	! Internal procedure SEARCHRAISED
+;	  0363	
+;	  0364	!++
+;	  0365	! Functional description:
+;	  0366	!	Search String1 for an instance of String2; return index of
+;	  0367	!	first character of match, or 0 if not found.  If Integer3
+;	  0368	!	provided, start search with Integer3'th character (first
+;	  0369	!	is 1).  Search is insensitive to alphabetic case.
+;	  0370	!
+;	  0371	! Formal parameters:
+;	  0372	!	Usual for system procedure
+;	  0373	!
+;	  0374	! Implicit inputs:
+;	  0375	!	User's strings
+;	  0376	!
+;	  0377	! Implicit outputs:
+;	  0378	!	None
+;	  0379	!
+;	  0380	! Routine value:
+;	  0381	!	Index or 0
+;	  0382	!
+;	  0383	! Side effects:
+;	  0384	!	None
+;	  0385	!
+;	  0386	!--
+;	  0387	
+;	  0388	    BEGIN
+;	  0389	    EXTERNAL REGISTER Z=0;
+;	  0390	    IF .CNT LSS 2 OR .CNT GTR 3 THEN ERROR('Bad arguments to $SEARCHRAISED');
+;	  0391	    DINSCC(.AP,.CNT,1)
+;	  0392	    END;
+
+
+P.AAF:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","S","E"		; o $SE
+	BYTE	(7)"A","R","C","H","R"		; ARCHR
+	BYTE	(7)"A","I","S","E","D"		; AISED
+	BYTE	(7)000,000,000,000,000
+
+
+U.5:
+DINSCR::PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC2			; CNT,AC2
+	MOVE	AC13,AC1			; AP,AC1
+	CAIGE	AC14,2				; CNT,2
+	JRST	L.17				; L.17
+	CAIG	AC14,3				; CNT,3
+	JRST	L.18				; L.18
+L.17:	MOVEI	AC1,P.AAF			; AC1,P.AAF
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.18:	MOVE	AC1,AC13			; AC1,AP
+	MOVE	AC2,AC14			; AC2,CNT
+	MOVEI	AC3,1				; AC3,1
+	PUSHJ	SP,U.6				; SP,DINSCC
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+
+; Routine Size:  17 words
+
+
+;	  0393	
+;	  0394	ROUTINE DINSCC(AP,CNT,FLG) =	! Common search routine
+;	  0395	
+;	  0396	!++
+;	  0397	! Functional description:
+;	  0398	!	Search String1 for an instance of String2; return index
+;	  0399	!	of first character of match, or 0 if not found.
+;	  0400	!	If FLG nonzero, make search insensitive to alphabetic
+;	  0401	!	case.  If Integer3 provided, start search with Integer3'th
+;	  0402	!	character (first is 1).
+;	  0403	!
+;	  0404	! Formal parameters:
+;	  0405	!	Usual for system procedure
+;	  0406	!	Flag: 0=Case sensitive, nonzero=Case insensitive
+;	  0407	!
+;	  0408	! Implicit inputs:
+;	  0409	!	User's strings
+;	  0410	!
+;	  0411	! Implicit outputs:
+;	  0412	!	None
+;	  0413	!
+;	  0414	! Routine value:
+;	  0415	!	Index or 0
+;	  0416	!
+;	  0417	! Side effects:
+;	  0418	!	None
+;	  0419	!
+;	  0420	!--
+;	  0421	
+;	  0422	    BEGIN
+;	  0423	    EXTERNAL REGISTER Z=0;
+;	  0424	    LOCAL
+;	  0425		MSTR: STR_VAL,		! Master string
+;	  0426		MPTR,			! Pointer
+;	  0427		TSTR: STR_VAL,		! Target string
+;	  0428		TPTR,			! Pointer
+;	  0429		TLEN,			! Length
+;	  0430		IDX,			! Current index
+;	  0431		VAL;			! Value to return
+;	  0432	    IF .CNT EQL 3
+;	  0433	    THEN
+;	  0434		BEGIN
+;	  0435		IDX = PCEGOP(.(.AP+2),STE_TYP_INT)-1;
+;	  0436		IF .IDX LSS 0 THEN IDX = 0
+;	  0437		END
+;	  0438	    ELSE
+;	  0439		IDX = 0;
+;	  0440	    TSTR = PCEGOP(.(.AP+1),STE_TYP_STR);
+;	  0441	    MSTR = PCEGOP(..AP,STE_TYP_STR);
+;	  0442	    TPTR = BYTPTR(.TSTR[STV_ADR]);
+;	  0443	    MPTR = BYTPTR(.MSTR[STV_ADR]);
+;	  0444	    IF .IDX NEQ 0 THEN MPTR = CH$PLUS(.MPTR,.IDX);
+;	  0445	    TLEN = .TSTR[STV_LEN];
+;	  0446	    VAL = (WHILE .MSTR[STV_LEN] GEQ .TLEN+.IDX DO
+;	  0447		IF (IF .FLG EQL 0
+;	  0448		    THEN
+;	  0449			CH$EQL(.TLEN, .MPTR, .TLEN, .TPTR)
+;	  0450		    ELSE
+;	  0451			BEGIN
+;	  0452			LOCAL
+;	  0453			    LPTR,
+;	  0454			    RPTR,
+;	  0455			    RCHR,
+;	  0456			    LCHR,
+;	  0457			    TCNT;
+;	  0458			LPTR = .MPTR;
+;	  0459			RPTR = .TPTR;
+;	  0460			TCNT = .TLEN;
+;	  0461			WHILE .TCNT GTR 0 DO
+;	  0462			    BEGIN
+;	  0463			    LCHR = CH$RCHAR_A(LPTR);
+;	  0464			    RCHR = CH$RCHAR_A(RPTR);
+;	  0465			    IF .LCHR GEQ %C'a' AND .LCHR LEQ %C'z'
+;	  0466			    THEN
+;	  0467				LCHR = .LCHR - %C'a' + %C'A';
+;	  0468			    IF .RCHR GEQ %C'a' AND .RCHR LEQ %C'z'
+;	  0469			    THEN
+;	  0470				RCHR = .RCHR - %C'a' + %C'A';
+;	  0471			    IF .LCHR NEQ .RCHR THEN EXITLOOP 0;
+;	  0472			    TCNT = .TCNT - 1
+;	  0473			    END
+;	  0474			END)
+;	  0475		THEN
+;	  0476		    EXITLOOP .IDX
+;	  0477		ELSE
+;	  0478		    BEGIN
+;	  0479		    IDX = .IDX + 1;
+;	  0480		    MPTR = CH$PLUS(.MPTR,1)
+;	  0481		    END);
+;	  0482	    IF ..AP EQL OPN_TMP_STR THEN PCEFST(.MSTR);
+;	  0483	    IF .(.AP+1) EQL OPN_TMP_STR THEN PCEFST(.TSTR);
+;	  0484	    .VAL+1
+;	  0485	    END;
+
+
+; DINSCC
+U.6:	PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,3				; SP,3
+	MOVE	AC11,AC3			; FLG,AC3
+	MOVE	AC13,AC1			; AP,AC1
+	CAIE	AC2,3				; CNT,3
+	JRST	L.19				; L.19
+	MOVE	AC1,2(AC13)			; AC1,2(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC14,AC1			; IDX,AC1
+	SOJGE	AC14,L.20			; IDX,L.20
+L.19:	SETZ	AC14,				; IDX,
+L.20:	MOVE	AC1,1(AC13)			; AC1,1(AP)
+	MOVEM	AC1,-1(SP)			; AC1,-1(SP)
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,0(SP)			; AC1,TSTR
+	MOVE	AC1,0(AC13)			; AC1,0(AP)
+	MOVEM	AC1,-2(SP)			; AC1,-2(SP)
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC10,AC1			; MSTR,AC1
+	HRRZ	AC1,0(SP)			; HLF,TSTR
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC12,AC1			; TPTR,HLF
+	MOVEI	AC1,0(AC10)			; HLF,0(MSTR)
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC13,AC1			; MPTR,HLF
+	JUMPE	AC14,L.21			; IDX,L.21
+	MOVE	AC1,AC14			; AC1,IDX
+	ADJBP	AC1,AC13			; AC1,MPTR
+	MOVE	AC13,AC1			; MPTR,AC1
+L.21:	HLRZ	AC3,0(SP)			; TLEN,TSTR
+L.22:	MOVE	AC1,AC3				; AC1,TLEN
+	ADD	AC1,AC14			; AC1,IDX
+	HLRZ	AC2,AC10			; AC2,MSTR
+	CAMGE	AC2,AC1				; AC2,AC1
+	JRST	L.28				; L.28
+	JUMPN	AC11,L.23			; FLG,L.23
+	MOVE	AC1,AC3				; AC1,TLEN
+	MOVE	AC2,AC13			; AC2,MPTR
+	MOVE	AC4,AC3				; AC4,TLEN
+	MOVE	AC5,AC12			; AC5,TPTR
+	EXTEND	AC1,C.1				; AC1,[CMPSE ]
+	JRST	L.27				; L.27
+	JRST	L.29				; L.29
+L.23:	MOVE	AC5,AC13			; LPTR,MPTR
+	MOVE	AC16,AC12			; RPTR,TPTR
+	MOVE	AC4,AC3				; TCNT,TLEN
+L.24:	JUMPLE	AC4,L.29			; TCNT,L.29
+	ILDB	AC2,AC5				; LCHR,LPTR
+	ILDB	AC1,AC16			; RCHR,RPTR
+	CAIL	AC2,141				; LCHR,141
+	CAILE	AC2,172				; LCHR,172
+	JRST	L.25				; L.25
+	SUBI	AC2,40				; LCHR,40
+L.25:	CAIL	AC1,141				; RCHR,141
+	CAILE	AC1,172				; RCHR,172
+	JRST	L.26				; L.26
+	SUBI	AC1,40				; RCHR,40
+L.26:	CAMN	AC2,AC1				; LCHR,RCHR
+	SOJA	AC4,L.24			; TCNT,L.24
+L.27:	ADDI	AC14,1				; IDX,1
+	MOVE	AC1,AC13			; AC1,MPTR
+	IBP	AC1				; AC1
+	MOVE	AC13,AC1			; MPTR,AC1
+	JRST	L.22				; L.22
+L.28:	SETO	AC14,				; VAL,
+L.29:	MOVEI	AC1,-100000			; AC1,-100000
+	CAME	AC1,-2(SP)			; AC1,-2(SP)
+	JRST	L.30				; L.30
+	MOVE	AC1,AC10			; AC1,MSTR
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.30:	MOVEI	AC1,-100000			; AC1,-100000
+	CAME	AC1,-1(SP)			; AC1,-1(SP)
+	JRST	L.31				; L.31
+	MOVE	AC1,0(SP)			; AC1,TSTR
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.31:	MOVE	AC1,AC14			; AC1,VAL
+	ADDI	AC1,1				; AC1,1
+	ADJSP	SP,-3				; SP,-3
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+C.1:	CMPSE					; 
+
+; Routine Size:  92 words
+
+
+;	  0486	
+;	  0487	
+;	  0488	GLOBAL ROUTINE DINITD(AP,CNT) =	! Internal integer procedure INPUTTAD
+;	  0489	
+;	  0490	!++
+;	  0491	! Functional description:
+;	  0492	!	Convert date and time in String1 to TAD.
+;	  0493	!
+;	  0494	! Formal parameters:
+;	  0495	!	Usual for system procedure
+;	  0496	!
+;	  0497	! Implicit inputs:
+;	  0498	!	User's string
+;	  0499	!
+;	  0500	! Implicit outputs:
+;	  0501	!	None
+;	  0502	!
+;	  0503	! Routine value:
+;	  0504	!	TAD
+;	  0505	!
+;	  0506	! Side effects:
+;	  0507	!	None
+;	  0508	!
+;	  0509	!--
+;	  0510	
+;	  0511	    BEGIN
+;	  0512	    EXTERNAL REGISTER Z=0;
+;	  0513	    LOCAL
+;	  0514		STR: STR_VAL;		! String
+;	  0515	    IF .CNT NEQ 1 THEN ERROR('Bad arguments to $INPUTTAD');
+;	  0516	    STR = PCEGOP(..AP,STE_TYP_STR);
+;	  0517		BEGIN
+;	  0518		REGISTER R1=1,R2=2;
+;	  0519		R1 = BYTPTR(.STR[STV_ADR]);
+;	  0520		R2 = 0;
+;	  0521		IF NOT JSYS(1,IDTIM,R1,R2) THEN R2 = 0;
+;	  0522		.R2
+;	  0523		END
+;	  0524	    END;
+
+
+P.AAG:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","I","N"		; o $IN
+	BYTE	(7)"P","U","T","T","A"		; PUTTA
+	BYTE	(7)"D",000,000,000,000		; D
+
+
+U.7:
+DINITD::PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,1				; CNT,1
+	JRST	L.32				; L.32
+	MOVEI	AC1,P.AAG			; AC1,P.AAG
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.32:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEI	AC1,0(AC1)			; HLF,0(STR)
+	HRLI	AC1,-337100			; HLF,-337100
+	SETZ	AC2,				; R2,
+	JSYS	221				; 221
+	JRST	L.33				; L.33
+	JRST	L.34				; L.34
+L.33:	SETZ	AC2,				; R2,
+L.34:	MOVE	AC1,AC2				; AC1,R2
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  19 words
+
+
+;	  0525	
+;	  0526	GLOBAL ROUTINE DINITC(AP,CNT) =	! Internal procedure CVITC
+;	  0527	
+;	  0528	!++
+;	  0529	! Functional description:
+;	  0530	!	Return the character equivalent of the number in Integer1.
+;	  0531	!
+;	  0532	! Formal parameters:
+;	  0533	!	Usual for system procedure
+;	  0534	!
+;	  0535	! Implicit inputs:
+;	  0536	!	User's integer
+;	  0537	!
+;	  0538	! Implicit outputs:
+;	  0539	!	None
+;	  0540	!
+;	  0541	! Routine value:
+;	  0542	!	Character
+;	  0543	!
+;	  0544	! Side effects:
+;	  0545	!	None
+;	  0546	!
+;	  0547	!--
+;	  0548	
+;	  0549	    BEGIN
+;	  0550	    EXTERNAL REGISTER Z=0;
+;	  0551	    LOCAL
+;	  0552		CHR,			! Character
+;	  0553		STR,			! String
+;	  0554		STV: STR_VAL;		! Stringvalue
+;	  0555	    IF .CNT NEQ 1 THEN ERROR('Bad arguments to $CVITC');
+;	  0556	    CHR = PCEGOP(.(.AP),STE_TYP_INT);
+;	  0557	    CH$WCHAR(.CHR, BYTPTR(STR));
+;	  0558	    STV[STV_LEN] = 1;
+;	  0559	    STV[STV_ADR] = STR;
+;	  0560	    PCECST(.STV)
+;	  0561	    END;
+
+
+P.AAH:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","C","V"		; o $CV
+	BYTE	(7)"I","T","C",000,000		; ITC
+
+
+U.8:
+DINITC::PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,1				; SP,1
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,1				; CNT,1
+	JRST	L.35				; L.35
+	MOVEI	AC1,P.AAH			; AC1,P.AAH
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.35:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEI	AC2,0(SP)			; HLF,STR
+	HRLI	AC2,-337100			; HLF,-337100
+	IDPB	AC1,AC2				; CHR,AC2
+	HRLI	AC1,1				; STV,1
+	MOVEI	AC2,0(SP)			; AC2,STR
+	HRR	AC1,AC2				; STV,AC2
+	PUSHJ	SP,PCECST			; SP,PCECST
+	ADJSP	SP,-1				; SP,-1
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  20 words
+
+
+;	  0562	
+;	  0563	GLOBAL ROUTINE DIVCTD =		! Internal variable $CURTAD
+;	  0564	
+;	  0565	!++
+;	  0566	! Functional description:
+;	  0567	!	Return current internal format date and time
+;	  0568	!
+;	  0569	! Formal parameters:
+;	  0570	!	None
+;	  0571	!
+;	  0572	! Implicit inputs:
+;	  0573	!	None
+;	  0574	!
+;	  0575	! Implicit outputs:
+;	  0576	!	None
+;	  0577	!
+;	  0578	! Routine value:
+;	  0579	!	TAD
+;	  0580	!
+;	  0581	! Side effects:
+;	  0582	!	None
+;	  0583	!
+;	  0584	!--
+;	  0585	
+;	  0586	    BEGIN
+;	  0587	    REGISTER R1=1;
+;	  0588	    JSYS(0,GTAD,R1);
+;	  0589	    .R1
+;	  0590	    END;
+
+
+U.9:
+DIVCTD::JSYS	227				; 227
+	POPJ	SP,				; SP,
+
+; Routine Size:  2 words
+
+
+;	  0591	
+;	  0592	GLOBAL ROUTINE DIVLEC =		! Internal variable $LASTERRCODE
+;	  0593	
+;	  0594	!++
+;	  0595	! Functional description:
+;	  0596	!	Return last JSYS error code
+;	  0597	!
+;	  0598	! Formal parameters:
+;	  0599	!	None
+;	  0600	!
+;	  0601	! Implicit inputs:
+;	  0602	!	None
+;	  0603	!
+;	  0604	! Implicit outputs:
+;	  0605	!	None
+;	  0606	!
+;	  0607	! Routine value:
+;	  0608	!	Error code
+;	  0609	!
+;	  0610	! Side effects:
+;	  0611	!	None
+;	  0612	!
+;	  0613	!--
+;	  0614	
+;	  0615	    BEGIN
+;	  0616	    LOCAL
+;	  0617		HLF: HLF_WRD;
+;	  0618	    REGISTER
+;	  0619		R1=1,R2=2;
+;	  0620	    R1 = $FHSLF;
+;	  0621	    JSYS(0,GETER,R1,R2);
+;	  0622	    HLF = .R2;
+;	  0623	    .HLF[HLF_RGT]
+;	  0624	    END;
+
+
+U.10:
+DIVLEC::MOVEI	AC1,400000			; R1,400000
+	JSYS	12				; 12
+	MOVE	AC1,AC2				; HLF,R2
+	MOVEI	AC1,0(AC1)			; AC1,0(HLF)
+	POPJ	SP,				; SP,
+
+; Routine Size:  5 words
+
+
+;	  0625	
+;	  0626	GLOBAL ROUTINE DIVTTN =		! Internal variable $TermNumber
+;	  0627	
+;	  0628	!++
+;	  0629	! Functional description:
+;	  0630	!	Return number of controlling terminal
+;	  0631	!
+;	  0632	! Formal parameters:
+;	  0633	!	None
+;	  0634	!
+;	  0635	! Implicit inputs:
+;	  0636	!	None
+;	  0637	!
+;	  0638	! Implicit outputs:
+;	  0639	!	None
+;	  0640	!
+;	  0641	! Routine value:
+;	  0642	!	Number
+;	  0643	!
+;	  0644	! Side effects:
+;	  0645	!	None
+;	  0646	!
+;	  0647	!--
+;	  0648	
+;	  0649	    BEGIN
+;	  0650	    REGISTER R1=1,R2=2,R3=3,R4=4;
+;	  0651	    JSYS(0,GJINF,R1,R2,R3,R4);
+;	  0652	    .R4
+;	  0653	    END;
+
+
+U.11:
+DIVTTN::JSYS	13				; 13
+	MOVE	AC1,AC4				; AC1,R4
+	POPJ	SP,				; SP,
+
+; Routine Size:  3 words
+
+
+;	  0654	
+;	  0655	GLOBAL ROUTINE DIVTWD =		! Internal variable $TERMWIDTH
+;	  0656	
+;	  0657	!++
+;	  0658	! Functional description:
+;	  0659	!	Return width of controlling terminal
+;	  0660	!
+;	  0661	! Formal parameters:
+;	  0662	!	None
+;	  0663	!
+;	  0664	! Implicit inputs:
+;	  0665	!	None
+;	  0666	!
+;	  0667	! Implicit outputs:
+;	  0668	!	None
+;	  0669	!
+;	  0670	! Routine value:
+;	  0671	!	Width
+;	  0672	!
+;	  0673	! Side effects:
+;	  0674	!	None
+;	  0675	!
+;	  0676	!--
+;	  0677	
+;	  0678	    BEGIN
+;	  0679	    REGISTER R1=1,R2=2,R3=3;
+;	  0680	    R1 = $CTTRM;
+;	  0681	    R2 = $MORLW;
+;	  0682	    JSYS(0,MTOPR,R1,R2,R3);
+;	  0683	    .R3
+;	  0684	    END;
+
+
+U.12:
+DIVTWD::MOVEI	AC1,-1				; R1,-1
+	MOVEI	AC2,30				; R2,30
+	JSYS	77				; 77
+	MOVE	AC1,AC3				; AC1,R3
+	POPJ	SP,				; SP,
+
+; Routine Size:  5 words
+
+
+;	  0685	
+;	  0686	GLOBAL ROUTINE DIVNUL(STR,FLG) =	! Internal variable $NUL
+;	  0687	
+;	  0688	!++
+;	  0689	! Functional description:
+;	  0690	!	If fetched, returns empty string; if set, discards string.
+;	  0691	!
+;	  0692	! Formal parameters:
+;	  0693	!	Stringvalue to set to
+;	  0694	!	Flag: -1 to set, 0 to fetch
+;	  0695	!
+;	  0696	! Implicit inputs:
+;	  0697	!	None
+;	  0698	!
+;	  0699	! Implicit outputs:
+;	  0700	!	None
+;	  0701	!
+;	  0702	! Routine value:
+;	  0703	!	Empty stringvalue
+;	  0704	!
+;	  0705	! Side effects:
+;	  0706	!	None
+;	  0707	!
+;	  0708	!--
+;	  0709	
+;	  0710	    BEGIN
+;	  0711	    EXTERNAL REGISTER Z=0;
+;	  0712	    IF .FLG NEQ 0 THEN PCEFST(.STR);
+;	  0713	    0
+;	  0714	    END;
+
+
+U.13:
+DIVNUL::JUMPE	AC2,L.36			; FLG,L.36
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.36:	SETZ	AC1,				; AC1,
+	POPJ	SP,				; SP,
+
+; Routine Size:  4 words
+
+
+;	  0715	
+;	  0716	GLOBAL ROUTINE DIVLER =		! Internal variable $LASTERROR
+;	  0717	
+;	  0718	!++
+;	  0719	! Functional description:
+;	  0720	!	Return stringvalue of text of last JSYS error.
+;	  0721	!
+;	  0722	! Formal parameters:
+;	  0723	!	None
+;	  0724	!
+;	  0725	! Implicit inputs:
+;	  0726	!	Last error code
+;	  0727	!
+;	  0728	! Implicit outputs:
+;	  0729	!	String space
+;	  0730	!
+;	  0731	! Routine value:
+;	  0732	!	Stringvalue of text
+;	  0733	!
+;	  0734	! Side effects:
+;	  0735	!	None
+;	  0736	!
+;	  0737	!--
+;	  0738	
+;	  0739	    BEGIN
+;	  0740	    EXTERNAL REGISTER Z=0;
+;	  0741	    LOCAL
+;	  0742		STR: STR_VAL,		! Stringvalue being generated
+;	  0743		CCT,			! Character count
+;	  0744		BUFF: VECTOR[10];	! String buffer
+;	  0745	    REGISTER
+;	  0746		R1=1,R2=2,R3=3;
+;	  0747	    R1 = BYTPTR(BUFF);
+;	  0748	    R2 = $FHSLF^18 + %O'777777';
+;	  0749	    R3 = 0;
+;	  0750	    JSYS(2,ERSTR,R1,R2,R3);
+;	  0751	    CCT = SUBBP(.R1, BYTPTR(BUFF));
+;	  0752	    STR = PCEAST(.CCT);
+;	  0753	    CH$COPY(.CCT, BYTPTR(BUFF[0]), 0, .CCT+1, BYTPTR(.STR[STV_ADR]));
+;	  0754	    .STR
+;	  0755	    END;
+
+
+U.14:
+DIVLER::PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,12				; SP,12
+	MOVEI	AC1,-11(SP)			; HLF,BUFF
+	HRLI	AC1,-337100			; HLF,-337100
+	HRLOI	AC2,400000			; R2,400000
+	SETZ	AC3,				; R3,
+	JSYS	11				; 11
+	JFCL					; 
+	JFCL					; 
+	MOVEI	AC2,-11(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	PUSHJ	SP,SUBBP			; SP,SUBBP
+	MOVE	AC14,AC1			; CCT,AC1
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; STR,AC1
+	MOVEI	AC2,-11(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC3,AC14			; AC3,CCT
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(STR)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC14			; AC1,CCT
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.2				; AC1,C.2
+	JFCL					; 
+	MOVE	AC1,AC16			; AC1,STR
+	ADJSP	SP,-12				; SP,-12
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+C.2:	MOVSLJ					; 
+	EXP	0				; 0
+
+; Routine Size:  31 words
+
+
+;	  0756	
+;	  0757	ROUTINE DIVTAD(OPT) =		! Internal variables $TIME and $DATE
+;	  0758	
+;	  0759	!++
+;	  0760	! Functional description:
+;	  0761	!	Return the current time or date, in the form HH:MM:SS or DD-MON-YY
+;	  0762	!
+;	  0763	! Formal parameters:
+;	  0764	!	Option flags to give to ODTIM%
+;	  0765	!
+;	  0766	! Implicit inputs:
+;	  0767	!	None
+;	  0768	!
+;	  0769	! Implicit outputs:
+;	  0770	!	None
+;	  0771	!
+;	  0772	! Routine value:
+;	  0773	!	Stringvalue
+;	  0774	!
+;	  0775	! Side effects:
+;	  0776	!	None
+;	  0777	!
+;	  0778	!--
+;	  0779	
+;	  0780	    BEGIN
+;	  0781	    EXTERNAL REGISTER Z=0;
+;	  0782	    LOCAL
+;	  0783		STR: STR_VAL,		! Stringvalue
+;	  0784		CCT,			! Character count
+;	  0785		BUFF: VECTOR[2];	! String buffer
+;	  0786	
+;	  0787		BEGIN
+;	  0788		REGISTER R1=1,R2=2,R3=3;
+;	  0789		R1 = BYTPTR(BUFF);
+;	  0790		R2 = -1;
+;	  0791		R3 = .OPT;
+;	  0792		JSYS(0,ODTIM,R1,R2,R3);
+;	  0793		CCT = .R1
+;	  0794		END;
+;	  0795	
+;	  0796	    CCT = SUBBP(.CCT, BYTPTR(BUFF));
+;	  0797	    STR = PCEAST(.CCT);
+;	  0798	    CH$COPY(.CCT, BYTPTR(BUFF[0]), 0, .CCT+1, BYTPTR(.STR[STV_ADR]));
+;	  0799	    .STR
+;	  0800	    END;
+
+
+; DIVTAD
+U.15:	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,2				; SP,2
+	MOVE	AC3,AC1				; OPT,AC1
+	MOVEI	AC1,-1(SP)			; HLF,BUFF
+	HRLI	AC1,-337100			; HLF,-337100
+	SETO	AC2,				; R2,
+	JSYS	220				; 220
+	MOVE	AC14,AC1			; CCT,R1
+	MOVEI	AC2,-1(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC1,AC14			; AC1,CCT
+	PUSHJ	SP,SUBBP			; SP,SUBBP
+	MOVE	AC14,AC1			; CCT,AC1
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; STR,AC1
+	MOVEI	AC2,-1(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC3,AC14			; AC3,CCT
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(STR)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC14			; AC1,CCT
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.2				; AC1,C.2
+	JFCL					; 
+	MOVE	AC1,AC16			; AC1,STR
+	ADJSP	SP,-2				; SP,-2
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  29 words
+
+
+;	  0801	
+;	  0802	GLOBAL ROUTINE DIVTIM =		! Internal variable $TIME
+;	  0803	
+;	  0804	!++
+;	  0805	! Functional description:
+;	  0806	!	Return the current time, in the form HH:MM:SS.
+;	  0807	!
+;	  0808	! Formal parameters:
+;	  0809	!	None
+;	  0810	!
+;	  0811	! Implicit inputs:
+;	  0812	!	None
+;	  0813	!
+;	  0814	! Implicit outputs:
+;	  0815	!	None
+;	  0816	!
+;	  0817	! Routine value:
+;	  0818	!	Stringvalue
+;	  0819	!
+;	  0820	! Side effects:
+;	  0821	!	None
+;	  0822	!
+;	  0823	!--
+;	  0824	
+;	  0825	    BEGIN
+;	  0826	    EXTERNAL REGISTER Z=0;
+;	  0827	    DIVTAD(OT_NDA)
+;	  0828	    END;
+
+
+U.16:
+DIVTIM::MOVSI	AC1,400000			; AC1,400000
+	JRST	U.15				; DIVTAD
+
+; Routine Size:  2 words
+
+
+;	  0829	
+;	  0830	GLOBAL ROUTINE DIVDAT =		! Internal variable $DATE
+;	  0831	
+;	  0832	!++
+;	  0833	! Functional description:
+;	  0834	!	Return the current date, in the form DD-MON-YY.
+;	  0835	!
+;	  0836	! Formal parameters:
+;	  0837	!	None
+;	  0838	!
+;	  0839	! Implicit inputs:
+;	  0840	!	None
+;	  0841	!
+;	  0842	! Implicit outputs:
+;	  0843	!	None
+;	  0844	!
+;	  0845	! Routine value:
+;	  0846	!	Stringvalue
+;	  0847	!
+;	  0848	! Side effects:
+;	  0849	!	None
+;	  0850	!
+;	  0851	!--
+;	  0852	
+;	  0853	    BEGIN
+;	  0854	    EXTERNAL REGISTER Z=0;
+;	  0855	    DIVTAD(OT_NTM)
+;	  0856	    END;
+
+
+U.17:
+DIVDAT::MOVSI	AC1,400				; AC1,400
+	JRST	U.15				; DIVTAD
+
+; Routine Size:  2 words
+
+
+;	  0857	
+;	  0858	GLOBAL ROUTINE DIVCDR =		! Internal variable $ConnectedDirectory
+;	  0859	
+;	  0860	!++
+;	  0861	! Functional description:
+;	  0862	!	Return the name of the connected directory.
+;	  0863	!
+;	  0864	! Formal parameters:
+;	  0865	!	None
+;	  0866	!
+;	  0867	! Implicit inputs:
+;	  0868	!	None
+;	  0869	!
+;	  0870	! Implicit outputs:
+;	  0871	!	None
+;	  0872	!
+;	  0873	! Routine value:
+;	  0874	!	Stringvalue
+;	  0875	!
+;	  0876	! Side effects:
+;	  0877	!	None
+;	  0878	!
+;	  0879	!--
+;	  0880	
+;	  0881	    BEGIN
+;	  0882	    EXTERNAL REGISTER Z=0;
+;	  0883	    LOCAL
+;	  0884		STR: STR_VAL,		! Stringvalue to be returned
+;	  0885		LEN,			! Length
+;	  0886		BUFF: VECTOR[10];	! String buffer
+;	  0887	    REGISTER
+;	  0888		R1=1,R2=2,R3=3,R4=4;
+;	  0889	    JSYS(0,GJINF,R1,R2,R3,R4);
+;	  0890	    R1 = BYTPTR(BUFF);
+;	  0891	    JSYS(1,DIRST,R1,R2);
+;	  0892	    LEN = SUBBP(.R1, BYTPTR(BUFF));
+;	  0893	    STR = PCEAST(.LEN);
+;	  0894	    CH$COPY(.LEN, BYTPTR(BUFF), 0, .LEN+1, BYTPTR(.STR[STV_ADR]));
+;	  0895	    .STR
+;	  0896	    END;
+
+
+U.18:
+DIVCDR::PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,12				; SP,12
+	JSYS	13				; 13
+	MOVEI	AC3,-11(SP)			; HLF,BUFF
+	HRLI	AC3,-337100			; HLF,-337100
+	MOVE	AC1,AC3				; R1,HLF
+	JSYS	41				; 41
+	JFCL					; 
+	MOVEI	AC2,-11(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	PUSHJ	SP,SUBBP			; SP,SUBBP
+	MOVE	AC14,AC1			; LEN,AC1
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; STR,AC1
+	MOVEI	AC2,-11(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC3,AC14			; AC3,LEN
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(STR)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC14			; AC1,LEN
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.2				; AC1,C.2
+	JFCL					; 
+	MOVE	AC1,AC16			; AC1,STR
+	ADJSP	SP,-12				; SP,-12
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  28 words
+
+
+;	  0897	
+;	  0898	GLOBAL ROUTINE DIVPMR(STR,FLG) =	! Internal variable $PromptReg
+;	  0899	
+;	  0900	!++
+;	  0901	! Functional description:
+;	  0902	!	Fetches or stores regular prompt string from table.
+;	  0903	!
+;	  0904	! Formal parameters:
+;	  0905	!	Stringvalue to set to
+;	  0906	!	nonzero to set, zero to fetch
+;	  0907	!
+;	  0908	! Implicit inputs:
+;	  0909	!	Prompt string
+;	  0910	!
+;	  0911	! Implicit outputs:
+;	  0912	!	None
+;	  0913	!
+;	  0914	! Routine value:
+;	  0915	!	Stringvalue
+;	  0916	!
+;	  0917	! Side effects:
+;	  0918	!	None
+;	  0919	!
+;	  0920	!--
+;	  0921	
+;	  0922	    BEGIN
+;	  0923	    EXTERNAL REGISTER Z=0;
+;	  0924	    DIVPMC(.STR, .FLG, 0)
+;	  0925	    END;
+
+
+U.19:
+DIVPMR::SETZ	AC3,				; AC3,
+	JRST	U.23				; DIVPMC
+
+; Routine Size:  2 words
+
+
+;	  0926	
+;	  0927	GLOBAL ROUTINE DIVPMS(STR,FLG) =	! Internal variable $PromptSub
+;	  0928	    BEGIN
+;	  0929	    EXTERNAL REGISTER Z=0;
+;	  0930	    DIVPMC(.STR, .FLG, 3)
+;	  0931	    END;
+
+
+U.20:
+DIVPMS::MOVEI	AC3,3				; AC3,3
+	JRST	U.23				; DIVPMC
+
+; Routine Size:  2 words
+;	  0932	
+;	  0933	GLOBAL ROUTINE DIVPME(STR,FLG) =	! Internal variable $PromptEnb
+;	  0934	    BEGIN
+;	  0935	    EXTERNAL REGISTER Z=0;
+;	  0936	    DIVPMC(.STR, .FLG, 1)
+;	  0937	    END;
+
+
+U.21:
+DIVPME::MOVEI	AC3,1				; AC3,1
+	JRST	U.23				; DIVPMC
+
+; Routine Size:  2 words
+
+
+;	  0938	
+;	  0939	GLOBAL ROUTINE DIVPMU(STR,FLG) =	! Internal variable $PromptEnbSub
+;	  0940	    BEGIN
+;	  0941	    EXTERNAL REGISTER Z=0;
+;	  0942	    DIVPMC(.STR, .FLG, 4)
+;	  0943	    END;
+
+
+U.22:
+DIVPMU::MOVEI	AC3,4				; AC3,4
+	JRST	U.23				; DIVPMC
+
+; Routine Size:  2 words
+
+
+;	  0944	
+;	  0945	ROUTINE DIVPMC(STR,FLG,IDX) =	! Common $Prompt routine
+;	  0946	
+;	  0947	!++
+;	  0948	! Functional description:
+;	  0949	!	Fetches or stores specified prompt string from table
+;	  0950	!
+;	  0951	! Formal parameters:
+;	  0952	!	Stringvalue to set to
+;	  0953	!	nonzero to set, zero to fetch
+;	  0954	!	Index of prompt in question
+;	  0955	!
+;	  0956	! Implicit inputs:
+;	  0957	!	Prompt string
+;	  0958	!
+;	  0959	! Implicit outputs:
+;	  0960	!	None
+;	  0961	!
+;	  0962	! Routine value:
+;	  0963	!	Stringvalue
+;	  0964	!
+;	  0965	! Side effects:
+;	  0966	!	None
+;	  0967	!
+;	  0968	!--
+;	  0969	
+;	  0970	    BEGIN
+;	  0971	    EXTERNAL REGISTER Z=0;
+;	  0972	    IF .FLG NEQ 0
+;	  0973	    THEN
+;	  0974		BEGIN
+;	  0975		MAP STR: STR_VAL;
+;	  0976		IF .PCLPMT[.IDX] NEQ 0
+;	  0977		THEN
+;	  0978		    BEGIN
+;	  0979		    LOCAL OLD: STR_VAL;
+;	  0980		    OLD = .PCLPMT[.IDX];
+;	  0981		    RETMEM((.OLD[STV_LEN]+5)/5, .OLD[STV_ADR], XDICT);
+;	  0982		    PCLPMT[.IDX] = 0
+;	  0983		    END;
+;	  0984		IF .STR NEQ 0
+;	  0985		THEN
+;	  0986		    BEGIN
+;	  0987		    LOCAL NEW: STR_VAL;
+;	  0988		    NEW[STV_LEN] = .STR[STV_LEN];
+;	  0989		    NEW[STV_ADR] = PCMGMM((.NEW[STV_LEN]+5)/5, XDICT);
+;	  0990		    CH$MOVE(.NEW[STV_LEN]+1, BYTPTR(.STR[STV_ADR]),
+;	  0991			    BYTPTR(.NEW[STV_ADR]));
+;	  0992		    PCLPMT[.IDX] = .NEW;
+;	  0993		    PCEFST(.STR);
+;	  0994		    IF .IDX EQL 0 AND .PCCURC NEQ 0 THEN PCCURC[ECB_OPM] = BYTPTR(.NEW)
+;	  0995		    END;
+;	  0996		0
+;	  0997		END
+;	  0998	    ELSE
+;	  0999		IF .PCLPMT[.IDX] NEQ 0
+;	  1000		THEN
+;	  1001		    .PCLPMT[.IDX]
+;	  1002		ELSE
+;	  1003		    BEGIN
+;	  1004		    LOCAL PTR,CNT,CPY: STR_VAL;
+;	  1005		    PTR = CH$PTR(REDPMT[.IDX]);
+;	  1006		    CNT = 0;
+;	  1007		    DO CNT = .CNT + 1 WHILE CH$RCHAR_A(PTR) NEQ 0;
+;	  1008		    CPY = PCEAST(.CNT);
+;	  1009		    CH$MOVE(.CNT, CH$PTR(REDPMT[.IDX]), BYTPTR(.CPY[STV_ADR]));
+;	  1010		    .CPY
+;	  1011		    END
+;	  1012	    END;
+
+
+; DIVPMC
+U.23:	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC3			; IDX,AC3
+	MOVE	AC12,AC1			; STR,AC1
+	MOVE	AC1,PCLPMT(AC14)		; AC1,PCLPMT(IDX)
+	JUMPE	AC2,L.39			; FLG,L.39
+	JUMPE	AC1,L.37			; AC1,L.37
+	MOVE	AC4,AC1				; OLD,AC1
+	HLRZ	AC1,AC4				; AC1,OLD
+	ADDI	AC1,5				; AC1,5
+	IDIVI	AC1,5				; AC1,5
+	MOVEI	AC2,0(AC4)			; AC2,0(OLD)
+	MOVEI	AC3,XDICT			; AC3,XDICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+	SETZM	PCLPMT(AC14)			; PCLPMT(IDX)
+L.37:	JUMPE	AC12,L.38			; STR,L.38
+	HLL	AC13,AC12			; NEW,STR
+	HLRZ	AC1,AC13			; AC1,NEW
+	ADDI	AC1,5				; AC1,5
+	IDIVI	AC1,5				; AC1,5
+	MOVEI	AC2,XDICT			; AC2,XDICT
+	PUSHJ	SP,PCMGMM			; SP,PCMGMM
+	HRR	AC13,AC1			; NEW,AC1
+	HLRZ	AC1,AC13			; AC1,NEW
+	ADDI	AC1,1				; AC1,1
+	MOVEI	AC2,0(AC12)			; HLF,0(STR)
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVEI	AC5,0(AC13)			; HLF,0(NEW)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC4,AC1				; AC4,AC1
+	EXTEND	AC1,C.3				; AC1,[MOVSLJ ]
+	JFCL					; 
+	MOVEM	AC13,PCLPMT(AC14)		; NEW,PCLPMT(IDX)
+	MOVE	AC1,AC12			; AC1,STR
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+	JUMPN	AC14,L.38			; IDX,L.38
+	SKIPN	PCCURC				; PCCURC
+	JRST	L.38				; L.38
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	MOVE	AC2,AC13			; HLF,NEW
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVEM	AC2,13(AC1)			; HLF,13(AC1)
+L.38:	SETZ	AC1,				; AC1,
+	JRST	L.41				; L.41
+L.39:	JUMPN	AC1,L.41			; AC1,L.41
+	MOVEI	AC1,REDPMT-1(AC14)		; AC1,REDPMT-1(IDX)
+	HRLI	AC1,10700			; AC1,10700
+	SETZ	AC13,				; CNT,
+L.40:	ADDI	AC13,1				; CNT,1
+	ILDB	AC2,AC1				; AC2,PTR
+	JUMPN	AC2,L.40			; AC2,L.40
+	MOVE	AC1,AC13			; AC1,CNT
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC3,AC1				; CPY,AC1
+	MOVEI	AC2,REDPMT-1(AC14)		; AC2,REDPMT-1(IDX)
+	HRLI	AC2,10700			; AC2,10700
+	MOVEI	AC5,0(AC3)			; HLF,0(CPY)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC13			; AC1,CNT
+	MOVE	AC4,AC13			; AC4,CNT
+	EXTEND	AC1,C.3				; AC1,[MOVSLJ ]
+	JFCL					; 
+	MOVE	AC1,AC3				; AC1,CPY
+L.41:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POPJ	SP,				; SP,
+C.3:	MOVSLJ					; 
+
+; Routine Size:  69 words
+
+
+;	  1013	
+;	  1014	GLOBAL ROUTINE DIVFNV =		! Internal variable $FileV
+;	  1015	
+;	  1016	!++
+;	  1017	! Functional description:
+;	  1018	!	Return version number of current parsed file.
+;	  1019	!
+;	  1020	! Formal parameters:
+;	  1021	!	None
+;	  1022	!
+;	  1023	! Implicit inputs:
+;	  1024	!	Parsed JFN list
+;	  1025	!
+;	  1026	! Implicit outputs:
+;	  1027	!	None
+;	  1028	!
+;	  1029	! Routine value:
+;	  1030	!	Version number of current parsed file
+;	  1031	!
+;	  1032	! Side effects:
+;	  1033	!	None
+;	  1034	!
+;	  1035	!--
+;	  1036	
+;	  1037	    BEGIN
+;	  1038	    EXTERNAL REGISTER Z=0;
+;	  1039	    LOCAL
+;	  1040		LST: REF JLS_WRD,	! JFN list entry
+;	  1041		JFN: HLF_WRD,		! JFN
+;	  1042		LEN,
+;	  1043		BUFF: VECTOR[3];
+;	  1044	    REGISTER
+;	  1045		R1=1,R2=2,R3=3;
+;	  1046	    LST = .PCCURC[ECB_PFL];
+;	  1047	    IF .LST EQL 0 THEN RETURN 0;
+;	  1048	    R1 = BYTPTR(BUFF);
+;	  1049	    JFN = .LST[JLS_JFN];
+;	  1050	    R2 = (IF .LST[JLS_WLD] THEN .JFN ELSE .JFN[HLF_RGT]);
+;	  1051	    R3 = FLD(1,JS_GEN);
+;	  1052	    JSYS(0,JFNS,R1,R2,R3);
+;	  1053	    LEN = SUBBP(.R1, BYTPTR(BUFF));
+;	  1054	    PCMSTI(.LEN, BYTPTR(BUFF))
+;	  1055	    END;
+
+
+U.24:
+DIVFNV::ADJSP	SP,3				; SP,3
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HRRZ	AC2,10(AC1)			; LST,10(AC1)
+	JUMPN	AC2,L.42			; LST,L.42
+	SETZ	AC1,				; AC1,
+	JRST	L.43				; L.43
+L.42:	MOVEI	AC1,-2(SP)			; HLF,BUFF
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC3,1(AC2)			; JFN,1(LST)
+	SKIPGE	0(AC2)				; 0(LST)
+	SKIPA	AC2,AC3				; R2,JFN
+	MOVEI	AC2,0(AC3)			; R2,0(JFN)
+	MOVSI	AC3,10				; R3,10
+	JSYS	30				; 30
+	MOVEI	AC2,-2(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	PUSHJ	SP,SUBBP			; SP,SUBBP
+	MOVEI	AC2,-2(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	PUSHJ	SP,PCMSTI			; SP,PCMSTI
+L.43:	ADJSP	SP,-3				; SP,-3
+	POPJ	SP,				; SP,
+
+; Routine Size:  22 words
+
+
+;	  1056	
+;	  1057	GLOBAL ROUTINE DIVFNM =		! Internal variable $FileN
+;	  1058	
+;	  1059	!++
+;	  1060	! Functional description:
+;	  1061	!	Return stringvalue of ordinary name of currently parsed file.
+;	  1062	!
+;	  1063	! Formal parameters:
+;	  1064	!	None
+;	  1065	!
+;	  1066	! Implicit inputs:
+;	  1067	!	Parsed JFN list
+;	  1068	!
+;	  1069	! Implicit outputs:
+;	  1070	!	None
+;	  1071	!
+;	  1072	! Routine value:
+;	  1073	!	Stringvalue of name
+;	  1074	!
+;	  1075	! Side effects:
+;	  1076	!	None
+;	  1077	!
+;	  1078	!--
+;	  1079	
+;	  1080	    BEGIN
+;	  1081	    EXTERNAL REGISTER Z=0;
+;	  1082	    DIVFNC(0)
+;	  1083	    END;
+
+
+U.25:
+DIVFNM::SETZ	AC1,				; AC1,
+	JRST	U.28				; DIVFNC
+
+; Routine Size:  2 words
+
+
+;	  1084	
+;	  1085	GLOBAL ROUTINE DIVFNS =		! Internal variable $FileS
+;	  1086	
+;	  1087	!++
+;	  1088	! Functional description:
+;	  1089	!	Return stringvalue of short name of currently parsed file.
+;	  1090	!
+;	  1091	! Formal parameters:
+;	  1092	!	None
+;	  1093	!
+;	  1094	! Implicit inputs:
+;	  1095	!	Parsed JFN list
+;	  1096	!
+;	  1097	! Implicit outputs:
+;	  1098	!	None
+;	  1099	!
+;	  1100	! Routine value:
+;	  1101	!	Stringvalue of name
+;	  1102	!
+;	  1103	! Side effects:
+;	  1104	!	None
+;	  1105	!
+;	  1106	!--
+;	  1107	
+;	  1108	    BEGIN
+;	  1109	    EXTERNAL REGISTER Z=0;
+;	  1110	    DIVFNC(FLD(2,JS_DEV)+FLD(2,JS_DIR)+FLD(1,JS_NAM)+FLD(1,JS_TYP)+JS_PAF)
+;	  1111	    END;
+
+
+U.26:
+DIVFNS::MOVE	AC1,C.4				; AC1,[221100000001]
+	JRST	U.28				; DIVFNC
+C.4:	EXP	221100000001			; 221100000001
+
+; Routine Size:  3 words
+
+
+;	  1112	
+;	  1113	GLOBAL ROUTINE DIVFNL =		! Internal variable $FileL
+;	  1114	
+;	  1115	!++
+;	  1116	! Functional description:
+;	  1117	!	Return stringvalue of long name of currently parsed file.
+;	  1118	!
+;	  1119	! Formal parameters:
+;	  1120	!	None
+;	  1121	!
+;	  1122	! Implicit inputs:
+;	  1123	!	Parsed JFN list
+;	  1124	!
+;	  1125	! Implicit outputs:
+;	  1126	!	None
+;	  1127	!
+;	  1128	! Routine value:
+;	  1129	!	Stringvalue of name
+;	  1130	!
+;	  1131	! Side effects:
+;	  1132	!	None
+;	  1133	!
+;	  1134	!--
+;	  1135	
+;	  1136	    BEGIN
+;	  1137	    EXTERNAL REGISTER Z=0;
+;	  1138	    DIVFNC(FLD(1,JS_DEV) + FLD(1,JS_DIR) + FLD(1,JS_NAM) +
+;	  1139		   FLD(1,JS_TYP) + FLD(1,JS_GEN) + JS_PAF)
+;	  1140	    END;
+
+
+U.27:
+DIVFNL::MOVE	AC1,C.5				; AC1,[111110000001]
+	JRST	U.28				; DIVFNC
+C.5:	EXP	111110000001			; 111110000001
+
+; Routine Size:  3 words
+
+
+;	  1141	
+;	  1142	ROUTINE DIVFNC(BITS) =	! Common $File routine
+;	  1143	
+;	  1144	!++
+;	  1145	! Functional description:
+;	  1146	!	Return stringvalue of name of currently parsed file, according
+;	  1147	!	to JFNS argument provided by caller.
+;	  1148	!
+;	  1149	! Formal parameters:
+;	  1150	!	Argument to JFNS JSYS
+;	  1151	!
+;	  1152	! Implicit inputs:
+;	  1153	!	Parsed JFN list
+;	  1154	!
+;	  1155	! Implicit outputs:
+;	  1156	!	None
+;	  1157	!
+;	  1158	! Routine value:
+;	  1159	!	Stringvalue of file name
+;	  1160	!
+;	  1161	! Side effects:
+;	  1162	!	None
+;	  1163	!
+;	  1164	!--
+;	  1165	
+;	  1166	    BEGIN
+;	  1167	    EXTERNAL REGISTER Z=0;
+;	  1168	    LOCAL
+;	  1169		STR: STR_VAL,		! Stringvalue being created
+;	  1170		BUFF: VECTOR[CH$ALLOCATION(120)],	! String buffer
+;	  1171		LEN,			! String length
+;	  1172		LST: REF JLS_WRD;	! Parsed JFN list
+;	  1173	    REGISTER
+;	  1174		R1=1,R2=2,R3=3;
+;	  1175	    LST = .PCCURC[ECB_PFL];
+;	  1176	    IF .LST EQL 0 THEN RETURN 0;
+;	  1177	    R1 = BYTPTR(BUFF);
+;	  1178	    IF .LST[JLS_WLD] eql 0      ! [fun25] bliss 2.0 bug
+;	  1179	    THEN
+;	  1180		R2 = .LST[JLS_JFN]
+;	  1181	    ELSE
+;	  1182		BEGIN
+;	  1183		LOCAL
+;	  1184		    JFN: HLF_WRD;
+;	  1185		JFN = .LST[JLS_JFN];
+;	  1186		R2 = .JFN[HLF_RGT]
+;	  1187		END;
+;	  1188	    R3 = .BITS;
+;	  1189	    JSYS(0,JFNS,R1,R2,R3);
+;	  1190	    LEN = SUBBP(.R1, BYTPTR(BUFF));
+;	  1191	    STR = PCEAST(.LEN);
+;	  1192	    CH$COPY(.LEN, BYTPTR(BUFF), $CHNUL, .LEN+1, BYTPTR(.STR[STV_ADR]));
+;	  1193	    .STR
+;	  1194	    END;
+
+
+; DIVFNC
+U.28:	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,30				; SP,30
+	MOVE	AC4,AC1				; BITS,AC1
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HRRZ	AC3,10(AC1)			; LST,10(AC1)
+	JUMPN	AC3,L.44			; LST,L.44
+	SETZ	AC1,				; AC1,
+	JRST	L.47				; L.47
+L.44:	MOVEI	AC1,-27(SP)			; HLF,BUFF
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC2,AC3				; AC2,LST
+	ADDI	AC2,1				; AC2,1
+	LDB	AC5,C.6				; AC5,[POINT 1,0(LST),0]  <35,1>
+	JUMPN	AC5,L.45			; AC5,L.45
+	MOVE	AC2,0(AC2)			; R2,0(AC2)
+	JRST	L.46				; L.46
+L.45:	MOVE	AC3,0(AC2)			; JFN,0(AC2)
+	MOVEI	AC2,0(AC3)			; R2,0(JFN)
+L.46:	MOVE	AC3,AC4				; R3,BITS
+	JSYS	30				; 30
+	MOVEI	AC2,-27(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	PUSHJ	SP,SUBBP			; SP,SUBBP
+	MOVE	AC14,AC1			; LEN,AC1
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; STR,AC1
+	MOVEI	AC2,-27(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC3,AC14			; AC3,LEN
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(STR)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC14			; AC1,LEN
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.2				; AC1,C.2
+	JFCL					; 
+	MOVE	AC1,AC16			; AC1,STR
+L.47:	ADJSP	SP,-30				; SP,-30
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+C.6:	POINT	1,0(AC3),0			; 1,0(LST),0
+
+; Routine Size:  41 words
+
+
+;	  1195	
+;	  1196	GLOBAL ROUTINE DINOPN(AP,CNT) =	! Internal integer procedure $Open
+;	  1197	
+;	  1198	!++
+;	  1199	! Functional description:
+;	  1200	!	Open the file named in String1, according to the mode described
+;	  1201	!	by Integer2 (0=input, 1=output, 2=append).  Return the channel number.
+;	  1202	!
+;	  1203	! Formal parameters:
+;	  1204	!	Usual for system procedure
+;	  1205	!
+;	  1206	! Implicit inputs:
+;	  1207	!	None
+;	  1208	!
+;	  1209	! Implicit outputs:
+;	  1210	!	ECB
+;	  1211	!
+;	  1212	! Routine value:
+;	  1213	!	Channel number, or zero if unsuccessful
+;	  1214	!
+;	  1215	! Side effects:
+;	  1216	!	None
+;	  1217	!
+;	  1218	!--
+;	  1219	
+;	  1220	    BEGIN
+;	  1221	    EXTERNAL REGISTER Z=0;
+;	  1222	    LOCAL
+;	  1223		FNM: STR_VAL,		! Filename string
+;	  1224		MODE,			! Desired mode
+;	  1225		JFN,			! JFN
+;	  1226		ENT: REF RCL_WRD;	! Entry in channel list
+;	  1227	    BIND
+;	  1228		GTJFN_MODE = UPLIT(GJ_SHT+GJ_OLD,GJ_SHT+GJ_FOU,GJ_SHT): VECTOR,
+;	  1229		OPEN_MODE = UPLIT(FLD(7,OF_BSZ)+OF_RD, FLD(7,OF_BSZ)+OF_WR,
+;	  1230				    FLD(7,OF_BSZ)+OF_APP): VECTOR;
+;	  1231	    IF .CNT NEQ 2 THEN ERROR('Bad arguments to $Open');
+;	  1232	    MODE = PCEGOP(.(.AP+1), STE_TYP_INT);
+;	  1233	    IF .MODE LSS 0 OR .MODE GTR 2 THEN ERROR('Bad arguments to $Open');
+;	  1234	    FNM = PCEGOP(.(.AP), STE_TYP_STR);
+;	  1235	    IF .FNM[STV_LEN] EQL 0 THEN RETURN 0;
+;	  1236		BEGIN
+;	  1237		REGISTER
+;	  1238		    R1=1,R2=2;
+;	  1239		R1 = .GTJFN_MODE[.MODE];
+;	  1240		R2 = BYTPTR(.FNM[STV_ADR]);
+;	  1241		IF JSYS(1,GTJFN,R1,R2)
+;	  1242		THEN
+;	  1243		    BEGIN
+;	  1244		    JFN = .R1;
+;	  1245		    R2 = .OPEN_MODE[.MODE];
+;	  1246		    IF NOT JSYS(1,OPENF,R1,R2)
+;	  1247			THEN
+;	  1248			    BEGIN
+;	  1249			    R1 = .JFN;
+;	  1250			    JSYS(1,RLJFN,R1);
+;	  1251			    RETURN 0
+;	  1252			    END
+;	  1253		    END
+;	  1254		ELSE
+;	  1255		    RETURN 0
+;	  1256		END;
+;	  1257	    ENT = PCMGMM(2, XDICT);
+;	  1258	    ENT[RCL_NXT] = 0;
+;	  1259	    ENT[RCL_JFN] = .JFN;
+;	  1260	    ENT[RCL_OUT] = .MODE NEQ 0;
+;	  1261	    IF .PCCURC[ECB_RCL] EQL 0
+;	  1262	    THEN
+;	  1263		BEGIN
+;	  1264		ENT[RCL_CHN] = 1;
+;	  1265		PCCURC[ECB_RCL] = .ENT
+;	  1266		END
+;	  1267	    ELSE
+;	  1268		BEGIN
+;	  1269		LOCAL
+;	  1270		    PTR: REF RCL_WRD,	! Channel list entry
+;	  1271		    CHN;		! Channel mask
+;	  1272		BUILTIN
+;	  1273		    FIRSTONE;
+;	  1274		CHN = -1;
+;	  1275		PTR = .PCCURC[ECB_RCL];
+;	  1276		WHILE .PTR NEQ 0 DO
+;	  1277		    BEGIN
+;	  1278		    CH$WCHAR(0, CH$PTR(CHN, .PTR[RCL_CHN], 1));
+;	  1279		    PTR = .PTR[RCL_NXT]
+;	  1280		    END;
+;	  1281		CH$WCHAR(0, CH$PTR(CHN, 0, 1));
+;	  1282		CHN = FIRSTONE(.CHN);
+;	  1283		IF .CHN LSS 0 THEN ERROR('Too many files open');
+;	  1284		ENT[RCL_CHN] = .CHN;
+;	  1285		ENT[RCL_NXT] = .PCCURC[ECB_RCL];
+;	  1286		PCCURC[ECB_RCL] = .ENT
+;	  1287		END;
+;	  1288	    IF ..AP EQL OPN_TMP_STR THEN PCEFST(.FNM);
+;	  1289	    .ENT[RCL_CHN]
+;	  1290	    END;
+
+
+P.AAI:	EXP	100001000000
+	EXP	-377777000000
+	EXP	1000000
+P.AAJ:	EXP	70000200000
+	EXP	70000100000
+	EXP	70000020000
+P.AAK:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","O","p"		; o $Op
+	BYTE	(7)"e","n",000,000,000		; en
+P.AAL:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","O","p"		; o $Op
+	BYTE	(7)"e","n",000,000,000		; en
+P.AAM:	BYTE	(7)"T","o","o"," ","m"		; Too m
+	BYTE	(7)"a","n","y"," ","f"		; any f
+	BYTE	(7)"i","l","e","s"," "		; iles
+	BYTE	(7)"o","p","e","n",000		; open
+
+
+; GTJFN_MODE
+U.53=		    P.AAI
+; OPEN_MODE
+U.54=		    P.AAJ
+
+
+U.29:
+DINOPN::PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,1				; SP,1
+	MOVE	AC12,AC1			; AP,AC1
+	CAIN	AC2,2				; CNT,2
+	JRST	L.48				; L.48
+	MOVEI	AC1,P.AAK			; AC1,P.AAK
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.48:	MOVE	AC1,1(AC12)			; AC1,1(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC13,AC1			; MODE,AC1
+	JUMPL	AC13,L.49			; MODE,L.49
+	CAIG	AC13,2				; MODE,2
+	JRST	L.50				; L.50
+L.49:	MOVEI	AC1,P.AAL			; AC1,P.AAL
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.50:	MOVE	AC1,0(AC12)			; AC1,0(AP)
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC10,AC1			; FNM,AC1
+	TLNN	AC10,-1				; FNM,-1
+	JRST	L.52				; L.52
+	MOVE	AC1,U.53(AC13)			; R1,GTJFN_MODE(MODE)
+	MOVEI	AC2,0(AC10)			; HLF,0(FNM)
+	HRLI	AC2,-337100			; HLF,-337100
+	JSYS	20				; 20
+	JRST	L.52				; L.52
+	MOVE	AC11,AC1			; JFN,R1
+	MOVE	AC2,U.54(AC13)			; R2,OPEN_MODE(MODE)
+	JSYS	21				; 21
+	JRST	L.51				; L.51
+	JRST	L.53				; L.53
+L.51:	MOVE	AC1,AC11			; R1,JFN
+	JSYS	23				; 23
+	JFCL					; 
+L.52:	SETZ	AC1,				; AC1,
+	JRST	L.62				; L.62
+L.53:	MOVEI	AC1,2				; AC1,2
+	MOVEI	AC2,XDICT			; AC2,XDICT
+	PUSHJ	SP,PCMGMM			; SP,PCMGMM
+	MOVE	AC14,AC1			; ENT,AC1
+	HRRZS	0(AC14)				; 0(ENT)
+	HRRM	AC11,1(AC14)			; JFN,1(ENT)
+	SETZ	AC1,				; AC1,
+	JUMPE	AC13,L.54			; MODE,L.54
+	MOVEI	AC1,1				; AC1,1
+L.54:	DPB	AC1,C.7				; AC1,[POINT 1,1(ENT),17]  <18,1>
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HLRZ	AC2,7(AC1)			; AC2,7(AC1)
+	JUMPN	AC2,L.55			; AC2,L.55
+	MOVEI	AC2,1				; AC2,1
+	HRRM	AC2,0(AC14)			; AC2,0(ENT)
+	JRST	L.60				; L.60
+L.55:	SETOM	0(SP)				; CHN
+	MOVE	AC1,AC2				; PTR,AC2
+L.56:	JUMPE	AC1,L.57			; PTR,L.57
+	SETZ	AC3,				; AC3,
+	MOVEI	AC4,0(SP)			; AC4,CHN
+	HRLI	AC4,-337700			; AC4,-337700
+	HRRZ	AC2,0(AC1)			; AC2,0(PTR)
+	ADJBP	AC2,AC4				; AC2,AC4
+	IDPB	AC3,AC2				; AC3,AC2
+	HLRZ	AC1,0(AC1)			; PTR,0(PTR)
+	JRST	L.56				; L.56
+L.57:	SETZ	AC2,				; AC2,
+	MOVEI	AC1,-1(SP)			; AC1,CHN-1
+	HRLI	AC1,100				; AC1,100
+	IDPB	AC2,AC1				; AC2,AC1
+	MOVE	AC1,0(SP)			; AC1,CHN
+	JFFO	AC1,L.58			; AC1,L.58
+	SETO	AC2,				; AC2,
+L.58:	MOVEM	AC2,0(SP)			; AC2,CHN
+	MOVE	AC13,0(SP)			; AC13,CHN
+	JUMPGE	AC13,L.59			; AC13,L.59
+	MOVEI	AC1,P.AAM			; AC1,P.AAM
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.59:	HRRM	AC13,0(AC14)			; AC13,0(ENT)
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HLRZ	AC2,7(AC1)			; AC2,7(AC1)
+	HRLM	AC2,0(AC14)			; AC2,0(ENT)
+L.60:	HRLM	AC14,7(AC1)			; ENT,7(AC1)
+	MOVEI	AC1,-100000			; AC1,-100000
+	CAME	AC1,0(AC12)			; AC1,0(AP)
+	JRST	L.61				; L.61
+	MOVE	AC1,AC10			; AC1,FNM
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.61:	HRRZ	AC1,0(AC14)			; AC1,0(ENT)
+L.62:	ADJSP	SP,-1				; SP,-1
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+C.7:	POINT	1,1(AC14),17			; 1,1(ENT),17
+
+; Routine Size:  99 words
+
+
+;	  1291	
+;	  1292	GLOBAL ROUTINE DINCLS(AP,CNT): NOVALUE =	! Internal procedure $Close
+;	  1293	
+;	  1294	!++
+;	  1295	! Functional description:
+;	  1296	!	Closes the channel given in Integer1, or all channels if -1
+;	  1297	!	or if no argument given.
+;	  1298	!
+;	  1299	! Formal parameters:
+;	  1300	!	Usual for system procedure
+;	  1301	!
+;	  1302	! Implicit inputs:
+;	  1303	!	ECB
+;	  1304	!
+;	  1305	! Implicit outputs:
+;	  1306	!	None
+;	  1307	!
+;	  1308	! Routine value:
+;	  1309	!	None
+;	  1310	!
+;	  1311	! Side effects:
+;	  1312	!	None
+;	  1313	!
+;	  1314	!--
+;	  1315	
+;	  1316	    BEGIN
+;	  1317	    EXTERNAL REGISTER Z=0;
+;	  1318	    LOCAL
+;	  1319		CHN,			! Channel number
+;	  1320		PRED: REF RCL_WRD,	! Channel list entry
+;	  1321		PTR: REF RCL_WRD;	! Channel list entry
+;	  1322	    IF .CNT NEQ 1 AND .CNT NEQ 0 THEN ERROR('Bad argument to $Close');
+;	  1323	    IF .CNT EQL 0 THEN CHN = -1 ELSE CHN = PCEGOP(..AP, STE_TYP_INT);
+;	  1324	    IF .PCCURC[ECB_RCL] EQL 0 THEN RETURN;
+;	  1325	    IF .CHN GTR 0
+;	  1326	    THEN
+;	  1327		BEGIN
+;	  1328		LOCAL
+;	  1329		    PTR: REF RCL_WRD,
+;	  1330		    PRED: REF RCL_WRD;
+;	  1331		PRED = 0;
+;	  1332		PTR = .PCCURC[ECB_RCL];
+;	  1333		WHILE .PTR NEQ 0 DO
+;	  1334		    BEGIN
+;	  1335		    IF .PTR[RCL_CHN] EQL .CHN THEN EXITLOOP;
+;	  1336		    PRED = .PTR;
+;	  1337		    PTR = .PTR[RCL_NXT]
+;	  1338		    END;
+;	  1339		IF .PTR EQL 0 THEN RETURN;
+;	  1340		    BEGIN
+;	  1341		    REGISTER
+;	  1342			R1=1;
+;	  1343		    R1 = .PTR[RCL_JFN];
+;	  1344		    JSYS(-1,CLOSF,R1)
+;	  1345		    END;
+;	  1346		IF .PRED EQL 0
+;	  1347		THEN
+;	  1348		    PCCURC[ECB_RCL] = .PTR[RCL_NXT]
+;	  1349		ELSE
+;	  1350		    PRED[RCL_NXT] = .PTR[RCL_NXT];
+;	  1351		RETMEM(2, .PTR, XDICT)
+;	  1352		END
+;	  1353	    ELSE
+;	  1354		BEGIN
+;	  1355		LOCAL
+;	  1356		    PTR: REF RCL_WRD,
+;	  1357		    NXT: REF RCL_WRD;
+;	  1358		PTR = .PCCURC[ECB_RCL];
+;	  1359		WHILE .PTR NEQ 0 DO
+;	  1360		    BEGIN
+;	  1361			BEGIN
+;	  1362			REGISTER
+;	  1363			    R1=1;
+;	  1364			R1 = .PTR[RCL_JFN];
+;	  1365			JSYS(-1,CLOSF,R1)
+;	  1366			END;
+;	  1367		    NXT = .PTR[RCL_NXT];
+;	  1368		    RETMEM(2, .PTR, XDICT);
+;	  1369		    PTR = .NXT
+;	  1370		    END;
+;	  1371		PCCURC[ECB_RCL] = 0
+;	  1372		END
+;	  1373	    END;
+
+
+P.AAN:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t"," ","t","o"		; nt to
+	BYTE	(7)" ","$","C","l","o"		;  $Clo
+	BYTE	(7)"s","e",000,000,000		; se
+
+
+U.30:
+DINCLS::PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC2			; CNT,AC2
+	MOVE	AC13,AC1			; AP,AC1
+	CAIN	AC14,1				; CNT,1
+	JRST	L.63				; L.63
+	JUMPE	AC14,L.63			; CNT,L.63
+	MOVEI	AC1,P.AAN			; AC1,P.AAN
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.63:	JUMPN	AC14,L.64			; CNT,L.64
+	SETO	AC4,				; CHN,
+	JRST	L.65				; L.65
+L.64:	MOVE	AC1,0(AC13)			; AC1,0(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC4,AC1				; CHN,AC1
+L.65:	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HLRZ	AC1,7(AC1)			; AC1,7(AC1)
+	JUMPE	AC1,L.75			; AC1,L.75
+	JUMPLE	AC4,L.71			; CHN,L.71
+	SETZ	AC3,				; PRED,
+	MOVE	AC2,AC1				; PTR,AC1
+L.66:	JUMPE	AC2,L.75			; PTR,L.75
+	HRRZ	AC1,0(AC2)			; AC1,0(PTR)
+	CAMN	AC1,AC4				; AC1,CHN
+	JRST	L.67				; L.67
+	MOVE	AC3,AC2				; PRED,PTR
+	HLRZ	AC2,0(AC2)			; PTR,0(PTR)
+	JRST	L.66				; L.66
+L.67:	JUMPE	AC2,L.75			; PTR,L.75
+	HRRZ	AC1,1(AC2)			; R1,1(PTR)
+	JSYS	22				; 22
+	JUMP	16,L.68				; 16,L.68
+L.68:	JUMPN	AC3,L.69			; PRED,L.69
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HLRZ	AC3,0(AC2)			; AC3,0(PTR)
+	HRLM	AC3,7(AC1)			; AC3,7(AC1)
+	JRST	L.70				; L.70
+L.69:	HLRZ	AC1,0(AC2)			; AC1,0(PTR)
+	HRLM	AC1,0(AC3)			; AC1,0(PRED)
+L.70:	MOVEI	AC1,2				; AC1,2
+	MOVEI	AC3,XDICT			; AC3,XDICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+	JRST	L.75				; L.75
+L.71:	MOVE	AC14,AC1			; PTR,AC1
+L.72:	JUMPE	AC14,L.74			; PTR,L.74
+	HRRZ	AC1,1(AC14)			; R1,1(PTR)
+	JSYS	22				; 22
+	JUMP	16,L.73				; 16,L.73
+L.73:	HLRZ	AC13,0(AC14)			; NXT,0(PTR)
+	MOVEI	AC1,2				; AC1,2
+	MOVE	AC2,AC14			; AC2,PTR
+	MOVEI	AC3,XDICT			; AC3,XDICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+	MOVE	AC14,AC13			; PTR,NXT
+	JRST	L.72				; L.72
+L.74:	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HRRZS	7(AC1)				; 7(AC1)
+L.75:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+
+; Routine Size:  61 words
+;	  1374	
+;	  1375	GLOBAL ROUTINE DINRED(AP,CNT) =	! Internal string procedure Read
+;	  1376	
+;	  1377	!++
+;	  1378	! Functional description:
+;	  1379	!	Read a record from the input file whose channel is Integer1,
+;	  1380	!	return a string	containing that record.
+;	  1381	!
+;	  1382	! Formal parameters:
+;	  1383	!	Usual for system procedure
+;	  1384	!
+;	  1385	! Implicit inputs:
+;	  1386	!	Input file
+;	  1387	!
+;	  1388	! Implicit outputs:
+;	  1389	!	None
+;	  1390	!
+;	  1391	! Routine value:
+;	  1392	!	Stringvalue of record
+;	  1393	!
+;	  1394	! Side effects:
+;	  1395	!	None
+;	  1396	!
+;	  1397	!--
+;	  1398	
+;	  1399	    BEGIN
+;	  1400	    EXTERNAL REGISTER Z=0;
+;	  1401	    LOCAL
+;	  1402		CHN,			! Channel
+;	  1403		ENT: REF RCL_WRD,	! Channel list entry
+;	  1404		JFN,			! JFN
+;	  1405		REC: STR_VAL,
+;	  1406		LEN;
+;	  1407	    IF .CNT NEQ 1 THEN ERROR('Read requires a parameter');
+;	  1408	    CHN = PCEGOP(..AP, STE_TYP_INT);
+;	  1409	    ENT = .PCCURC[ECB_RCL];
+;	  1410	    WHILE .ENT NEQ 0 DO
+;	  1411		IF .ENT[RCL_CHN] EQL .CHN THEN EXITLOOP ELSE ENT = .ENT[RCL_NXT];
+;	  1412	    IF .ENT EQL 0 THEN ERROR('No file with that channel open');
+;	  1413	    IF .ENT[RCL_OUT] THEN ERROR('File is open for output');
+;	  1414	    JFN = .ENT[RCL_JFN];
+;	  1415		BEGIN
+;	  1416		REGISTER
+;	  1417		    R1=1,R2=2,R3=3,R4=4;
+;	  1418		R1 = .JFN;
+;	  1419		R2 = .CSBUFP;
+;	  1420		R3 = 5*512;
+;	  1421		R4 = $CHLFD;
+;	  1422		IF NOT JSYS(-1,SIN,R1,R2,R3,R4) THEN RETURN 0;
+;	  1423		LEN = 5*512 - .R3
+;	  1424		END;
+;	  1425	    IF .LEN NEQ 0
+;	  1426	    THEN
+;	  1427		BEGIN
+;	  1428		REC = PCEAST(.LEN-2);
+;	  1429		CH$COPY(.LEN-2, .CSBUFP, $CHNUL, .LEN-1, BYTPTR(.REC[STV_ADR]))
+;	  1430		END
+;	  1431	    ELSE
+;	  1432		REC = 0;
+;	  1433	    .REC
+;	  1434	    END;
+
+
+P.AAO:	BYTE	(7)"R","e","a","d"," "		; Read
+	BYTE	(7)"r","e","q","u","i"		; requi
+	BYTE	(7)"r","e","s"," ","a"		; res a
+	BYTE	(7)" ","p","a","r","a"		;  para
+	BYTE	(7)"m","e","t","e","r"		; meter
+	BYTE	(7)000,000,000,000,000
+P.AAP:	BYTE	(7)"N","o"," ","f","i"		; No fi
+	BYTE	(7)"l","e"," ","w","i"		; le wi
+	BYTE	(7)"t","h"," ","t","h"		; th th
+	BYTE	(7)"a","t"," ","c","h"		; at ch
+	BYTE	(7)"a","n","n","e","l"		; annel
+	BYTE	(7)" ","o","p","e","n"		;  open
+	BYTE	(7)000,000,000,000,000
+P.AAQ:	BYTE	(7)"F","i","l","e"," "		; File
+	BYTE	(7)"i","s"," ","o","p"		; is op
+	BYTE	(7)"e","n"," ","f","o"		; en fo
+	BYTE	(7)"r"," ","o","u","t"		; r out
+	BYTE	(7)"p","u","t",000,000		; put
+
+
+U.31:
+DINRED::PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,1				; CNT,1
+	JRST	L.76				; L.76
+	MOVEI	AC1,P.AAO			; AC1,P.AAO
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.76:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC2,PCCURC			; AC2,PCCURC
+	HLRZ	AC14,7(AC2)			; ENT,7(AC2)
+L.77:	JUMPE	AC14,L.78			; ENT,L.78
+	HRRZ	AC2,0(AC14)			; AC2,0(ENT)
+	CAMN	AC2,AC1				; AC2,CHN
+	JRST	L.78				; L.78
+	HLRZ	AC14,0(AC14)			; ENT,0(ENT)
+	JRST	L.77				; L.77
+L.78:	JUMPN	AC14,L.79			; ENT,L.79
+	MOVEI	AC1,P.AAP			; AC1,P.AAP
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.79:	MOVSI	AC1,1				; AC1,1
+	TDNN	AC1,1(AC14)			; AC1,1(ENT)
+	JRST	L.80				; L.80
+	MOVEI	AC1,P.AAQ			; AC1,P.AAQ
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.80:	HRRZ	AC1,1(AC14)			; JFN,1(ENT)
+	MOVE	AC2,CSBUFP			; R2,CSBUFP
+	MOVEI	AC3,5000			; R3,5000
+	MOVEI	AC4,12				; R4,12
+	JSYS	52				; 52
+	JUMP	16,L.81				; 16,L.81
+	JRST	L.82				; L.82
+L.81:	SETZ	AC1,				; AC1,
+	JRST	L.85				; L.85
+L.82:	MOVEI	AC14,5000			; LEN,5000
+	SUB	AC14,AC3			; LEN,R3
+	JUMPE	AC14,L.83			; LEN,L.83
+	MOVE	AC13,AC14			; AC13,LEN
+	SUBI	AC13,2				; AC13,2
+	MOVE	AC1,AC13			; AC1,AC13
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; REC,AC1
+	MOVE	AC3,AC14			; AC3,LEN
+	SUBI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(REC)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC13			; AC1,AC13
+	MOVE	AC2,CSBUFP			; AC2,CSBUFP
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.2				; AC1,C.2
+	JFCL					; 
+	JRST	L.84				; L.84
+L.83:	SETZ	AC16,				; REC,
+L.84:	MOVE	AC1,AC16			; AC1,REC
+L.85:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+
+; Routine Size:  58 words
+
+
+;	  1435	
+;	  1436	GLOBAL ROUTINE DINEOF(AP,CNT) =	! Internal integer procedure EOF
+;	  1437	
+;	  1438	!++
+;	  1439	! Functional description:
+;	  1440	!	Examine file specified in by channel Integer1.  Return nonzero if
+;	  1441	!	file has reached end of file, or if an output file, or if nonexistent.
+;	  1442	!
+;	  1443	! Formal parameters:
+;	  1444	!	Usual for system procedure
+;	  1445	!
+;	  1446	! Implicit inputs:
+;	  1447	!	Input file
+;	  1448	!
+;	  1449	! Implicit outputs:
+;	  1450	!	None
+;	  1451	!
+;	  1452	! Routine value:
+;	  1453	!	Zero or -1
+;	  1454	!
+;	  1455	! Side effects:
+;	  1456	!	None
+;	  1457	!
+;	  1458	!--
+;	  1459	
+;	  1460	    BEGIN
+;	  1461	    EXTERNAL REGISTER Z=0;
+;	  1462	    LOCAL
+;	  1463		CHN,			! Channel number
+;	  1464		ENT: REF RCL_WRD;	! Channel list entry
+;	  1465	    IF .CNT NEQ 1 THEN ERROR('EOF requires channel number');
+;	  1466	    CHN = PCEGOP(..AP, STE_TYP_INT);
+;	  1467	    ENT = .PCCURC[ECB_RCL];
+;	  1468	    WHILE .ENT NEQ 0 DO
+;	  1469		IF .ENT[RCL_CHN] EQL .CHN THEN EXITLOOP ELSE ENT = .ENT[RCL_NXT];
+;	  1470	    IF .ENT EQL 0 THEN ERROR('No file with that channel open');
+;	  1471	    IF .ENT[RCL_OUT] THEN RETURN -1;
+;	  1472		BEGIN
+;	  1473		REGISTER
+;	  1474		    R1=1,R2=2;
+;	  1475		R1 = .ENT[RCL_JFN];
+;	  1476		JSYS(0,GTSTS,R1,R2);
+;	  1477		IF .POINTR(R2,GS_EOF) THEN -1 ELSE 0
+;	  1478		END
+;	  1479	    END;
+
+
+P.AAR:	BYTE	(7)"E","O","F"," ","r"		; EOF r
+	BYTE	(7)"e","q","u","i","r"		; equir
+	BYTE	(7)"e","s"," ","c","h"		; es ch
+	BYTE	(7)"a","n","n","e","l"		; annel
+	BYTE	(7)" ","n","u","m","b"		;  numb
+	BYTE	(7)"e","r",000,000,000		; er
+P.AAS:	BYTE	(7)"N","o"," ","f","i"		; No fi
+	BYTE	(7)"l","e"," ","w","i"		; le wi
+	BYTE	(7)"t","h"," ","t","h"		; th th
+	BYTE	(7)"a","t"," ","c","h"		; at ch
+	BYTE	(7)"a","n","n","e","l"		; annel
+	BYTE	(7)" ","o","p","e","n"		;  open
+	BYTE	(7)000,000,000,000,000
+
+
+U.32:
+DINEOF::PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,1				; CNT,1
+	JRST	L.86				; L.86
+	MOVEI	AC1,P.AAR			; AC1,P.AAR
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.86:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC2,PCCURC			; AC2,PCCURC
+	HLRZ	AC14,7(AC2)			; ENT,7(AC2)
+L.87:	JUMPE	AC14,L.88			; ENT,L.88
+	HRRZ	AC2,0(AC14)			; AC2,0(ENT)
+	CAMN	AC2,AC1				; AC2,CHN
+	JRST	L.88				; L.88
+	HLRZ	AC14,0(AC14)			; ENT,0(ENT)
+	JRST	L.87				; L.87
+L.88:	JUMPN	AC14,L.89			; ENT,L.89
+	MOVEI	AC1,P.AAS			; AC1,P.AAS
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.89:	MOVSI	AC1,1				; AC1,1
+	TDNE	AC1,1(AC14)			; AC1,1(ENT)
+	JRST	L.90				; L.90
+	HRRZ	AC1,1(AC14)			; R1,1(ENT)
+	JSYS	24				; 24
+	TLNN	AC2,1000			; R2,1000
+	JRST	L.91				; L.91
+L.90:	SETO	AC1,				; AC1,
+	JRST	L.92				; L.92
+L.91:	SETZ	AC1,				; AC1,
+L.92:	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  32 words
+
+
+;	  1480	
+;	  1481	GLOBAL ROUTINE DINWRT (AP,CNT): NOVALUE =	! Internal procedure Write
+;	  1482	
+;	  1483	!++
+;	  1484	! Functional description:
+;	  1485	!	Write the record in String2 to the output file in channel Integer1.
+;	  1486	!
+;	  1487	! Formal parameters:
+;	  1488	!	Usual for system procedure
+;	  1489	!
+;	  1490	! Implicit inputs:
+;	  1491	!	None
+;	  1492	!
+;	  1493	! Implicit outputs:
+;	  1494	!	Output file
+;	  1495	!
+;	  1496	! Routine value:
+;	  1497	!	None
+;	  1498	!
+;	  1499	! Side effects:
+;	  1500	!	None
+;	  1501	!
+;	  1502	!--
+;	  1503	
+;	  1504	    BEGIN
+;	  1505	    EXTERNAL REGISTER Z=0;
+;	  1506	    LOCAL
+;	  1507		CHN,			! Channel
+;	  1508		ENT: REF RCL_WRD,	! Channel list entry
+;	  1509		REC: STR_VAL,
+;	  1510		JFN;
+;	  1511	    IF .CNT NEQ 2 THEN ERROR('Bad arguments to $Write');
+;	  1512	    REC = PCEGOP(.(.AP+1),STE_TYP_STR);
+;	  1513	    CHN = PCEGOP(..AP, STE_TYP_INT);
+;	  1514	    ENT = .PCCURC[ECB_RCL];
+;	  1515	    WHILE .ENT NEQ 0 DO
+;	  1516		IF .ENT[RCL_CHN] EQL .CHN THEN EXITLOOP ELSE ENT = .ENT[RCL_NXT];
+;	  1517	    IF .ENT EQL 0 THEN ERROR('Channel not in use');
+;	  1518	    IF .ENT[RCL_OUT] EQL 0 THEN ERROR('File not open for output');
+;	  1519		BEGIN
+;	  1520		REGISTER
+;	  1521		    R1=1,R2=2,R3=3;
+;	  1522		R1 = .ENT[RCL_JFN];
+;	  1523		R2 = BYTPTR(.REC[STV_ADR]);
+;	  1524		R3 = -.REC[STV_LEN];
+;	  1525		JSYS(0,SOUT,R1,R2,R3);
+;	  1526		R2 = CH$PTR(UPLIT(%CHAR($CHCRT,$CHLFD)));
+;	  1527		R3 = -2;
+;	  1528		JSYS(0,SOUT,R1,R2,R3)
+;	  1529		END;
+;	  1530	    IF .(.AP) EQL OPN_TMP_STR THEN PCEFST(.REC)
+;	  1531	    END;
+
+
+P.AAT:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","W","r"		; o $Wr
+	BYTE	(7)"i","t","e",000,000		; ite
+P.AAU:	BYTE	(7)"C","h","a","n","n"		; Chann
+	BYTE	(7)"e","l"," ","n","o"		; el no
+	BYTE	(7)"t"," ","i","n"," "		; t in
+	BYTE	(7)"u","s","e",000,000		; use
+P.AAV:	BYTE	(7)"F","i","l","e"," "		; File
+	BYTE	(7)"n","o","t"," ","o"		; not o
+	BYTE	(7)"p","e","n"," ","f"		; pen f
+	BYTE	(7)"o","r"," ","o","u"		; or ou
+	BYTE	(7)"t","p","u","t",000		; tput
+P.AAW:	BYTE	(7)015,012,000,000,000
+
+
+U.33:
+DINWRT::PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC13,AC1			; AP,AC1
+	CAIN	AC2,2				; CNT,2
+	JRST	L.93				; L.93
+	MOVEI	AC1,P.AAT			; AC1,P.AAT
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.93:	MOVE	AC1,1(AC13)			; AC1,1(AP)
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC12,AC1			; REC,AC1
+	MOVE	AC1,0(AC13)			; AC1,0(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC2,PCCURC			; AC2,PCCURC
+	HLRZ	AC14,7(AC2)			; ENT,7(AC2)
+L.94:	JUMPE	AC14,L.95			; ENT,L.95
+	HRRZ	AC2,0(AC14)			; AC2,0(ENT)
+	CAMN	AC2,AC1				; AC2,CHN
+	JRST	L.95				; L.95
+	HLRZ	AC14,0(AC14)			; ENT,0(ENT)
+	JRST	L.94				; L.94
+L.95:	JUMPN	AC14,L.96			; ENT,L.96
+	MOVEI	AC1,P.AAU			; AC1,P.AAU
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.96:	LDB	AC1,C.7				; AC1,[POINT 1,1(AC14),17]  <18,1>
+	JUMPN	AC1,L.97			; AC1,L.97
+	MOVEI	AC1,P.AAV			; AC1,P.AAV
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.97:	HRRZ	AC1,1(AC14)			; R1,1(ENT)
+	MOVEI	AC2,0(AC12)			; HLF,0(REC)
+	HRLI	AC2,-337100			; HLF,-337100
+	HLRZ	AC4,AC12			; AC4,REC
+	MOVN	AC3,AC4				; R3,AC4
+	JSYS	53				; 53
+	MOVE	AC2,C.8				; R2,[POINT 7,P.AAW-1,34]  <1,7>
+	HRROI	AC3,-2				; R3,-2
+	JSYS	53				; 53
+	MOVEI	AC1,-100000			; AC1,-100000
+	CAME	AC1,0(AC13)			; AC1,0(AP)
+	JRST	L.98				; L.98
+	MOVE	AC1,AC12			; AC1,REC
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.98:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POPJ	SP,				; SP,
+C.8:	POINT	7,P.AAW-1,34			; 7,P.AAW-1,34
+
+; Routine Size:  49 words
+
+
+;	  1532	
+;	  1533	GLOBAL ROUTINE DINNFL =	! Internal integer procedure NextFile
+;	  1534	
+;	  1535	!++
+;	  1536	! Functional description:
+;	  1537	!	Steps parsed JFN list to next file, either through GNJFN of the
+;	  1538	!	current entry or by discarding it and moving to the next.
+;	  1539	!	Returns zero if there is no next file, 1 if there is.
+;	  1540	!
+;	  1541	! Formal parameters:
+;	  1542	!	None
+;	  1543	!
+;	  1544	! Implicit inputs:
+;	  1545	!	Parsed JFN list
+;	  1546	!
+;	  1547	! Implicit outputs:
+;	  1548	!	None
+;	  1549	!
+;	  1550	! Routine value:
+;	  1551	!	Nonzero if done, zero if no more files
+;	  1552	!
+;	  1553	! Side effects:
+;	  1554	!	None
+;	  1555	!
+;	  1556	!--
+;	  1557	
+;	  1558	    BEGIN
+;	  1559	    EXTERNAL REGISTER Z=0;
+;	  1560	    LOCAL
+;	  1561		ENT: REF JLS_WRD,	! Parsed JFN list
+;	  1562		JFN;			! JFN
+;	  1563	    ENT = .PCCURC[ECB_PFL];
+;	  1564	    IF .ENT EQL 0 THEN RETURN 0;
+;	  1565	    IF .ENT[JLS_WLD] eql 0      ! [fun24] Add directory list function to pcl
+;	  1566	    THEN
+;	  1567		BEGIN
+;	  1568		REGISTER
+;	  1569		    R1=1;
+;	  1570		R1 = .ENT[JLS_JFN];
+;	  1571		JSYS(1,RLJFN,R1);
+;	  1572		JFN = 0
+;	  1573		END
+;	  1574	    ELSE
+;	  1575		BEGIN
+;	  1576		REGISTER
+;	  1577		    R1=1;
+;	  1578		R1 = .ENT[JLS_JFN];
+;	  1579		IF NOT JSYS(1,GNJFN,R1) THEN JFN = 0 ELSE JFN = .ENT[JLS_JFN]
+;	  1580		END;
+;	  1581	    IF .JFN EQL 0
+;	  1582	    THEN
+;	  1583		BEGIN
+;	  1584		PCCURC[ECB_PFL] = .ENT[JLS_LNK];
+;	  1585		RETMEM(2, .ENT, XDICT)
+;	  1586		END;
+;	  1587	    IF .PCCURC[ECB_PFL] EQL 0 THEN 0 ELSE 1
+;	  1588	    END;
+
+
+U.34:
+DINNFL::MOVE	AC1,PCCURC			; AC1,PCCURC
+	HRRZ	AC2,10(AC1)			; ENT,10(AC1)
+	JUMPE	AC2,L.102			; ENT,L.102
+	MOVE	AC1,AC2				; AC1,ENT
+	ADDI	AC1,1				; AC1,1
+	LDB	AC3,C.9				; AC3,[POINT 1,0(ENT),0]  <35,1>
+	JUMPN	AC3,L.99			; AC3,L.99
+	MOVE	AC1,0(AC1)			; R1,0(AC1)
+	JSYS	23				; 23
+	JFCL					; 
+	JRST	L.100				; L.100
+L.99:	MOVE	AC1,0(AC1)			; R1,0(AC1)
+	JSYS	17				; 17
+L.100:	TDZA	AC1,AC1				; JFN,JFN
+	MOVE	AC1,1(AC2)			; JFN,1(ENT)
+	JUMPN	AC1,L.101			; JFN,L.101
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	MOVE	AC3,0(AC2)			; AC3,0(ENT)
+	HRRM	AC3,10(AC1)			; AC3,10(AC1)
+	MOVEI	AC1,2				; AC1,2
+	MOVEI	AC3,XDICT			; AC3,XDICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+L.101:	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HRRZ	AC2,10(AC1)			; AC2,10(AC1)
+	JUMPN	AC2,L.103			; AC2,L.103
+L.102:	TDZA	AC1,AC1				; AC1,AC1
+L.103:	MOVEI	AC1,1				; AC1,1
+	POPJ	SP,				; SP,
+C.9:	POINT	1,0(AC2),0			; 1,0(ENT),0
+
+; Routine Size:  29 words
+
+
+;	  1589	
+;	  1590	                                ! [fun24]+ add DirectoryList function to pcl
+;	  1591	GLOBAL ROUTINE DINNDL =         ! Internal integer procedure NextDirectory
+;	  1592	
+;	  1593	!++
+;	  1594	! Functional description:
+;	  1595	!	Steps parsed DIRECTORY list to next DIRECTORY, either through
+;	  1596	!       RCDIR of the  
+;	  1597	! 	current entry or by discarding it and moving to the next.
+;	  1598	!	Returns zero if there is no next directory, 1 if there is.
+;	  1599	!
+;	  1600	! Formal parameters:
+;	  1601	!	None
+;	  1602	!
+;	  1603	! Implicit inputs:
+;	  1604	!	Parsed directory list
+;	  1605	!
+;	  1606	! Implicit outputs:
+;	  1607	!	None
+;	  1608	!
+;	  1609	! Routine value:
+;	  1610	!	Nonzero if done, zero if no more directories.
+;	  1611	!
+;	  1612	! Side effects:
+;	  1613	!	None
+;	  1614	!
+;	  1615	!--
+;	  1616	
+;	  1617	    begin
+;	  1618	    external register z=0;
+;	  1619	    local
+;	  1620		ent: ref dls_wrd,	! parsed directory list
+;	  1621	        ptr,                    ! ptr to directory string
+;	  1622	        dir;                    ! directory number
+;	  1623	    ent = .pccurc[ecb_pdl];     ! get address of current ecb
+;	  1624	    if .ent eql 0 then return 0;
+;	  1625	    if .ent[dls_wld] eql 0      ! do we have wild carding ?
+;	  1626	    then
+;	  1627		begin                   ! NO wildcarding, so can't do anything
+;	  1628	        dir = 0;
+;	  1629		end
+;	  1630	    else
+;	  1631		begin                   ! YES wildcarding, try to get next
+;	  1632		register
+;	  1633		    r1=1, r2=2, r3=3;
+;	  1634		r1 = rc_stp + rc_awl;   ! stepping, wildcarding
+;	  1635	        r2 = bytptr (.ent[dls_str]);    ! pointer to directory string
+;	  1636	        r3 = .ent[dls_dir];     ! directory number
+;	  1637	        if not (if .ent[dls_usr] eql 0 
+;	  1638	                   then jsys (-1,rcdir,r1,r2,r3)
+;	  1639	                   else jsys (-1,rcusr,r1,r2,r3)) then
+;	  1640	           dir = 0
+;	  1641	        else                    ! Mind rcusr bug when stepping
+;	  1642	                                ! (if no wild card was used, loops on the
+;	  1643	                                ! same user instead of returning 0)
+;	  1644	           dir = (if .ent[dls_dir] eql .r3 then 0 else .r3);
+;	  1645	        if .dir neq 0 then begin
+;	  1646	           ent[dls_dir] = .dir;! store new directory number
+;	  1647	           end;
+;	  1648		end;
+;	  1649	    if .dir eql 0
+;	  1650	    then
+;	  1651		begin
+;	  1652		pccurc[ecb_pdl] = .ent[dls_lnk];        ! link to next chunk
+;	  1653	                                                ! in list
+;	  1654	        retmem (.ent[dls_len],.ent[dls_str], xdict);    ! release string
+;	  1655		retmem(dls_size, .ent, xdict); ! release chunk itself
+;	  1656		end;
+;	  1657	    if .pccurc[ecb_pdl] eql 0 then 0 else 1
+;	  1658	    end;
+
+
+U.35:
+DINNDL::PUSH	SP,AC14				; SP,AC14
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HLRZ	AC14,15(AC1)			; ENT,15(AC1)
+	JUMPE	AC14,L.110			; ENT,L.110
+	LDB	AC1,C.10			; AC1,[POINT 1,2(ENT),35]  <0,1>
+	JUMPN	AC1,L.104			; AC1,L.104
+	SETZ	AC4,				; DIR,
+	JRST	L.108				; L.108
+L.104:	MOVSI	AC1,6				; R1,6
+	HLRZ	AC2,0(AC14)			; HLF,0(ENT)
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC3,1(AC14)			; R3,1(ENT)
+	LDB	AC5,C.11			; AC5,[POINT 1,2(ENT),25]  <10,1>
+	JUMPN	AC5,L.105			; AC5,L.105
+	JSYS	553				; 553
+	JUMP	16,L.107			; 16,L.107
+	JRST	L.106				; L.106
+L.105:	JSYS	554				; 554
+	JUMP	16,L.107			; 16,L.107
+L.106:	CAMN	AC3,1(AC14)			; R3,1(ENT)
+L.107:	TDZA	AC4,AC4				; DIR,DIR
+	MOVE	AC4,AC3				; DIR,R3
+	JUMPE	AC4,L.108			; DIR,L.108
+	MOVEM	AC4,1(AC14)			; DIR,1(ENT)
+L.108:	JUMPN	AC4,L.109			; DIR,L.109
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	MOVE	AC2,0(AC14)			; AC2,0(ENT)
+	HRLM	AC2,15(AC1)			; AC2,15(AC1)
+	LDB	AC1,C.12			; AC1,[POINT 9,2(ENT),34]  <1,9>
+	HLRZ	AC2,0(AC14)			; AC2,0(ENT)
+	MOVEI	AC3,XDICT			; AC3,XDICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+	MOVEI	AC1,3				; AC1,3
+	MOVE	AC2,AC14			; AC2,ENT
+	MOVEI	AC3,XDICT			; AC3,XDICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+L.109:	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HLRZ	AC2,15(AC1)			; AC2,15(AC1)
+	JUMPN	AC2,L.111			; AC2,L.111
+L.110:	TDZA	AC1,AC1				; AC1,AC1
+L.111:	MOVEI	AC1,1				; AC1,1
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+C.10:	POINT	1,2(AC14),35			; 1,2(ENT),35
+C.11:	POINT	1,2(AC14),25			; 1,2(ENT),25
+C.12:	POINT	9,2(AC14),34			; 9,2(ENT),34
+
+; Routine Size:  46 words
+
+
+;	  1659	                                ! [fun24]- add DirectoryList function to pcl
+;	  1660	
+;	  1661	GLOBAL ROUTINE DINFII(AP,CNT) =	! Internal integer procedure FileInfo_I
+;	  1662	
+;	  1663	                                ! [fun49]+ Filenames in $fileinfo
+;	  1664	!++
+;	  1665	! Functional description:
+;	  1666	!       int = $fileinfo_i (fil,cod)
+;	  1667	!	Return the datum regarding fil which is indexed by
+;	  1668	!	cod (fdb index).  Fil is the channel number, or -1 for the
+;	  1669	!	currently parsed file, or a string with the filename.
+;	  1670	!
+;	  1671	! Formal parameters:
+;	  1672	!	Usual for system procedure
+;	  1673	!
+;	  1674	! Implicit inputs:
+;	  1675	!	File
+;	  1676	!
+;	  1677	! Implicit outputs:
+;	  1678	!	None
+;	  1679	!
+;	  1680	! Routine value:
+;	  1681	!	Datum
+;	  1682	!
+;	  1683	! Side effects:
+;	  1684	!	None
+;	  1685	!
+;	  1686	!--
+;	  1687	
+;	  1688	    BEGIN
+;	  1689	    EXTERNAL REGISTER Z=0;
+;	  1690	    LOCAL
+;	  1691		COD,			! Datum index
+;	  1692		CHN,			! Channel
+;	  1693	        chn_typ,                ! Channel argument type
+;	  1694	        jfn_tmp,                ! 1 if temp jfn name
+;	  1695	        info,                   ! info returned
+;	  1696		JFN;			! JFN
+;	  1697	    IF .CNT NEQ 2 THEN ERROR('Bad arguments to $FileInfo_I');
+;	  1698	    COD = PCEGOP(.(.AP+1), STE_TYP_INT);
+;	  1699	    chn = pcegop(..ap, ste_typ_any;  chn_typ);
+;	  1700	    jfn = diujfn (.chn, .chn_typ ; jfn_tmp);
+;	  1701	    CASE .COD FROM $FBCTL TO $FBSS2 OF  ! [FUN30]
+;	  1702		SET
+;	  1703	[$fbctl,$fbadr to $fbcre, $fbgen, $fbbyv to $fbbk0, $fbbbt to $fbusw,
+;	  1704	 $fbtdt to $fbss2]:
+;	  1705		BEGIN
+;	  1706		! Get word from FDB
+;	  1707		LOCAL
+;	  1708		    DATUM;
+;	  1709		REGISTER
+;	  1710		    R1=1,R2=2,R3=3;
+;	  1711		R1 = .JFN;
+;	  1712		R2 = .COD + 1^18;
+;	  1713		R3 = DATUM;
+;	  1714		info = (IF NOT JSYS(-1,GTFDB,R1,R2,R3) THEN 0 ELSE .DATUM);
+;	  1715		END;
+;	  1716	[INRANGE,OUTRANGE]:             ! [FUN30]
+;	  1717		ERROR('Invalid code in $FileInfo_I');
+;	  1718		TES;
+;	  1719	
+;	  1720	    if .jfn_tmp then begin       ! Release jfn and string
+;	  1721	       begin
+;	  1722	          register r1=1;
+;	  1723	          r1 = .jfn;
+;	  1724	          jsys (-1, rljfn, r1);
+;	  1725	          end;
+;	  1726	       if .(.ap) eql opn_tmp_str then pcefst(.chn);
+;	  1727	       end;
+;	  1728	    .info
+;	  1729	                                ! [fun49]-
+;	  1730	    END;
+
+
+P.AAX:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","F","i"		; o $Fi
+	BYTE	(7)"l","e","I","n","f"		; leInf
+	BYTE	(7)"o","_","I",000,000		; o_I
+P.AAY:	BYTE	(7)"I","n","v","a","l"		; Inval
+	BYTE	(7)"i","d"," ","c","o"		; id co
+	BYTE	(7)"d","e"," ","i","n"		; de in
+	BYTE	(7)" ","$","F","i","l"		;  $Fil
+	BYTE	(7)"e","I","n","f","o"		; eInfo
+	BYTE	(7)"_","I",000,000,000		; _I
+
+
+U.36:
+DINFII::PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,1				; SP,1
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,2				; CNT,2
+	JRST	L.112				; L.112
+	MOVEI	AC1,P.AAX			; AC1,P.AAX
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.112:	MOVE	AC1,1(AC14)			; AC1,1(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC13,AC1			; COD,AC1
+	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	MOVEI	AC2,2				; AC2,2
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC10,AC1			; CHN,AC1
+	PUSHJ	SP,U.44				; SP,DIUJFN
+	MOVE	AC12,AC1			; JFN,AC1
+	MOVE	AC11,AC2			; AC11,AC2
+	MOVE	AC1,AC13			; AC1,COD
+	SOJL	AC1,L.114			; AC1,L.114
+	CAIGE	AC1,36				; AC1,36
+	JRST	L.113(AC1)			; L.113(AC1)
+	JRST	L.114				; L.114
+L.113:	JRST	L.115				; L.115
+	JRST	L.114				; L.114
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.114				; L.114
+	JRST	L.115				; L.115
+	JRST	L.114				; L.114
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.114				; L.114
+	JRST	L.114				; L.114
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.114				; L.114
+	JRST	L.114				; L.114
+	JRST	L.114				; L.114
+	JRST	L.114				; L.114
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+	JRST	L.115				; L.115
+L.114:	MOVEI	AC1,P.AAY			; AC1,P.AAY
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+	JRST	L.118				; L.118
+L.115:	MOVE	AC1,AC12			; R1,JFN
+	MOVE	AC2,AC13			; R2,COD
+	ADD	AC2,C.13			; R2,[1000000]
+	MOVEI	AC3,0(SP)			; R3,DATUM
+	JSYS	63				; 63
+	JUMP	16,L.116			; 16,L.116
+	JRST	L.117				; L.117
+L.116:	TDZA	AC13,AC13			; INFO,INFO
+L.117:	MOVE	AC13,0(SP)			; INFO,DATUM
+L.118:	TRNN	AC11,1				; JFN_TMP,1
+	JRST	L.120				; L.120
+	MOVE	AC1,AC12			; R1,JFN
+	JSYS	23				; 23
+	JUMP	16,L.119			; 16,L.119
+L.119:	MOVEI	AC1,-100000			; AC1,-100000
+	CAME	AC1,0(AC14)			; AC1,0(AP)
+	JRST	L.120				; L.120
+	MOVE	AC1,AC10			; AC1,CHN
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.120:	MOVE	AC1,AC13			; AC1,INFO
+	ADJSP	SP,-1				; SP,-1
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+C.13:	EXP	1000000				; 1000000
+
+; Routine Size:  88 words
+
+
+;	  1731	
+;	  1732	GLOBAL ROUTINE DIUJFN (CHN,CHN_TYP ; JFN_TMP) : EXEC1  =
+;	  1733	
+;	  1734	!++
+;	  1735	! Functional description:
+;	  1736	! Get a jfn from either a channel number, $parse (filelist) , or
+;	  1737	! file name in a string.
+;	  1738	!
+;	  1739	! Input Formals:
+;	  1740	! Channel number OR $parse or string value of file name
+;	  1741	! Type of 1st arg: ste_typ_int or _str or _any
+;	  1742	!
+;	  1743	! Output Formals:
+;	  1744	! true if gotten jfn from string argument, else false
+;	  1745	!
+;	  1746	! Implicit inputs:
+;	  1747	! filelist
+;	  1748	!
+;	  1749	! Implicit outputs:
+;	  1750	! none
+;	  1751	!
+;	  1752	! Routine Value:
+;	  1753	! jfn
+;	  1754	!
+;	  1755	! Side effects:
+;	  1756	! none
+;	  1757	!
+;	  1758	!--
+;	  1759	
+;	  1760	begin
+;	  1761	external register z=0;
+;	  1762	local
+;	  1763	   jfn;                         ! Jfn to return
+;	  1764	
+;	  1765	jfn = 0;
+;	  1766	if .chn_typ eql ste_typ_int then begin
+;	  1767	    if .chn lss 0 then begin
+;	  1768		local
+;	  1769		    lst: ref jls_wrd,	! parsed jfn list
+;	  1770		    hlf: hlf_wrd;
+;	  1771		lst = .pccurc[ecb_pfl];
+;	  1772		if .lst neq 0 then begin
+;	  1773	            hlf = .lst[jls_jfn];
+;	  1774	            jfn = .hlf[hlf_rgt]
+;	  1775	            end
+;	  1776		end
+;	  1777	    else begin
+;	  1778		local
+;	  1779		    ent: ref rcl_wrd;
+;	  1780		ent = .pccurc[ecb_rcl];
+;	  1781		while .ent neq 0 do
+;	  1782		    if .ent[rcl_chn] eql .chn then exitloop else ent = .ent[rcl_nxt];
+;	  1783		if .ent neq 0 then jfn = .ent[rcl_jfn]
+;	  1784		end;
+;	  1785	   if .jfn eql 0 then error('Requested file channel not in use');
+;	  1786	   jfn_tmp = false;
+;	  1787	   end
+;	  1788	else begin                      ! NB ste_typ_any is treated as string
+;	  1789	                                ! !!! This will be cured some day
+;	  1790	   local
+;	  1791	      ok,
+;	  1792	      str: str_val;
+;	  1793	   register r1=1, r2=2;
+;	  1794	   str = .chn;
+;	  1795	   r1 = gj_sht + gj_old;
+;	  1796	   r2 = bytptr (.str[stv_adr]);
+;	  1797	   ok = jsys (-1, gtjfn, r1,r2);
+;	  1798	   jfn = .r1;
+;	  1799	   if not .ok then 
+;	  1800	      error ('Requested file does not exist');
+;	  1801	   jfn_tmp = true;
+;	  1802	   end;
+;	  1803	
+;	  1804	.jfn
+;	  1805	
+;	  1806	end;
+
+
+P.AAZ:	BYTE	(7)"R","e","q","u","e"		; Reque
+	BYTE	(7)"s","t","e","d"," "		; sted
+	BYTE	(7)"f","i","l","e"," "		; file
+	BYTE	(7)"c","h","a","n","n"		; chann
+	BYTE	(7)"e","l"," ","n","o"		; el no
+	BYTE	(7)"t"," ","i","n"," "		; t in
+	BYTE	(7)"u","s","e",000,000		; use
+P.ABA:	BYTE	(7)"R","e","q","u","e"		; Reque
+	BYTE	(7)"s","t","e","d"," "		; sted
+	BYTE	(7)"f","i","l","e"," "		; file
+	BYTE	(7)"d","o","e","s"," "		; does
+	BYTE	(7)"n","o","t"," ","e"		; not e
+	BYTE	(7)"x","i","s","t",000		; xist
+
+
+U.44:
+DIUJFN::PUSH	SP,AC14				; SP,AC14
+	SETZ	AC14,				; JFN,
+	JUMPN	AC2,L.126			; CHN_TYP,L.126
+	MOVE	AC2,PCCURC			; AC2,PCCURC
+	JUMPGE	AC1,L.121			; CHN,L.121
+	HRRZ	AC2,10(AC2)			; LST,10(AC2)
+	JUMPE	AC2,L.124			; LST,L.124
+	MOVE	AC2,1(AC2)			; HLF,1(LST)
+	MOVEI	AC14,0(AC2)			; JFN,0(HLF)
+	JRST	L.124				; L.124
+L.121:	HLRZ	AC2,7(AC2)			; ENT,7(AC2)
+L.122:	JUMPE	AC2,L.124			; ENT,L.124
+	HRRZ	AC3,0(AC2)			; AC3,0(ENT)
+	CAMN	AC3,AC1				; AC3,CHN
+	JRST	L.123				; L.123
+	HLRZ	AC2,0(AC2)			; ENT,0(ENT)
+	JRST	L.122				; L.122
+L.123:	JUMPE	AC2,L.124			; ENT,L.124
+	HRRZ	AC14,1(AC2)			; JFN,1(ENT)
+L.124:	JUMPN	AC14,L.125			; JFN,L.125
+	MOVEI	AC1,P.AAZ			; AC1,P.AAZ
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.125:	SETZ	AC2,				; JFN_TMP,
+	JRST	L.129				; L.129
+L.126:	MOVE	AC2,AC1				; STR,CHN
+	MOVSI	AC1,100001			; R1,100001
+	MOVEI	AC2,0(AC2)			; HLF,0(STR)
+	HRLI	AC2,-337100			; HLF,-337100
+	SETZ	AC3,				; AC3,
+	JSYS	20				; 20
+	JUMP	16,L.127			; 16,L.127
+	MOVEI	AC3,1				; AC3,1
+L.127:	MOVE	AC2,AC3				; OK,AC3
+	MOVE	AC14,AC1			; JFN,R1
+	TRNE	AC2,1				; OK,1
+	JRST	L.128				; L.128
+	MOVEI	AC1,P.ABA			; AC1,P.ABA
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.128:	SETO	AC2,				; JFN_TMP,
+L.129:	MOVE	AC1,AC14			; AC1,JFN
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  42 words
+
+
+;	  1807	
+;	  1808	
+;	  1809	                                ! [fun49] Improve $fileinfo_s
+;	  1810	GLOBAL ROUTINE DINFIS(AP,CNT) =	! Internal string procedure $FileInfo_S
+;	  1811	
+;	  1812	!++
+;	  1813	! Functional description:
+;	  1814	!       str = $fileinfo_s(fil,cod [,fmt])
+;	  1815	! returns the file info selected by cod.
+;	  1816	! Fil is either a channel number, -1 for currently parsed file,
+;	  1817	! or a string with the file name.
+;	  1818	! cod is either:
+;	  1819	!   $fbaut -> author string  }
+;	  1820	!   $fblwr -> last writer    } from fdb information
+;	  1821	!   $fbact -> account string }
+;	  1822	!   -1 says that third argument holds jfns format bits
+;	  1823	!   Number>64 gives in second argument the format bits [!!!OBSOLETE]
+;	  1824	!   1 for $fbaut, or 2 for $fblwr or 3 for $fbact [!!!OBSOLETE]
+;	  1825	!
+;	  1826	! Formal parameters:
+;	  1827	!	Usual for system procedure
+;	  1828	!
+;	  1829	! Implicit inputs:
+;	  1830	!	File
+;	  1831	!
+;	  1832	! Implicit outputs:
+;	  1833	!	None
+;	  1834	!
+;	  1835	! Routine value:
+;	  1836	!	Stringvalue of datum
+;	  1837	!
+;	  1838	! Side effects:
+;	  1839	!	None
+;	  1840	!
+;	  1841	!--
+;	  1842	
+;	  1843	    BEGIN
+;	  1844	    EXTERNAL REGISTER Z=0;
+;	  1845	    LOCAL
+;	  1846	                                ! [fun49]x fil not needed
+;	  1847	        fmt,                    ! format bits
+;	  1848		COD;			! Datum index
+;	  1849	    if .cnt eql 3 then begin
+;	  1850	       fmt = pcegop (.(.ap+2), ste_typ_int);
+;	  1851	       if pcegop(.(.ap+1),ste_typ_int) neq -1 then
+;	  1852	          error ('Invalid code in $FileInfo_s');
+;	  1853	       cod = 4;
+;	  1854	       end
+;	  1855	    else if .cnt eql 2 then begin
+;	  1856	       fmt = 0;
+;	  1857	       cod = pcegop(.(.ap+1), ste_typ_int);
+;	  1858	       end
+;	  1859	    else error ('Bad arguments to $fileinfo_s');
+;	  1860	                             ! Deal with obsolete fmt+64 format
+;	  1861	    if .cod gtr 64 then begin
+;	  1862	       fmt = .cod - 64;
+;	  1863	       cod = 4;
+;	  1864	       end;
+;	  1865	    selectone .cod of set
+;	  1866	    [$fbaut]: cod = 1;          ! Symbolic form
+;	  1867	    [$fblwr]: cod = 2;
+;	  1868	    [$fbact]: cod = 3;
+;	  1869	    [-1]: begin
+;	  1870	       if .cnt neq 3 then error ('Format bits missing in $fileinfo_s');
+;	  1871	       cod = 4;   
+;	  1872	       end;
+;	  1873	    [1 to 4]: ;                 ! "cod" itself [obsolete]
+;	  1874	    [OTHERWISE]: error ('Invalid Code in $FileInfo_S');
+;	  1875	       TES;
+;	  1876	
+;	  1877	   dinjfn(.(.ap), .cod, .fmt)
+;	  1878	
+;	  1879	                                ! [fun49]-
+;	  1880	    END;
+
+
+P.ABB:	BYTE	(7)"I","n","v","a","l"		; Inval
+	BYTE	(7)"i","d"," ","c","o"		; id co
+	BYTE	(7)"d","e"," ","i","n"		; de in
+	BYTE	(7)" ","$","F","i","l"		;  $Fil
+	BYTE	(7)"e","I","n","f","o"		; eInfo
+	BYTE	(7)"_","s",000,000,000		; _s
+P.ABC:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t","s"," ","t"		; nts t
+	BYTE	(7)"o"," ","$","f","i"		; o $fi
+	BYTE	(7)"l","e","i","n","f"		; leinf
+	BYTE	(7)"o","_","s",000,000		; o_s
+P.ABD:	BYTE	(7)"F","o","r","m","a"		; Forma
+	BYTE	(7)"t"," ","b","i","t"		; t bit
+	BYTE	(7)"s"," ","m","i","s"		; s mis
+	BYTE	(7)"s","i","n","g"," "		; sing
+	BYTE	(7)"i","n"," ","$","f"		; in $f
+	BYTE	(7)"i","l","e","i","n"		; ilein
+	BYTE	(7)"f","o","_","s",000		; fo_s
+P.ABE:	BYTE	(7)"I","n","v","a","l"		; Inval
+	BYTE	(7)"i","d"," ","C","o"		; id Co
+	BYTE	(7)"d","e"," ","i","n"		; de in
+	BYTE	(7)" ","$","F","i","l"		;  $Fil
+	BYTE	(7)"e","I","n","f","o"		; eInfo
+	BYTE	(7)"_","S",000,000,000		; _S
+
+
+U.37:
+DINFIS::PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC12,AC2			; CNT,AC2
+	MOVE	AC14,AC1			; AP,AC1
+	CAIE	AC12,3				; CNT,3
+	JRST	L.131				; L.131
+	MOVE	AC1,2(AC14)			; AC1,2(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC11,AC1			; FMT,AC1
+	MOVE	AC1,1(AC14)			; AC1,1(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	CAMN	AC1,C.14			; AC1,[-1]
+	JRST	L.130				; L.130
+	MOVEI	AC1,P.ABB			; AC1,P.ABB
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.130:	MOVEI	AC13,4				; COD,4
+	JRST	L.133				; L.133
+L.131:	CAIE	AC12,2				; CNT,2
+	JRST	L.132				; L.132
+	SETZ	AC11,				; FMT,
+	MOVE	AC1,1(AC14)			; AC1,1(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC13,AC1			; COD,AC1
+	JRST	L.133				; L.133
+L.132:	MOVEI	AC1,P.ABC			; AC1,P.ABC
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.133:	CAIG	AC13,100			; COD,100
+	JRST	L.134				; L.134
+	MOVE	AC11,AC13			; FMT,COD
+	SUBI	AC11,100			; FMT,100
+	MOVEI	AC13,4				; COD,4
+L.134:	CAIE	AC13,6				; COD,6
+	JRST	L.135				; L.135
+	MOVEI	AC13,1				; COD,1
+	JRST	L.141				; L.141
+L.135:	CAIE	AC13,30				; COD,30
+	JRST	L.136				; L.136
+	MOVEI	AC13,2				; COD,2
+	JRST	L.141				; L.141
+L.136:	CAIE	AC13,10				; COD,10
+	JRST	L.137				; L.137
+	MOVEI	AC13,3				; COD,3
+	JRST	L.141				; L.141
+L.137:	CAME	AC13,C.14			; COD,[-1]
+	JRST	L.139				; L.139
+	CAIN	AC12,3				; CNT,3
+	JRST	L.138				; L.138
+	MOVEI	AC1,P.ABD			; AC1,P.ABD
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.138:	MOVEI	AC13,4				; COD,4
+	JRST	L.141				; L.141
+L.139:	JUMPLE	AC13,L.140			; COD,L.140
+	CAIG	AC13,4				; COD,4
+	JRST	L.141				; L.141
+L.140:	MOVEI	AC1,P.ABE			; AC1,P.ABE
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.141:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	MOVE	AC2,AC13			; AC2,COD
+	MOVE	AC3,AC11			; AC3,FMT
+	PUSHJ	SP,U.43				; SP,DINJFN
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POPJ	SP,				; SP,
+C.14:	EXP	-1				; -1
+
+; Routine Size:  71 words
+
+
+;	  1881	
+;	  1882	GLOBAL ROUTINE DINFDV(AP,CNT) =	! Internal string procedure $File_Dev
+;	  1883	
+;	  1884	!++
+;	  1885	! Functional description:
+;	  1886	!       str = $file_dev(fil) returns the file device of fil.
+;	  1887	! Fil is either a channel number, -1 for currently parsed file,
+;	  1888	! or a string with the file name.
+;	  1889	!
+;	  1890	! Formal parameters:
+;	  1891	!	Usual for system procedure
+;	  1892	!
+;	  1893	! Implicit inputs:
+;	  1894	!	File
+;	  1895	!
+;	  1896	! Implicit outputs:
+;	  1897	!	None
+;	  1898	!
+;	  1899	! Routine value:
+;	  1900	!	Stringvalue of datum
+;	  1901	!
+;	  1902	! Side effects:
+;	  1903	!	None
+;	  1904	!
+;	  1905	!--
+;	  1906	
+;	  1907	    BEGIN
+;	  1908	    EXTERNAL REGISTER Z=0;
+;	  1909	                                ! [fun49]x fil not needed
+;	  1910	    IF .CNT NEQ 1 THEN ERROR('Bad argument to $File_Dev');
+;	  1911	                                ! [fun49]: Filename in $fileinfo
+;	  1912	    DINJFN(.(.ap), 4, FLD($JSAOF,JS_DEV) )
+;	  1913	    END;
+
+
+P.ABF:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t"," ","t","o"		; nt to
+	BYTE	(7)" ","$","F","i","l"		;  $Fil
+	BYTE	(7)"e","_","D","e","v"		; e_Dev
+	BYTE	(7)000,000,000,000,000
+
+
+U.38:
+DINFDV::PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,1				; CNT,1
+	JRST	L.142				; L.142
+	MOVEI	AC1,P.ABF			; AC1,P.ABF
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.142:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	MOVEI	AC2,4				; AC2,4
+	MOVSI	AC3,100000			; AC3,100000
+	PUSHJ	SP,U.43				; SP,DINJFN
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  12 words
+
+
+;	  1914	
+;	  1915	GLOBAL ROUTINE DINFDR(AP,CNT) =	! Internal string procedure $File_Dir
+;	  1916	
+;	  1917	!++
+;	  1918	! Functional description:
+;	  1919	!       str = $file_dir(fil) returns the file directory of fil.
+;	  1920	! Fil is either a channel number, -1 for currently parsed file,
+;	  1921	! or a string with the file name.
+;	  1922	!
+;	  1923	! Formal parameters:
+;	  1924	!	Usual for system procedure
+;	  1925	!
+;	  1926	! Implicit inputs:
+;	  1927	!	File
+;	  1928	!
+;	  1929	! Implicit outputs:
+;	  1930	!	None
+;	  1931	!
+;	  1932	! Routine value:
+;	  1933	!	Stringvalue of datum
+;	  1934	!
+;	  1935	! Side effects:
+;	  1936	!	None
+;	  1937	!
+;	  1938	!--
+;	  1939	
+;	  1940	    BEGIN
+;	  1941	    EXTERNAL REGISTER Z=0;
+;	  1942	                                ! [fun49]x fil not needed
+;	  1943	    IF .CNT NEQ 1 THEN ERROR('Bad argument to $File_Dev');
+;	  1944	                                ! [fun49]: Filename in $fileinfo
+;	  1945	    DINJFN(.(.ap), 4, FLD($JSAOF,JS_DIR) )
+;	  1946	    END;
+
+
+P.ABG:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t"," ","t","o"		; nt to
+	BYTE	(7)" ","$","F","i","l"		;  $Fil
+	BYTE	(7)"e","_","D","e","v"		; e_Dev
+	BYTE	(7)000,000,000,000,000
+
+
+U.39:
+DINFDR::PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,1				; CNT,1
+	JRST	L.143				; L.143
+	MOVEI	AC1,P.ABG			; AC1,P.ABG
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.143:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	MOVEI	AC2,4				; AC2,4
+	MOVSI	AC3,10000			; AC3,10000
+	PUSHJ	SP,U.43				; SP,DINJFN
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  12 words
+
+
+;	  1947	
+;	  1948	                                ! [fun49]+ $file_gen
+;	  1949	GLOBAL ROUTINE DINFGN(AP,CNT) =	! Internal string procedure $File_Gen
+;	  1950	
+;	  1951	!++
+;	  1952	! Functional description:
+;	  1953	!       str = $file_gen(fil) returns the file generation of fil.
+;	  1954	! Fil is either a channel number, -1 for currently parsed file,
+;	  1955	! or a string with the file name.
+;	  1956	!
+;	  1957	! Formal parameters:
+;	  1958	!	Usual for system procedure
+;	  1959	!
+;	  1960	! Implicit inputs:
+;	  1961	!	File
+;	  1962	!
+;	  1963	! Implicit outputs:
+;	  1964	!	None
+;	  1965	!
+;	  1966	! Routine value:
+;	  1967	!	Stringvalue of datum
+;	  1968	!
+;	  1969	! Side effects:
+;	  1970	!	None
+;	  1971	!
+;	  1972	!--
+;	  1973	
+;	  1974	    BEGIN
+;	  1975	    EXTERNAL REGISTER Z=0;
+;	  1976	    IF .CNT NEQ 1 THEN ERROR('Bad argument to $File_Dev');
+;	  1977	    DINJFN(.(.ap), 4, FLD($JSAOF,JS_GEN) )
+;	  1978	    END;
+
+
+P.ABH:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t"," ","t","o"		; nt to
+	BYTE	(7)" ","$","F","i","l"		;  $Fil
+	BYTE	(7)"e","_","D","e","v"		; e_Dev
+	BYTE	(7)000,000,000,000,000
+
+
+U.42:
+DINFGN::PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,1				; CNT,1
+	JRST	L.144				; L.144
+	MOVEI	AC1,P.ABH			; AC1,P.ABH
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.144:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	MOVEI	AC2,4				; AC2,4
+	MOVSI	AC3,10				; AC3,10
+	PUSHJ	SP,U.43				; SP,DINJFN
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  12 words
+
+
+;	  1979	                                ! [fun49]-
+;	  1980	                                ! [fun24]+ add DirectoryList function to pcl
+;	  1981	
+;	  1982	global routine dindir (ap,cnt) =        ! string procedure $directory
+;	  1983	
+;	  1984	!++
+;	  1985	! Functional description
+;	  1986	!       Returns the directory string corresponding to the last
+;	  1987	! directory parsed by either DIRECTORY of USER or DIRECTORYLIST.
+;	  1988	!
+;	  1989	! Formal parameters
+;	  1990	!       Usual for system procedure
+;	  1991	! Implicit inputs
+;	  1992	!       Directory list
+;	  1993	! Implicit outputs
+;	  1994	!       none
+;	  1995	! Routine value
+;	  1996	!       string value of directory name
+;	  1997	! Side effects
+;	  1998	!       none
+;	  1999	!--
+;	  2000	
+;	  2001	   begin
+;	  2002	   external register z=0;
+;	  2003	   local
+;	  2004	      lst : ref dls_wrd;        ! directory list pointer
+;	  2005	
+;	  2006	   lst = .pccurc[ecb_pdl];      ! get pointer to list
+;	  2007	   if .lst eql 0 then
+;	  2008	      0                         ! NO LIST
+;	  2009	   else begin
+;	  2010	      register
+;	  2011	         r1=1,r2=2;             ! [fun24-1] Bug in register allocation !!
+;	  2012	      r1 = .csbufp;             ! point to exec provided string space
+;	  2013	      r2 = .lst[dls_dir];       ! get directory/user number
+;	  2014	      if not jsys(1,dirst,r1,r2) then
+;	  2015	         0                      ! DIRST fails for one or the other reason
+;	  2016	      else begin
+;	  2017	         local
+;	  2018	            ptr,len,
+;	  2019	            val : str_val;      ! String value
+;	  2020	         ptr = .r1;             ! return string to caller
+;	  2021	         len = subbp (.ptr, .csbufp);
+;	  2022	         val = pceast (.len);   ! cons a string space
+;	  2023	         ch$copy (.len, .csbufp, $chnul, .len+1,
+;	  2024	                  bytptr(.val[stv_adr]));
+;	  2025	         .val
+;	  2026	         end
+;	  2027	      end
+;	  2028	   end;
+
+
+U.45:
+DINDIR::PUSH	SP,AC14				; SP,AC14
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HLRZ	AC2,15(AC1)			; LST,15(AC1)
+	JUMPE	AC2,L.145			; LST,L.145
+	MOVE	AC1,CSBUFP			; R1,CSBUFP
+	MOVE	AC2,1(AC2)			; R2,1(LST)
+	JSYS	41				; 41
+	JRST	L.145				; L.145
+	JRST	L.146				; L.146
+L.145:	SETZ	AC1,				; AC1,
+	JRST	L.147				; L.147
+L.146:	MOVE	AC2,CSBUFP			; AC2,CSBUFP
+	PUSHJ	SP,SUBBP			; SP,SUBBP
+	MOVE	AC14,AC1			; LEN,AC1
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; VAL,AC1
+	MOVE	AC3,AC14			; AC3,LEN
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(VAL)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC14			; AC1,LEN
+	MOVE	AC2,CSBUFP			; AC2,CSBUFP
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.2				; AC1,C.2
+	JFCL					; 
+	MOVE	AC1,AC16			; AC1,VAL
+L.147:	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  28 words
+
+
+;	  2029	                                ! [fun24]- add DirectoryList function to pcl
+;	  2030	
+;	  2031	GLOBAL ROUTINE DINFNM(AP,CNT) =	! Internal string procedure $File_Nam
+;	  2032	
+;	  2033	!++
+;	  2034	! Functional description:
+;	  2035	!       str = $file_nam(fil) returns the file name of fil.
+;	  2036	! Fil is either a channel number, -1 for currently parsed file,
+;	  2037	! or a string with the file name.
+;	  2038	!
+;	  2039	! Formal parameters:
+;	  2040	!	Usual for system procedure
+;	  2041	!
+;	  2042	! Implicit inputs:
+;	  2043	!	File
+;	  2044	!
+;	  2045	! Implicit outputs:
+;	  2046	!	None
+;	  2047	!
+;	  2048	! Routine value:
+;	  2049	!	Stringvalue of datum
+;	  2050	!
+;	  2051	! Side effects:
+;	  2052	!	None
+;	  2053	!
+;	  2054	!--
+;	  2055	
+;	  2056	    BEGIN
+;	  2057	    EXTERNAL REGISTER Z=0;
+;	  2058	                                ! [fun49]x fil not needed
+;	  2059	    IF .CNT NEQ 1 THEN ERROR('Bad argument to $File_Dev');
+;	  2060	                                ! [fun49]: Filename in $fileinfo
+;	  2061	    DINJFN(.(.ap), 4, FLD($JSAOF,JS_NAM) )
+;	  2062	    END;
+
+
+P.ABI:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t"," ","t","o"		; nt to
+	BYTE	(7)" ","$","F","i","l"		;  $Fil
+	BYTE	(7)"e","_","D","e","v"		; e_Dev
+	BYTE	(7)000,000,000,000,000
+
+
+U.40:
+DINFNM::PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,1				; CNT,1
+	JRST	L.148				; L.148
+	MOVEI	AC1,P.ABI			; AC1,P.ABI
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.148:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	MOVEI	AC2,4				; AC2,4
+	MOVSI	AC3,1000			; AC3,1000
+	PUSHJ	SP,U.43				; SP,DINJFN
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  12 words
+
+
+;	  2063	
+;	  2064	GLOBAL ROUTINE DINFTY(AP,CNT) =	! Internal string procedure $File_Typ
+;	  2065	
+;	  2066	!++
+;	  2067	! Functional description:
+;	  2068	!       str = $file_typ(fil) returns the file type of fil.
+;	  2069	! Fil is either a channel number, -1 for currently parsed file,
+;	  2070	! or a string with the file name.
+;	  2071	!
+;	  2072	!	Returns the file type of file Integer1.  The file index is
+;	  2073	!	the channel number, or -1 for the currently parsed file.
+;	  2074	!
+;	  2075	! Formal parameters:
+;	  2076	!	Usual for system procedure
+;	  2077	!
+;	  2078	! Implicit inputs:
+;	  2079	!	File
+;	  2080	!
+;	  2081	! Implicit outputs:
+;	  2082	!	None
+;	  2083	!
+;	  2084	! Routine value:
+;	  2085	!	Stringvalue of datum
+;	  2086	!
+;	  2087	! Side effects:
+;	  2088	!	None
+;	  2089	!
+;	  2090	!--
+;	  2091	
+;	  2092	    BEGIN
+;	  2093	    EXTERNAL REGISTER Z=0;
+;	  2094	                                ! [fun49]x fil not needed
+;	  2095	    IF .CNT NEQ 1 THEN ERROR('Bad argument to $File_Dev');
+;	  2096	                                ! [fun49]: Filename in $fileinfo
+;	  2097	    DINJFN(.(.ap), 4, FLD($JSAOF,JS_TYP) )
+;	  2098	    END;
+
+
+P.ABJ:	BYTE	(7)"B","a","d"," ","a"		; Bad a
+	BYTE	(7)"r","g","u","m","e"		; rgume
+	BYTE	(7)"n","t"," ","t","o"		; nt to
+	BYTE	(7)" ","$","F","i","l"		;  $Fil
+	BYTE	(7)"e","_","D","e","v"		; e_Dev
+	BYTE	(7)000,000,000,000,000
+
+
+U.41:
+DINFTY::PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; AP,AC1
+	CAIN	AC2,1				; CNT,1
+	JRST	L.149				; L.149
+	MOVEI	AC1,P.ABJ			; AC1,P.ABJ
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.149:	MOVE	AC1,0(AC14)			; AC1,0(AP)
+	MOVEI	AC2,4				; AC2,4
+	MOVSI	AC3,100				; AC3,100
+	PUSHJ	SP,U.43				; SP,DINJFN
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  12 words
+
+
+;	  2099	
+;	  2100	routine dinjfn (aparg, cod, fmt) =	! Common JFNS routine
+;	  2101	                                ! [fun49]+ Improve $fileinfo_s and related
+;	  2102	!++
+;	  2103	! Functional description:
+;	  2104	!	Returns the requested datum regarding the given file.
+;	  2105	!
+;	  2106	! Formal parameters:
+;	  2107	! System proc arg ptr to file index: Channel number, or -1 for the currently
+;	  2108	!   parsed file, or string value to file name.
+;	  2109	!   !!! Mind this requests that caller system procs ALWAYS have the
+;	  2110	!   !!! file name as first argument, so that the pcegop for it is done
+;	  2111	!   !!! last as required.
+;	  2112	! Cod of info requested:
+;	  2113	!   1 = author, 2 = lastwriter, 3 = account
+;	  2114	!   4 = jfns, fmt bits in fmt
+;	  2115	! Format bits for jfns
+;	  2116	!
+;	  2117	! Datum code
+;	  2118	!
+;	  2119	! Implicit inputs:
+;	  2120	!	File
+;	  2121	!
+;	  2122	! Implicit outputs:
+;	  2123	!	None
+;	  2124	!
+;	  2125	! Routine value:
+;	  2126	!	Stringvalue of datum
+;	  2127	!
+;	  2128	! Side effects:
+;	  2129	!	None
+;	  2130	!
+;	  2131	!--
+;	  2132	
+;	  2133	    BEGIN
+;	  2134	    EXTERNAL REGISTER Z=0;
+;	  2135	    LOCAL
+;	  2136		JFN,			! JFN
+;	  2137	        chn,                    ! channel requested
+;	  2138	        chn_typ,                ! Channel argument type
+;	  2139	        jfn_tmp,                ! 1 if temp jfn name
+;	  2140		VAL: STR_VAL,		! Stringvalue being generated
+;	  2141		LEN,
+;	  2142		PTR;			! String pointer
+;	  2143	    chn = pcegop (.aparg, ste_typ_any ; chn_typ); ! get channel number
+;	  2144	    jfn = diujfn (.chn, .chn_typ ; jfn_tmp);
+;	  2145	                                ! [fun49]-
+;	  2146	    PTR = .CSBUFP;
+;	  2147	    CASE .COD FROM 1 TO 4 OF
+;	  2148		SET
+;	  2149	[1 TO 2]:
+;	  2150		BEGIN
+;	  2151		LOCAL
+;	  2152		    HLF: HLF_WRD;
+;	  2153		REGISTER
+;	  2154		    R1=1,R2=2;
+;	  2155		HLF[HLF_LFT] = (IF .COD EQL 1 THEN $GFAUT ELSE $GFLWR);
+;	  2156		HLF[HLF_RGT] = .JFN;
+;	  2157		R1 = .HLF;
+;	  2158		R2 = .CSBUFP;
+;	  2159		IF NOT JSYS(-1,GFUST,R1,R2) THEN R2 = .CSBUFP;
+;	  2160		PTR = .R2;
+;	  2161		END;
+;	  2162	[3]:	BEGIN
+;	  2163		REGISTER
+;	  2164		    R1=1,R2=2;
+;	  2165		R1 = .JFN;
+;	  2166		R2 = .CSBUFP;
+;	  2167		IF NOT JSYS(1,GACTF,R1,R2) THEN R2 = .CSBUFP;
+;	  2168		PTR = .R2
+;	  2169		END;
+;	  2170	[4]:
+;	  2171		BEGIN
+;	  2172		! General access to JFNS
+;	  2173		REGISTER
+;	  2174		    R1=1,R2=2,R3=3,R4=4;
+;	  2175	                                ! [fun49]x removed cod>64 support
+;	  2176		R1 = .CSBUFP;
+;	  2177		R2 = .JFN;
+;	  2178		R3 = .fmt;
+;	  2179		R4 = 0;
+;	  2180		IF NOT JSYS(-1,JFNS,R1,R2,R3,R4) THEN R1 = .CSBUFP;
+;	  2181		PTR = .R1
+;	  2182		END;
+;	  2183		TES;
+;	  2184	                                ! [fun49]+ Filenames in $fileinfo
+;	  2185	    if .jfn_tmp then begin       ! Release jfn and string
+;	  2186	       begin
+;	  2187	          register r1=1;
+;	  2188	          r1 = .jfn;
+;	  2189	          jsys (-1, rljfn, r1);
+;	  2190	          end;
+;	  2191	       if .aparg eql opn_tmp_str then pcefst(.chn);
+;	  2192	       end;
+;	  2193	                                ! [fun49]-
+;	  2194	    IF .PTR NEQ .CSBUFP
+;	  2195	    THEN
+;	  2196		BEGIN
+;	  2197		LEN = SUBBP(.PTR, .CSBUFP);
+;	  2198		VAL = PCEAST(.LEN);
+;	  2199		CH$COPY(.LEN, .CSBUFP, $CHNUL, .LEN+1, BYTPTR(.VAL[STV_ADR]));
+;	  2200		.VAL
+;	  2201		END
+;	  2202	    ELSE
+;	  2203		0
+;	  2204	    END;
+
+
+; DINJFN
+U.43:	PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,1				; SP,1
+	MOVE	AC12,AC3			; FMT,AC3
+	MOVE	AC14,AC2			; COD,AC2
+	MOVE	AC11,AC1			; APARG,AC1
+	MOVEI	AC2,2				; AC2,2
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,0(SP)			; AC1,CHN
+	PUSHJ	SP,DIUJFN			; SP,DIUJFN
+	MOVE	AC5,AC1				; JFN,AC1
+	MOVE	AC10,AC2			; AC10,AC2
+	MOVE	AC3,CSBUFP			; AC3,CSBUFP
+	MOVE	AC13,AC3			; PTR,AC3
+	MOVE	AC1,AC14			; AC1,COD
+	SUBI	AC1,1				; AC1,1
+	JRST	L.150(AC1)			; L.150(AC1)
+L.150:	JRST	L.151				; L.151
+	JRST	L.151				; L.151
+	JRST	L.152				; L.152
+	JRST	L.155				; L.155
+L.151:	CAIN	AC14,1				; COD,1
+	TDZA	AC1,AC1				; AC1,AC1
+	MOVEI	AC1,1				; AC1,1
+	HRL	AC2,AC1				; HLF,AC1
+	HRR	AC2,AC5				; HLF,JFN
+	MOVE	AC1,AC2				; R1,HLF
+	MOVE	AC2,AC3				; R2,AC3
+	JSYS	550				; 550
+	JUMP	16,L.153			; 16,L.153
+	JRST	L.154				; L.154
+L.152:	MOVE	AC1,AC5				; R1,JFN
+	MOVE	AC2,AC3				; R2,AC3
+	JSYS	37				; 37
+	JRST	L.153				; L.153
+	JRST	L.154				; L.154
+L.153:	MOVE	AC2,CSBUFP			; R2,CSBUFP
+L.154:	MOVE	AC13,AC2			; PTR,R2
+	JRST	L.158				; L.158
+L.155:	MOVE	AC1,AC3				; R1,AC3
+	MOVE	AC2,AC5				; R2,JFN
+	MOVE	AC3,AC12			; R3,FMT
+	SETZ	AC4,				; R4,
+	JSYS	30				; 30
+	JUMP	16,L.156			; 16,L.156
+	JRST	L.157				; L.157
+L.156:	MOVE	AC1,CSBUFP			; R1,CSBUFP
+L.157:	MOVE	AC13,AC1			; PTR,R1
+L.158:	TRNN	AC10,1				; JFN_TMP,1
+	JRST	L.160				; L.160
+	MOVE	AC1,AC5				; R1,JFN
+	JSYS	23				; 23
+	JUMP	16,L.159			; 16,L.159
+L.159:	CAIE	AC11,-100000			; APARG,-100000
+	JRST	L.160				; L.160
+	MOVE	AC1,0(SP)			; AC1,CHN
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.160:	CAMN	AC13,CSBUFP			; PTR,CSBUFP
+	JRST	L.161				; L.161
+	MOVE	AC1,AC13			; AC1,PTR
+	MOVE	AC2,CSBUFP			; AC2,CSBUFP
+	PUSHJ	SP,SUBBP			; SP,SUBBP
+	MOVE	AC13,AC1			; LEN,AC1
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC12,AC1			; VAL,AC1
+	MOVE	AC3,AC13			; AC3,LEN
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC12)			; HLF,0(VAL)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC13			; AC1,LEN
+	MOVE	AC2,CSBUFP			; AC2,CSBUFP
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.2				; AC1,C.2
+	JFCL					; 
+	SKIPA	AC1,AC12			; AC1,VAL
+L.161:	SETZ	AC1,				; AC1,
+	ADJSP	SP,-1				; SP,-1
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+
+; Routine Size:  86 words
+
+
+;	  2205	
+;	  2206	GLOBAL ROUTINE DIVACC =		! Internal variable $Account
+;	  2207	
+;	  2208	!++
+;	  2209	! Functional description:
+;	  2210	!	Return stringvalue of job's account number.
+;	  2211	!
+;	  2212	! Formal parameters:
+;	  2213	!	None
+;	  2214	!
+;	  2215	! Implicit inputs:
+;	  2216	!	Account number
+;	  2217	!
+;	  2218	! Implicit outputs:
+;	  2219	!	None
+;	  2220	!
+;	  2221	! Routine value:
+;	  2222	!	Stringvalue of account number
+;	  2223	!
+;	  2224	! Side effects:
+;	  2225	!	None
+;	  2226	!
+;	  2227	!--
+;	  2228	
+;	  2229	    BEGIN
+;	  2230	    EXTERNAL REGISTER Z=0;
+;	  2231	    LOCAL
+;	  2232		STR: STR_VAL,		! Stringvalue being generated
+;	  2233		LEN,			! String length
+;	  2234		BUFF: VECTOR[10];	! String buffer
+;	  2235	    REGISTER
+;	  2236		R1=1,R2=2;
+;	  2237	    R1 = -1;
+;	  2238	    R2 = BYTPTR(BUFF);
+;	  2239	    JSYS(0,GACCT,R1,R2);
+;	  2240	    R1 = .R2;
+;	  2241	    LEN = SUBBP(.R1, BYTPTR(BUFF));
+;	  2242	    STR = PCEAST(.LEN);
+;	  2243	    CH$COPY(.LEN, BYTPTR(BUFF), $CHNUL, .LEN+1, BYTPTR(.STR[STV_ADR]));
+;	  2244	    .STR
+;	  2245	    END;
+
+
+U.46:
+DIVACC::PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,12				; SP,12
+	SETO	AC1,				; R1,
+	MOVEI	AC2,-11(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	JSYS	546				; 546
+	MOVE	AC1,AC2				; R1,R2
+	MOVEI	AC2,-11(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	PUSHJ	SP,SUBBP			; SP,SUBBP
+	MOVE	AC14,AC1			; LEN,AC1
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; STR,AC1
+	MOVEI	AC2,-11(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC3,AC14			; AC3,LEN
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(STR)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC14			; AC1,LEN
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.2				; AC1,C.2
+	JFCL					; 
+	MOVE	AC1,AC16			; AC1,STR
+	ADJSP	SP,-12				; SP,-12
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  27 words
+
+
+;	  2246	
+;	  2247	GLOBAL ROUTINE DINWAI (AP,CNT): NOVALUE =	! Procedure $Wait
+;	  2248	
+;	  2249	!++
+;	  2250	! Functional description:
+;	  2251	!	Delay the number of milliseconds given in Integer1, or forever
+;	  2252	!	of omitted or nonpositive.
+;	  2253	!
+;	  2254	! Formal parameters:
+;	  2255	!	Usual for system procedure
+;	  2256	!
+;	  2257	! Implicit inputs:
+;	  2258	!	None
+;	  2259	!
+;	  2260	! Implicit outputs:
+;	  2261	!	None
+;	  2262	!
+;	  2263	! Routine value:
+;	  2264	!	None
+;	  2265	!
+;	  2266	! Side effects:
+;	  2267	!	None
+;	  2268	!
+;	  2269	!--
+;	  2270	
+;	  2271	    BEGIN
+;	  2272	    EXTERNAL REGISTER Z=0;
+;	  2273	    LOCAL
+;	  2274		TIME;
+;	  2275	    TIME = 0;
+;	  2276	    IF .CNT GEQ 1 THEN TIME = PCEGOP(..AP, STE_TYP_INT);
+;	  2277	    IF .TIME LEQ 0
+;	  2278	    THEN
+;	  2279		JSYS(0,WAIT)
+;	  2280	    ELSE
+;	  2281		BEGIN
+;	  2282		REGISTER
+;	  2283		    R1=1;
+;	  2284		R1 = .TIME;
+;	  2285		JSYS(0,DISMS,R1)
+;	  2286		END
+;	  2287	    END;
+
+
+U.47:
+DINWAI::MOVE	AC3,AC1				; AP,AC1
+	SETZ	AC4,				; TIME,
+	JUMPLE	AC2,L.162			; CNT,L.162
+	MOVE	AC1,0(AC3)			; AC1,0(AP)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC4,AC1				; TIME,AC1
+L.162:	JUMPG	AC4,L.163			; TIME,L.163
+	JSYS	306				; 306
+	POPJ	SP,				; SP,
+L.163:	MOVE	AC1,AC4				; R1,TIME
+	JSYS	167				; 167
+	POPJ	SP,				; SP,
+
+; Routine Size:  13 words
+
+
+;	  2288	
+;	  2289	GLOBAL ROUTINE DIVTAH =		! Variable $Typeahead_Count
+;	  2290	
+;	  2291	!++
+;	  2292	! Functional description:
+;	  2293	!	Return characters in typeahead buffer for controlling terminal.
+;	  2294	!
+;	  2295	! Formal parameters:
+;	  2296	!	None
+;	  2297	!
+;	  2298	! Implicit inputs:
+;	  2299	!	None
+;	  2300	!
+;	  2301	! Implicit outputs:
+;	  2302	!	None
+;	  2303	!
+;	  2304	! Routine value:
+;	  2305	!	Number of characters
+;	  2306	!
+;	  2307	! Side effects:
+;	  2308	!	None
+;	  2309	!
+;	  2310	!--
+;	  2311	
+;	  2312	    BEGIN
+;	  2313	    REGISTER
+;	  2314		R1=1,R2=2;
+;	  2315	    R1 = $CTTRM;
+;	  2316	    IF JSYS(1,SIBE,R1,R2) THEN R2 = 0;
+;	  2317	    .R2
+;	  2318	    END;
+
+
+U.48:
+DIVTAH::MOVEI	AC1,-1				; R1,-1
+	JSYS	102				; 102
+	JRST	L.164				; L.164
+	SETZ	AC2,				; R2,
+L.164:	MOVE	AC1,AC2				; AC1,R2
+	POPJ	SP,				; SP,
+
+; Routine Size:  6 words
+
+
+;	  2319	
+;	  2320	
+;	  2321	GLOBAL ROUTINE DIVDND =		! Variable $DECnet_Node
+;	  2322	
+;	  2323	!++
+;	  2324	! Functional description:
+;	  2325	!	Return stringvalue containing the local node name.
+;	  2326	!	
+;	  2327	! Formal parameters:
+;	  2328	!	None
+;	  2329	!
+;	  2330	! Implicit inputs:
+;	  2331	!	None
+;	  2332	!
+;	  2333	! Implicit outputs:
+;	  2334	!	None
+;	  2335	!
+;	  2336	! Routine value:
+;	  2337	!	Stringvalue containing the local Decnet node name.  This is a null
+;	  2338	!	string if the user's machine is not a DECnet host.
+;	  2339	!
+;	  2340	! Side effects:
+;	  2341	!	None
+;	  2342	!
+;	  2343	!--
+;	  2344	
+;	  2345	    BEGIN
+;	  2346	    EXTERNAL REGISTER Z=0;
+;	  2347	    LOCAL
+;	  2348		STR: STR_VAL,		! Stringvalue being generated
+;	  2349		LEN,			! String length
+;	  2350		NODBLK,			! NODE% argument block
+;	  2351		BUFF: VECTOR[10];	! String buffer
+;	  2352	    REGISTER
+;	  2353		R1=1,R2=2;
+;	  2354	    NODBLK = BYTPTR(BUFF);
+;	  2355	    R1 = $NDGLN;
+;	  2356	    R2 = NODBLK;
+;	  2357	    IF JSYS(-1,NODE,R1,R2)
+;	  2358	        THEN LEN = SUBBP(.NODBLK, BYTPTR(BUFF))
+;	  2359		ELSE LEN = 0;
+;	  2360	    STR = PCEAST(.LEN);
+;	  2361	    CH$COPY(.LEN, BYTPTR(BUFF), $CHNUL, .LEN+1, BYTPTR(.STR[STV_ADR]));
+;	  2362	    .STR
+;	  2363	    END;
+
+
+U.49:
+DIVDND::PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,13				; SP,13
+	MOVEI	AC1,-12(SP)			; HLF,BUFF
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVEM	AC1,0(SP)			; HLF,NODBLK
+	MOVEI	AC1,1				; R1,1
+	MOVEI	AC2,0(SP)			; R2,NODBLK
+	JSYS	567				; 567
+	JUMP	16,L.165			; 16,L.165
+	MOVEI	AC2,-12(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC1,0(SP)			; AC1,NODBLK
+	PUSHJ	SP,SUBBP			; SP,SUBBP
+	SKIPA	AC14,AC1			; LEN,AC1
+L.165:	SETZ	AC14,				; LEN,
+	MOVE	AC1,AC14			; AC1,LEN
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; STR,AC1
+	MOVEI	AC2,-12(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC3,AC14			; AC3,LEN
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(STR)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC14			; AC1,LEN
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.2				; AC1,C.2
+	JFCL					; 
+	MOVE	AC1,AC16			; AC1,STR
+	ADJSP	SP,-13				; SP,-13
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  32 words
+
+
+;	  2364	
+;	  2365	GLOBAL ROUTINE DIVAND =		! Variable $ARPAnet_Node
+;	  2366	
+;	  2367	!++
+;	  2368	! Functional description:
+;	  2369	!	Return stringvalue containing the local node name.
+;	  2370	!	
+;	  2371	! Formal parameters:
+;	  2372	!	None
+;	  2373	!
+;	  2374	! Implicit inputs:
+;	  2375	!	None
+;	  2376	!
+;	  2377	! Implicit outputs:
+;	  2378	!	None
+;	  2379	!
+;	  2380	! Routine value:
+;	  2381	!	Stringvalue containing the local Arpanet node name.  This is a null
+;	  2382	!	string if the user's machine is not an Arpanet host.
+;	  2383	!
+;	  2384	! Side effects:
+;	  2385	!	None
+;	  2386	!
+;	  2387	!--
+;	  2388	
+;	  2389	    BEGIN
+;	  2390	    EXTERNAL REGISTER Z=0;
+;	  2391	    LOCAL
+;	  2392		STR: STR_VAL,		! Stringvalue being generated
+;	  2393		LEN,			! String length
+;	  2394		BUFF: VECTOR[10];	! String buffer
+;	  2395	    REGISTER
+;	  2396		R1=1,R2=2;
+;	  2397	    R1 = BYTPTR(BUFF);
+;	  2398	    R2 = -1;
+;	  2399	    IF JSYS(-1,CVHST,R1,R2)
+;	  2400	        THEN LEN = SUBBP(.R1, BYTPTR(BUFF))
+;	  2401		ELSE LEN = 0;
+;	  2402	    STR = PCEAST(.LEN);
+;	  2403	    CH$COPY(.LEN, BYTPTR(BUFF), $CHNUL, .LEN+1, BYTPTR(.STR[STV_ADR]));
+;	  2404	    .STR
+;	  2405	    END;
+
+
+U.50:
+DIVAND::PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,12				; SP,12
+	MOVEI	AC1,-11(SP)			; HLF,BUFF
+	HRLI	AC1,-337100			; HLF,-337100
+	SETO	AC2,				; R2,
+	JSYS	276				; 276
+	JUMP	16,L.166			; 16,L.166
+	MOVEI	AC2,-11(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	PUSHJ	SP,SUBBP			; SP,SUBBP
+	SKIPA	AC14,AC1			; LEN,AC1
+L.166:	SETZ	AC14,				; LEN,
+	MOVE	AC1,AC14			; AC1,LEN
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; STR,AC1
+	MOVEI	AC2,-11(SP)			; HLF,BUFF
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC3,AC14			; AC3,LEN
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(STR)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC14			; AC1,LEN
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.2				; AC1,C.2
+	JFCL					; 
+	MOVE	AC1,AC16			; AC1,STR
+	ADJSP	SP,-12				; SP,-12
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  29 words
+
+
+;	  2406	
+;	  2407	GLOBAL ROUTINE DINROU: NOVALUE = ! Procedure $Resume_Output
+;	  2408	
+;	  2409	!++
+;	  2410	! Functional description:
+;	  2411	!	Resumes output by turning off TT%OSP (the bit in the JFN mode
+;	  2412	!	word which is turned on by the ^O routine) in the JFN mode word
+;	  2413	!	for .PRIOU.  This routine is a noop if TT%OSP is already off.
+;	  2414	!	
+;	  2415	! Formal parameters:
+;	  2416	!	None
+;	  2417	!
+;	  2418	! Implicit inputs:
+;	  2419	!	None
+;	  2420	!
+;	  2421	! Implicit outputs:
+;	  2422	!	None
+;	  2423	!
+;	  2424	! Routine value:
+;	  2425	!	None
+;	  2426	!
+;	  2427	! Side effects:
+;	  2428	!	None
+;	  2429	!
+;	  2430	!--
+;	  2431	
+;	  2432	    BEGIN
+;	  2433	    EXTERNAL REGISTER Z=0;
+;	  2434	    REGISTER
+;	  2435		R1=1,R2=2;
+;	  2436	    R1 = $PRIOU;
+;	  2437	    JSYS(0,RFMOD,R1,R2);
+;	  2438	    R2 = .R2 OR TT_OSP;
+;	  2439	    JSYS(0,SFMOD,R1,R2);
+;	  2440	    END;
+
+
+U.51:
+DINROU::MOVEI	AC1,101				; R1,101
+	JSYS	107				; 107
+	TLO	AC2,400000			; R2,400000
+	JSYS	110				; 110
+	POPJ	SP,				; SP,
+
+; Routine Size:  5 words
+
+
+;	  2441	END
+;	  2442	
+;	  2443	ELUDOM
+
+
+
+	END
+
+; Low  segment length:       0 words
+; High segment length:    1594 words
+
+
+
+
+;				LIBRARY STATISTICS
+;
+;					     -------- Symbols --------    Blocks
+;	File				     Total    Loaded   Percent      Read
+;
+;  PS:<PCL5.X-SOURCES>EXECPD.L36.1	       328        69        21         0
+;  PS:<SUBSYS>TENDEF.L36.2		        56         7        12         0
+;  PS:<SUBSYS>MONSYM.L36.5		      3861        78         2         0
+
+
+
+
+; Information:	0
+; Warnings:	3
+; Errors:	0
+
+;	  2444	
+; Compilation Complete
+
+	END
+   

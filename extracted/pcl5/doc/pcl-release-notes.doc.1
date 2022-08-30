@@ -1,0 +1,328 @@
+
+
+
+
+
+
+
+
+
+
+
+                                   TOPS-20
+
+                        PROGRAMMABLE COMMAND LANGUAGE
+
+                                RELEASE NOTES
+
+                            FOR PCL VERSION 5(100)
+
+                               November 24,1982
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       Copyright (C) 1982 Carnegie Mellon University Computation Center
+Programmable Command Language                                           Page 1
+
+
+1. Introduction
+
+        PCL  is  an extension to the TOPS-20 Exec which allows users to easily
+write their own Exec commands or rewrite existing ones to suite  their  needs.
+This is accomplished through a high-level, Algol-like programming language, so
+even  users  with no knowlwdge of assembly language or TOPS-20 system services
+can easily learn to use PCL.  A system  manager  can  also  use  PCL  to  add,
+modify,  or  delete commands from his or her site's Exec even if the site does
+not have an Exec source licence.
+
+        PCL is distributed free of charge as a public service by the Carnegie-
+Mellon University  Computation  Center.    Information  on  obtaining  PCL  is
+included   in  a  later  section  of  this  document.    Although  PCL  is  an
+"unsupported" product, sites  are  encouraged  to  send  us  bug  reports  and
+suggestions.  The procedure for reporting bugs and suggestions is described in
+a  later  section  of  this  document.    Bug  reports and suggestions will be
+considered and new versions  will  be  distributed  as  quickly  as  our  time
+permits.
+
+        This  document  describes  PCL  version 5(100), the first release of a
+version of PCL compatable with version 5.0 of TOPS-20.   This  version  should
+also  be compatable with any versions of the Exec which are currently in field
+test, though it has not been tested in them.  This version is  not  compatable
+with Tops-20 version 4.0.  If you wish to use PCL on a version 4.0 system, see
+the section on 4.0 PCL which occurs later in this document.
+Programmable Command Language                                           Page 2
+
+
+2. Changes Since the Last Version
+
+        Quite  a  while  has  elapsed  since  the  last  version  of  PCl  was
+distributed, and there have been quite a few changes.  Most are bug fixes that
+should have no effect on  working  PCL  programs,  but  there  are  some  more
+substantial  changes  as  well.  This is a hopefully complete list of the more
+important changes and bug fixes:
+
+   - Writeable system variables ($NUL in  particular)  may  now  be  used
+     after the TO in DOCOMMAND statements.
+
+   - DISPLAY now works for integer as well as string expressions.
+
+   - INVOKE  has  undergone  (and  will  continue  to undergo in the near
+     future) substantial internal changes.  The  only  externally-visible
+     change  that  I  am  aware  of  is  that  invoked forks now have the
+     "invoked" fork attribute, which makes  them  immune  to  most  fork-
+     manipulation commands.
+
+   - TYPEIN  no longer raises the text to uppercase when it feeds it into
+     the program.
+
+   - PCL command now act a lot more like normal Exec commands.  A user no
+     longer receives a special message if he or she ^C's  out  of  a  PCL
+     command.   ^C out of a PCL command resets INVOKE'd programs.  INVOKE
+     no longer changes the user's current fork (unless the  PCL  does  an
+     EXIT  SAVE  or an EXIT TOPROGRAM).  ^T treats PCL commands much more
+     like builtin commands (though there is still more that needs  to  be
+     here).
+
+   - The Exec commands SAVE /ENVIRONMENT and SAVE /EXEC are now obsolete.
+     Although the Exec will (temporarily) still accept them, users should
+     start  to  use  the equivalent new commands PRESERVE ENVIRONMENT and
+     PRESERVE EXEC instead.
+
+   - The syntax of the CASE, SELECT, and  complex  PARSE  statements  has
+     been  changed.    This  version  of PCL accepts both the old and new
+     syntaxes, but future versions may accept only the new syntax.    The
+     new syntax is documented in the Programmable Command Language User's
+     Guide   and  Reference  Manual,  which  is  included  with  all  PCL
+     distributions.  This is the first of  a  series  of  syntax  changes
+     being  planned  in  order  to  make  the  language  more  internally
+     consistent and to allow for some planned expansions of the language.
+
+   - The effect of PARSEONLY  in  file  parses  has  been  changed.    If
+     PARSEONLY is specified but WILD is not, an error is generated if the
+     filespec typed in by the user contains wildcards.  If both PARSEONLY
+     and  WILD are specified, wildcards are allowed but GJ%IFG is not set
+     in the GTJFN% block.  Thus, if PARSEONLY and WILD are both specified
+     the effect is the same as specifying PARSEONLY without WILD gave  in
+     previous  versions  except that the $FILEx variables will return the
+     wildcards properly.  There is no  way  to  obtain  the  effect  that
+Programmable Command Language                                           Page 3
+
+
+     occurred  if  one  specified  both  PARSEONLY and WILD in a previous
+     version, but I never found anyone who thought that was useful.
+
+   - The code for declaration of global variables  has  been  changed  to
+     always  do  the declaration even if another PCL object with the same
+     name would be superceded.
+
+   - Negative values may now be used as values for WORDS.   The  compiler
+     always allowed this, but it never used to actually work.
+
+   - Procedures  can  now  do  DOCOMMAND's  of user-defined commands.  In
+     previous versions this tended to result in random  execution  errors
+     such as "PC out of bounds".
+
+   - New  system  variables have been added: $DECnet_Node, $ARPAnet_Node,
+     $Batch_Job, and $LF.  Descriptions of these variables, as well as  a
+     current   list   of  all  system  variables,  are  included  in  the
+     Programmable Command Language User's  Guide  and  Reference  Manual,
+     which is included with all PCL distributions.
+
+   - Thanks  to  some cooperation from DEC it is now much simpler than in
+     the past for Exec source sites to install PCL because  much  of  the
+     support  is  included in the distributed DEC sources.  A side effect
+     of that change is that PCL is no longer heavily tied to a number  of
+     experimental  Exec  features  that sites may or may not want to use.
+     This distribution contains procedures for building a  standard  Exec
+     with  PCL  and  for  building  a  standard  Exec with PCL and multi-
+     forking.
+Programmable Command Language                                           Page 4
+
+
+3. How to Obtain PCL
+
+        PCL  is  available  free  to  any  TOPS-20 site which requests it.  We
+recommend that you obtain PCL from CMU rather than from other sites which have
+it to insure that you receive timely notification of updates.    We  also  ask
+that  if you do receive PCL from a third party that you let us know so that we
+may have an accurate list of which (and how many) sites are using  PCL.    The
+best  method  for  obtaining  PCL  depends  on  whether you have access to the
+ARPAnet.
+
+        If you have access to the ARPAnet, the easiest way to acquire  PCL  is
+to retrieve it from node CMU-CS-C (formerly known as CMU-20C).  Using FTP with
+user  ANONYMOUS  and  password  PCL,  retrieve  PS:<KING.PCL>*.*.0 and send me
+(ALMQUIST@CMU-CS-C) mail saying that you have done so.
+
+        If you do not have access to the ARPAnet you must send us a 2400  foot
+magtape.   We will write a standard distribution kit onto the tape and send it
+back to you.  Requests should be sent to:
+
+                                 J. Ray Scott
+                          Carnegie-Mellon University
+                              Computation Center
+                                Schenley Park
+                          Pittsburgh, Pa. USA 15213
+Programmable Command Language                                           Page 5
+
+
+4. Installing PCL
+
+        Your  PCL  distribution  tape contains a large number of files.  Which
+ones you will actually need depends on what software licences you have at your
+site and also some decisions on your part about exactly what you want  to  do.
+This section attempts to help you choose th correct files and make good use of
+them.
+
+   1. Restore  the  first  saveset.    The first saveset contains various
+      documentation: PCL.DOC is the on-line version of  the  manual,  and
+      should   probably   be   placed   on   HLP:  (or  wherever  on-line
+      documentation is kept at your site).  PCL.LPT is a version  of  the
+      manual  which  is  intended  to  be printed on a lineprinter.  PCL-
+      RELEASE-NOTES.DOC is a copy of these release notes.  REPORT.FRM  is
+      a copy of the PCL bug/suggestion report form, which is described in
+      a later section.
+
+   2. Decide  whether  or not you wish to use the multi-forking features.
+      The  multi-forking  features  are  very  powerful,  especially   in
+      conjunction  with  PCL,  and  are  therefore  highly appreciated by
+      sophisticated users.  Our experience at Carnegie-Mellon shows  that
+      even  inexperienced  users  can  derive  some  benefits from multi-
+      forking.  Also, since we use  multi-forking,  PCL  has  never  been
+      extensively  tested  without  multi-forking.    However, the multi-
+      forking code contains a number of bugs and there is little  if  any
+      documentation on the features which is available to non-ARPA sites.
+
+   3. If  you  are not an Exec source site and just want an Exec with PCL
+      in it, restore one of the EXE files from the second saveset.    The
+      files are EXEC.EXE (a standard Exec with PCL and multi-forking) and
+      EXEC-WITHOUT-MULTI-FORKING.EXE  (a  standard  Exec  with  only  PCL
+      added).
+
+   4. If you are not a source site but think you may want to rebuild your
+      Exec, restore the third saveset.  It contains the complete  set  of
+      REL, CMD and CTL files used to build the EXE files included on this
+      tape.    You  might wish to rebuild your Exec even if you are not a
+      source site if you want  to  modify  the  PCL  sources  (which  are
+      included on this tape).
+
+   5. If  you  are  an  Exec source site, restore the fourth saveset.  It
+      contains the source patches for the DEC modules and the CMD and CTL
+      files used to build the EXE files included on this tape.
+
+   6. If you want to modify PCL (or if you are just curious), restore the
+      fifth saveset, which includes the sources to the PCL modules.  Most
+      of them are written in Bliss-36.  Because  some  sites  don't  have
+      Bliss-36,  LST  files for the Bliss modules are also included.  The
+      LST files may be run through Macro to generate REL files for  these
+      modules.    Note:   most of the LST files will not assemble without
+      minor editing because some identifiers included  in  them  are  not
+      acceptable  to Macro.  Also, I have heard rumors that the LST files
+Programmable Command Language                                           Page 6
+
+
+      don't  necessarily  contain  the  same code that the Bliss compiler
+      puts into the REL files.  Thus, you use the LST files at  your  own
+      risk...
+
+   7. If  you  are a source site, install the necessary changes into your
+      sources.  The difference files are *.RED, from the fourth  saveset.
+      The  easiest  way  to  install the changes is with REDIT, using the
+      (new) version which was distributed  on  the  TOPS-20  version  5.0
+      tools tape.  Then recompile the changed modules.
+
+   8. If   you  want  to  rebuild  your  Exec,  examine  PCLEXEC.CTL  and
+      PCLEXEC.LOG.  They document the procedure to build  the  EXE  files
+      included  on  the distribution tape.  Note: it may not be necessary
+      (or possible, if you are not a source  site)  to  perform  all  the
+      steps shown therein.
+
+   9. Test  the Exec you have either built or gotten off the tape.  If it
+      works to your satisfaction, install it as PS:<SYSTEM>EXEC.EXE.
+
+  10. If you have gotten this far in the procedure and aren't  yet  happy
+      as  a  clam,  please  submit a trouble report.  Trouble reports are
+      discussed in a later section.
+Programmable Command Language                                           Page 7
+
+
+5. Reporting Problems and Suggestions
+
+        Although  Carnegie-Mellon University, for reasons of limited manpower,
+cannot guarantee any type of maintenance support to sites which use PCL, we do
+encourage those sites to send us bug reports and suggestions so that  PCL  may
+be  improved.    To  facilitate  handling  of these reports we are now using a
+special bug/suggestion report form which is rather heavily based on DEC's  QAR
+form.    The  form  may  be  filled  out on-line with any text editor and then
+printed and mailed to us:
+
+                               Philip Almquist
+                          Carnegie-Mellon University
+                              Computation Center
+                                Schenley Park
+                          Pittsburgh, Pa. USA 15213
+
+
+ARPAnet users may  alternatively  include  the  form  in  a  mail  message  to
+ALMQUIST@CMU-CS-C. Please be sure to fill out the form completely.  Especially
+important  are  the PCL version number and a (physical) mail address so we may
+send you a response.  Whenever possible, include a  listing  of  a  small  PCL
+command  which  demonstrates the problem you are reporting or which would work
+if your suggestion were implemented.
+Programmable Command Language                                           Page 8
+
+
+6. PCL for Version 4.0 Systems
+
+        The  previous  release  of  PCL  is still available to sites which are
+running Tops-20 version 4.0.  It is no longer maintained at all.   It  may  be
+obtained  by  sending  us a 2400 foot magtape (make sure to emphasize that you
+want version 4.0 PCL!!!).  The address is:
+
+                                 J. Ray Scott
+                          Carnegie-Mellon University
+                              Computation Center
+                                Schenley Park
+                          Pittsburgh, Pa. USA 15213
+Programmable Command Language                                           Page i
+
+
+                              Table of Contents
+
+1. Introduction                                                              1
+
+2. Changes Since the Last Version                                            2
+
+3. How to Obtain PCL                                                         4
+
+4. Installing PCL                                                            5
+
+5. Reporting Problems and Suggestions                                        7
+
+6. PCL for Version 4.0 Systems                                               8
+    

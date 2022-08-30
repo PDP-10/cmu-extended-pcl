@@ -1,0 +1,28 @@
+=========½====½====½====½====½====½====½====½=========½====½====½=====
+WRITE_ST:	Write a string n times to a file.
+
+PclDoc from Library PS:<PCL>UTILITY.PCL.23
+10-Feb-83  12:38:28
+======================================================================
+
+This procedure writes  to a  file a  record of  identical repeating  n
+times a given string.  characters.
+
+Usage:
+	call write_st (channel, st, count);
+
+Input:
+channel	channel number of the file for output
+st	string to repeat
+count	number of times st must be repeated
+
+Side Effect:
+	A string  of  count st  is  written  out to  channel,  with  a
+carriage return at  the end. St  is a string  containing at least  one
+character.
+
+
+Remarks:
+	If st is empty or count is zero, nothing happens.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31

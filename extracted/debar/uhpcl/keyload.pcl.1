@@ -1,0 +1,61 @@
+COMMAND KEYLOAD;
+!------------------------------------------------------------------------
+! Purpose:
+!	KEYLOAD font and function key files to terminals.
+!
+! Usage:
+!	KEYLOAD {/CRLF} filespecs
+!
+! Remarks:
+!	If the switch /CRLF is  given, ASCII CR LF pairs  present
+!	in the file will be sent.  By default, they are stripped.
+!	Wildcarded specifications are permitted.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[29-Sep-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER	CRLF,
+	FileId,
+	NO,
+	YES;
+STRING	record;
+
+NO = 0;
+YES = 1;
+
+GUIDE "files";
+
+PARSE (
+SWITCH(WORDS(CRLF:1),STDHELP) : CRLF = YES;
+OTHERWISE : CRLF = NO);
+
+PARSE (
+FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_EXT "BGF",
+	DEFAULT_GEN 0,
+	INPUT,
+	HELP "list of files to KEYLOAD") : NOP;
+);
+
+DO	BEGIN
+	FileId = $OPEN($FILEL,$Input);
+	record = $Read(FileId);
+	WHILE $Eof(FileId) = 0 DO
+	BEGIN
+		IF CRLF = NO 
+			THEN DISPLAY BINARY record
+			ELSE DISPLAY BINARY record + $CRLF;
+		record = $Read(FileId)
+	END
+	END
+UNTIL $Nextfile = 0
+
+END; !KEYLOAD
+

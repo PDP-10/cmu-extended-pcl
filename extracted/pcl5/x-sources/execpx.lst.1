@@ -1,0 +1,5026 @@
+;	  0001	! UPD ID= 79, PS:<5-0.PCL.LOCAL>EXECPX.B36.7,  16-Jan-83 19:56:31 by DEBAR
+;	  0002	! [fun58] Make Relfdb release 5 words, not 4.
+;	  0003	! UPD ID= 77, PS:<5-0.PCL.LOCAL>EXECPX.B36.6,  16-Jan-83 19:34:07 by DEBAR
+;	  0004	! [fun24-2] Correct bug introduced when merging our exec with PCL5.
+;	  0005	! UPD ID= 75, PS:<5-0.PCL.LOCAL>EXECPX.B36.5,   6-Jan-83 13:10:41 by DEBAR
+;	  0006	![fun54] Merge fundp edits to PCL with PCL5
+;	  0007	!<5.1.EXEC>EXECPX.B36.5, 15-Nov-82 02:39:52, Edit by PA0B
+;	  0008	!Allow integer arguments to DISPLAY, Add OUTRANGE to CASE
+;	  0009	!Try to fix up some of the problems with the PCL stack handling
+;	  0010	!(in particular, don't destroy stack when a procedure does a
+;	  0011	!DOCOMMAND of a user-defined command):
+;	  0012	! - Use PCLSTF only to determine if PCL is initialized (it used
+;	  0013	!   to be used to keep track of free space on the stack, but it
+;	  0014	!   was incorrectly initialized and then not updated properly
+;	  0015	!   anyway).
+;	  0016	! - Use STKP where PCLSTF was used to find info about the PCL
+;	  0017	!   stack.
+;	  0018	! - Move PCIRUN here from EXECPI.
+;	  0019	! - Check for PCL stack overflow/underflow in more places.
+;	  0020	!<5.1.EXEC>EXECPX.B36.4,  8-Nov-82 03:39:07, Edit by PA0B
+;	  0021	!Move the call to CLRINV at the end of the executor to be
+;	  0022	!before the call to be before PCICLP.  This was necessary
+;	  0023	!because PCICLP zeroes PCCURC[ECB_CFK].
+;	  0024	!<5.1.EXEC>EXECPX.B36.3,  9-Sep-82 23:40:00, Edit by PA0B
+;	  0025	!Add FK%INV (fork is INVOKE'd) flag to fork table
+;	  0026	!<5.1.EXEC>EXECPX.B36.2,  4-Aug-82 23:34:29, Edit by PA0B
+;	  0027	!Redo the PCFORK stuff
+;	  0028	!<4.EXEC>EXECPX.B36.101, 27-Feb-82 02:40:03, Edit by PA0B
+;	  0029	!Make EXIT SAVE and EXIT TOPROGRAM set PCFORK to -1 to avoid
+;	  0030	!confusion.
+;	  0031	!<4.EXEC>EXECPX.B36.100,  8-Oct-81 13:41:40, Edit by DK32
+;	  0032	!Exec output stringblocks may be empty
+;	  0033	! UPD ID= 58, PS:<5-0.PCL.LOCAL>EXECPX.B36.4,  22-Nov-82 00:27:32 by DEBAR
+;	  0034	! [fun45] Multiple tags in case/select/selectall
+;	  0035	! UPD ID= 55, PS:<5-0.PCL.LOCAL>EXECPX.B36.3,  12-Nov-82 23:55:52 by DEBAR
+;	  0036	! [fun44] Allow pcegop to return ANY type of argument
+;	  0037	! UPD ID= 36, PS:<5-0.PCL.LOCAL>EXECPX.B36.2,  26-Oct-82 21:05:47 by DEBAR
+;	  0038	! [fun31] Fix string system variables garbage collection problem
+;	  0039	! UPD ID= 21, PS:<5-0.PCL.LOCAL>EXECPX.B36.2,  10-Oct-82 17:53:12 by DEBAR
+;	  0040	! [fun24] add DirectoryList function to PCL
+;	  0041	! UPD ID= 14, V4:<5-0.PCL.LOCAL>EXECPX.B36.1,   3-Oct-82 20:24:37 by DEBAR
+;	  0042	!<4.EXEC>EXECPX.B36.99, 20-May-81 16:09:03, Edit by DK32
+;	  0043	!Reset fork on Abort and error
+;	  0044	!<4.EXEC>EXECPX.B36.98, 10-Mar-81 16:51:58, Edit by DK32
+;	  0045	!New parse-in-progress logic so commands do confirmation,
+;	  0046	!Fix multiple-CR commands, Fix command argument reparse
+;	  0047	!<4.EXEC>EXECPX.B36.97, 25-Feb-81 21:52:40, Edit by DK32
+;	  0048	!Prompt, PassOutput
+;	  0049	!<4.EXEC>EXECPX.B36.96, 15-Jan-81 17:26:36, Edit by DK32
+;	  0050	!Pass both arguments to variable-routines
+;	  0051	!<4.EXEC>EXECPX.B36.95, 23-Dec-80 18:04:03, Edit by DK32
+;	  0052	!Use Exec linkage, Parse Invisible
+;	  0053	!<4.EXEC>EXECPX.B36.94, 15-Dec-80 17:51:50, Edit by DK32
+;	  0054	!Respect preserved context for procedures and commands
+;	  0055	!<4.EXEC>EXECPX.B36.93,  9-Dec-80 00:31:46, Edit by DK32
+;	  0056	!Save and ToProgram options to Exit
+;	  0057	!<4.EXEC>EXECPX.B36.92, 26-Nov-80 20:11:28, Edit by DK32
+;	  0058	!Allow for superceded global symbols
+;	  0059	!<4.EXEC>EXECPX.B36.91, 16-Nov-80 22:31:27, Edit by DK32
+;	  0060	!Read remainder of line after failed command argument,
+;	  0061	!Handle running out of memory for PDS typeout
+;	  0062	!<4.EXEC>EXECPX.B36.90, 30-Oct-80 14:07:24, Edit by DK32
+;	  0063	!Insert null after command in buffer
+;	  0064	!<4.EXEC>EXECPX.B36.89, 25-Oct-80 23:03:07, Edit by DK32
+;	  0065	!Cleanup invoked forks properly
+;	  0066	!<4.EXEC>EXECPX.B36.88, 18-Oct-80 15:53:07, Edit by DK32
+;	  0067	!Parse FileList, Get operands to subtract in proper order
+;	  0068	!<4.EXEC>EXECPX.B36.87,  9-Oct-80 18:37:16, Edit by DK32
+;	  0069	!Parsed JFN list, Fix substring overrun
+;	  0070	!<4.EXEC>EXECPX.B36.86,  2-Oct-80 20:16:23, Edit by DK32
+;	  0071	!Add Parse NoIndirect, Fix writeable system variables
+;	  0072	!<4.EXEC>EXECPX.B36.85, 24-Sep-80 17:08:59, Edit by DK32
+;	  0073	!Remove service routines to EXECPU
+;	  0074	!<4.EXEC>EXECPX.B36.84, 17-Sep-80 17:23:14, Edit by DK32
+;	  0075	!<4.EXEC>EXECPX.B36.83, 15-Sep-80 16:03:26, Edit by DK32
+;	  0076	!Use correct byte count in Typein
+;	  0077	!<4.EXEC>EXECPX.B36.82, 11-Sep-80 14:16:08, Edit by DK32
+;	  0078	!Strip linefeeds from Typein
+;	  0079	!<4.EXEC>EXECPX.B36.81,  7-Sep-80 20:50:03, Edit by DK32
+;	  0080	!Add $SearchRaised, Fix String[1:*], Fix message for substring
+;	  0081	!start less than 1, Add optional starting position argument
+;	  0082	!to $Search and $SearchRaised
+;	  0083	!<4.EXEC>EXECPX.B36.80, 20-Aug-80 16:55:26, Edit by DK32
+;	  0084	!Handle multiple line DoCommand with final null line,
+;	  0085	!Add $TermNumber
+;	  0086	!<DK32.CG>EXECPX.B36.79, 10-Aug-80 14:12:17, Edit by DK32
+;	  0087	!Keep PCT details in ECB, Handle multiple-line Docommand
+;	  0088	!better, Handle null DoCommand
+;	  0089	!<DK32.CG>EXECPX.B36.78,  1-Aug-80 15:09:42, Edit by DK32
+;	  0090	!Fix $TermWidth, Call PCITIN with real string
+;	  0091	!<DK32.CG>EXECPX.B36.77, 29-Jul-80 14:54:57, Edit by DK32
+;	  0092	!Don't kill user fork, just disengage it from PCL
+;	  0093	!<DK32.CG>EXECPX.B36.76, 17-Jul-80 13:30:59, Edit by DK32
+;	  0094	!Handle multi-line DoCommands
+;	  0095	!<DK32.CG>EXECPX.B36.75, 10-Jul-80 10:40:30, Edit by DK32
+;	  0096	!Add $ConnectedDirectory
+;	  0097	!<DK32.CG>EXECPX.B36.74,  3-Jul-80 14:10:02, Edit by DK32
+;	  0098	!SBS never returns error for length too long, Make MERGETAD a function,
+;	  0099	!Add INPUTTAD, Fix Abort to handle expressions, Have substring handle length -1
+;	  0100	MODULE EXECPX =
+;	  0101	BEGIN
+;	  0102	
+;	  0103	!++
+;	  0104	!
+;	  0105	!  This is the first attempt at the Programmable Command Language executer
+;	  0106	!
+;	  0107	!  Dave King, Carnegie-Mellon University Computation Center
+;	  0108	!
+;	  0109	!  January, 1980
+;	  0110	!
+;	  0111	!  Copyright (C) 1980, Carnegie-Mellon University
+;	  0112	!
+;	  0113	!--
+;	  0114	
+;	  0115	!++
+;	  0116	!    This module contains the bulk of the code necessary to actually
+;	  0117	!  run a stored command.  Its only entry is the routine PCEXCT, which
+;	  0118	!  enters a fetch-execute cycle on the internal representation of the
+;	  0119	!  user's command.  This module provides all the facilities of fetching
+;	  0120	!  instructions, decoding and fetching operands, performing the
+;	  0121	!  instruction, and storing the results.  It calls routines in module
+;	  0122	!  EXECPI to provide services which could be called "system interfacing,"
+;	  0123	!  such as running user programs and writing to the terminal.  Originally,
+;	  0124	!  I intended to divide things up so that there would be no need for
+;	  0125	!  this module to contain any JSYS instructions, but this rule has not
+;	  0126	!  been uniformly followed; it was not instituted in the interests of
+;	  0127	!  code purity, but to provide a rule of thumb to keep the modules
+;	  0128	!  of reasonable size.
+;	  0129	!--
+;	  0130	
+;	  0131	
+;	  0132	!
+;	  0133	! Standard definitions
+;	  0134	!
+;	  0135	
+;	  0136	LIBRARY 'EXECPD';		! Get common definitions
+;	  0137	LIBRARY 'BLI:TENDEF';		! Get system definitions
+;	  0138	LIBRARY 'BLI:MONSYM';
+; WARN#050	........1  L1:0138
+; Name already declared in this block:  $CHLFD
+; WARN#050	........1  L1:0138
+; Name already declared in this block:  $CHCRT
+; WARN#050	........1  L1:0138
+; Name already declared in this block:  $CHFFD
+;	  0139	SWITCHES LINKAGE(EXEC);
+;	  0140	
+;	  0141	!
+;	  0142	! Table of contents:
+;	  0143	!
+;	  0144	
+;	  0145	FORWARD ROUTINE
+;	  0146	    PCEERR,			! Report execution error
+;	  0147	    PCEAST,			! Allocate string storage
+;	  0148	    PCEFST: NOVALUE,		! Free string storage
+;	  0149	    PCECST,			! Make copy of a string
+;	  0150	    PCIRUN,			! Entry point for command invocation
+;	  0151	    SETCTX: NOVALUE,		! Switch procedure context
+;	  0152	    PCEGOP : exec1,             ! Get value of operand
+;	  0153	    PCESOP: NOVALUE,		! Store datum in operand
+;	  0154	    CALPRC: NOVALUE,		! Call another procedure
+;	  0155	    RETPRC: NOVALUE,		! Return from procedure
+;	  0156	    DOCASE: NOVALUE,		! Indexed jump
+;	  0157	    CLNVAR: NOVALUE,		! Clean up local string variables
+;	  0158	    DOSBSS: NOVALUE,		! Extract substring
+;	  0159	    DOCMND,			! DoCommand instruction
+;	  0160	    PUTDCL,			! Send additional DoCommand lines
+;	  0161	    DOCARG: NOVALUE,		! Get command arguments
+;	  0162	    DPARSE: NOVALUE,		! Parse instruction
+;	  0163	    COPFDB,			! Make real FLDDB from prototype
+;	  0164	    COPKWT,			! Copy keyword table
+;	  0165	    COPFDF: NOVALUE,		! Copy FILE defaults
+;	  0166	    RELFDB: NOVALUE,		! Free storage for real FLDDB
+;	  0167	    DPRMPT: NOVALUE,		! Prompt instruction
+;	  0168	    GETEOP: NOVALUE,		! Get Exec output
+;	  0169	    DOTINP: NOVALUE,		! Typein instruction
+;	  0170	    DOGTYO: NOVALUE,		! Gettypout instruction
+;	  0171	    DODPLY: NOVALUE,		! Display instruction
+;	  0172	    CLIPRC: NOVALUE,		! Call internal routine
+;	  0173	    PCEXCT;			! Main executer loop
+;	  0174	
+;	  0175	!
+;	  0176	! Macros:
+;	  0177	!
+;	  0178	
+;	  0179	MACRO ERROR(TXT) = PCEERR(UPLIT(%ASCIZ TXT)) %;
+;	  0180	
+;	  0181	!
+;	  0182	! External references:
+;	  0183	!
+;	  0184	
+;	  0185	EXTERNAL ROUTINE
+;	  0186	    PCMGMM,			! General memory allocator
+;	  0187	    RETMEM,			! EXECSU General memory release
+;	  0188	    GETBUF,			! EXECSU Temporary memory allocate
+;	  0189	    ERESET: NOVALUE,		! EXECP routine to reset program environment
+;	  0190	    CLRINV: NOVALUE,		! EXECP routine to clear INVOKE'd fork flag
+;	  0191	    PCIFGS,			! Find global symbol
+;	  0192	    PCIPRS,			! Do COMND% for Parse
+;	  0193	    PCIIVK: NOVALUE,		! Get and start up user program
+;	  0194	    PCICLP: NOVALUE,		! Clean up all PTY/PDS's and forks
+;	  0195	    PCIKIF: NOVALUE,		! Kill invoked fork
+;	  0196	    PCITIN: NOVALUE,		! Type in to user program
+;	  0197	    PCIPEO: NOVALUE,		! Prepare for Exec output
+;	  0198	    PCIPSO: NOVALUE,		! Fake PTY-output pseudointerrupt
+;	  0199	    PCIDPY: NOVALUE,		! Display string on real terminal
+;	  0200	    PCIRPL: NOVALUE,		! Release Parsed JFN list
+;	  0201	    DIVFNM,			! Get filename of current parsed JFN
+;	  0202	    PCMITS,			! CVTBDO routine
+;	  0203	    PCMXER,			! Report execution error
+;	  0204	    PCMPER;			! Report parsing error
+;	  0205	
+;	  0206	EXTERNAL
+;	  0207	    PCCURC: REF ECB_BLK,	! Current Execution Context Block
+;	  0208	    PCSFRE,			! Pointer to first free string block
+;	  0209	    PCGBST: GST_TBL,		! Global symbol table
+;	  0210	    PCTEXT: VECTOR,		! Text region
+;	  0211	    PCSTAK: STKFRM,		! Run time stack
+;	  0212	    PCLSTF,			! First unused word of run stack
+;	  0213	    XDICT,			! Permanent storage pool
+;	  0214	    DICT,			! Temporary storage pool
+;	  0215	    CSBUFP: STR_VAL,		! Temporary string buffer pointer
+;	  0216	    CJFNBK: VECTOR,		! Long-GTJFN block
+;	  0217	    PCPOTP: VOLATILE,		! Address of block of user program output
+;	  0218	    PCPEOP: VOLATILE,		! Address of block of Exec output
+;	  0219	    PCLDCO,			! Flag to do command in original mode
+;	  0220	    PSDEFN: SYN_TBL,		! System name table
+;	  0221	    PCVVAL,			! Number parsed by last Parse
+;	  0222	    PCVATM,			! Atom parsed by last Parse
+;	  0223	    FORK:   VOLATILE,		! Exec's current fork handle
+;	  0224	    PCFORK: VOLATILE,		! Saved value of FORK
+;	  0225	    PCRNFK: VOLATILE;		! Saved value of RUNFK
+;	  0226	
+;	  0227	EXTERNAL LITERAL
+;	  0228	    PCGBLN: UNSIGNED(3),	! Pages in global symbol table
+;	  0229	    PCSTKL: UNSIGNED(3),	! Pages in run time stack
+;	  0230	    PSDEFL: UNSIGNED(6);	! Length of system name table
+;	  0231	!
+;	  0232	! Equated symbols:
+;	  0233	!
+;	  0234	
+;	  0235	BIND
+;	  0236	    CFM_FLDDB = UPLIT(%O'010000000000',0,0,0),
+;	  0237	    GBSTLN=PCGBLN*512/GST_LEN,	! Maximum GST index possible
+;	  0238	    STAKLN=PCSTKL*512,		! Execution stack length
+;	  0239	    PC = PCSTAK,		! Program counter, relative to routine text
+;	  0240	    FP = PCSTAK+1,		! Stack frame pointer, relative to PCSTAK
+;	  0241	    STKP = FP+1,		! Stack pointer, relative to PCSTAK
+;	  0242	    INSTR = STKP+1: BLOCK[2] FIELD(COD_FLD),	! Instruction being performed
+;	  0243	    LSTPMT = INSTR+2,		! Location of last Prompt instruction
+;	  0244	    CURGST = LSTPMT+1: REF GST_BLK, ! GST of current routine
+;	  0245	    CURCOD = CURGST+1: REF COD_BLK, ! Pointer to code for current routine
+;	  0246	    CURCDL = CURCOD+1,		    ! Its length
+;	  0247	    CURCNS = CURCDL+1: REF VECTOR,  ! Pointer to constants for routine
+;	  0248	    CURCNL = CURCNS+1,		    ! Its length
+;	  0249	    CURSMT = CURCNL+1: REF SYMENT,  ! Symbol table for routine
+;	  0250	    CURSML = CURSMT+1,		    ! Its length
+;	  0251	    CMPTR = CURSML+1;		    ! Pointer to Exec's command buffer
+;	  0252	
+;	  0253	GLOBAL LITERAL
+;	  0254	    PCEOWN = 13;		    ! Length of executor context
+;	  0255	
+;	  0256	GLOBAL ROUTINE PCEERR(MSG,PAR1) =   ! Report execution error
+;	  0257	
+;	  0258	!++
+;	  0259	! Functional description:
+;	  0260	!	Clean up, issue error message and stop.  The error message is
+;	  0261	!	provided as an ASCIZ string; anywhere a #n appears the n'th
+;	  0262	!	message parameter is inserted.
+;	  0263	!
+;	  0264	! Formal parameters:
+;	  0265	!	Address of error message string
+;	  0266	!	Address of parameter string #1
+;	  0267	!
+;	  0268	! Implicit inputs:
+;	  0269	!	Instruction being executed, global symbol for current procedure
+;	  0270	!
+;	  0271	! Implicit outputs:
+;	  0272	!	None
+;	  0273	!
+;	  0274	! Routine value:
+;	  0275	!	Really, none; does not return.   I wish I could convince BLISS of that.
+;	  0276	!
+;	  0277	! Side effects:
+;	  0278	!	Kills current controlled program, frees string variables
+;	  0279	!
+;	  0280	!--
+;	  0281	
+;	  0282	%( Presently only works with one insert )%
+;	  0283	
+;	  0284	    BEGIN
+;	  0285	    EXTERNAL REGISTER Z;
+;	  0286	    LOCAL
+;	  0287		IPT,			! String pointers
+;	  0288		OPT,
+;	  0289		CHR,			! Character
+;	  0290		INSRT,			! Insertion pointer
+;	  0291		BUFF: VECTOR[25];	! Message buffer
+;	  0292	    PCICLP(1);
+;	  0293	    CLNVAR();
+;	  0294	    OPT = BYTPTR(BUFF);
+;	  0295	    IPT = BYTPTR(.CURGST[GST_NMA]);
+;	  0296	    WHILE (CHR = CH$RCHAR_A(IPT)) NEQ 0 DO CH$WCHAR_A(.CHR,OPT);
+;	  0297	    IPT = CH$PTR( UPLIT (%ASCIZ ' Line '));
+;	  0298	    WHILE (CHR = CH$RCHAR_A(IPT)) NEQ 0 DO CH$WCHAR_A(.CHR,OPT);
+;	  0299	    OPT = PCMITS(.INSTR[COD_LNO],.OPT);
+;	  0300	    CH$WCHAR_A(%C':', OPT);
+;	  0301	    CH$WCHAR_A(%C' ', OPT);
+;	  0302	    IPT = BYTPTR(.MSG);
+;	  0303	    DO
+;	  0304		IF (CHR = CH$RCHAR_A(IPT)) EQL %C'#'
+;	  0305		THEN
+;	  0306		    BEGIN
+;	  0307		    CH$RCHAR_A(IPT);	! Skip the 1 which must follow
+;	  0308		    INSRT = BYTPTR(.PAR1);
+;	  0309		    WHILE (CHR = CH$RCHAR_A(INSRT)) NEQ 0 DO CH$WCHAR_A(.CHR,OPT);
+;	  0310		    CHR = -1
+;	  0311		    END
+;	  0312		ELSE
+;	  0313		    CH$WCHAR_A(.CHR,OPT)
+;	  0314	      UNTIL .CHR EQL 0;
+;	  0315	    PCMXER(BUFF)
+;	  0316	    END;
+
+
+	TITLE	EXECPX
+	TWOSEG
+
+
+	.REQUEST  SYS:B362LB.REL
+
+
+	RELOC	400000
+P.AAA:	EXP	10000000000
+	EXP	0
+	EXP	0
+	EXP	0
+P.AAB:	BYTE	(7)" ","L","i","n","e"		;  Line
+	BYTE	(7)" ",000,000,000,000
+
+
+	EXTERN	PCMGMM, RETMEM, GETBUF, ERESET, CLRINV, PCIFGS, PCIPRS, PCIIVK, PCICLP, PCIKIF, PCITIN
+	EXTERN	PCIPEO, PCIPSO, PCIDPY, PCIRPL, DIVFNM, PCMITS, PCMXER, PCMPER, PCCURC, PCSFRE, PCGBST
+	EXTERN	PCTEXT, PCSTAK, PCLSTF, XDICT, DICT, CSBUFP, CJFNBK, PCPOTP, PCPEOP, PCLDCO, PSDEFN
+	EXTERN	PCVVAL, PCVATM, FORK, PCFORK, PCRNFK, PCGBLN, PCSTKL, PSDEFL
+
+
+; CFM_FLDDB
+U.29=		    P.AAA
+; GBSTLN
+U.30=		    <<PCGBLN*1000>/3>
+; STAKLN
+U.31=		    <PCSTKL*1000>
+; PC
+U.32=		    PCSTAK
+; FP
+U.33=		    PCSTAK+1
+; STKP
+U.34=		    PCSTAK+2
+; INSTR
+U.35=		    PCSTAK+3
+; LSTPMT
+U.36=		    PCSTAK+5
+; CURGST
+U.37=		    PCSTAK+6
+; CURCOD
+U.38=		    PCSTAK+7
+; CURCDL
+U.39=		    PCSTAK+10
+; CURCNS
+U.40=		    PCSTAK+11
+; CURCNL
+U.41=		    PCSTAK+12
+; CURSMT
+U.42=		    PCSTAK+13
+; CURSML
+U.43=		    PCSTAK+14
+; CMPTR
+U.44=		    PCSTAK+15
+PCEOWN==:	    15
+
+
+AC0=	0
+AC1=	1
+AC2=	2
+AC3=	3
+AC4=	4
+AC5=	5
+AC6=	6
+AC7=	7
+AC10=	10
+AC11=	11
+AC12=	12
+AC13=	13
+AC14=	14
+FP=	15
+AC16=	16
+SP=	17
+
+
+U.1:
+PCEERR::PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,31				; SP,31
+	MOVE	AC11,AC2			; PAR1,AC2
+	MOVE	AC12,AC1			; MSG,AC1
+	MOVEI	AC1,1				; AC1,1
+	PUSHJ	SP,PCICLP			; SP,PCICLP
+	PUSHJ	SP,U.12				; SP,CLNVAR
+	MOVEI	AC1,-30(SP)			; HLF,BUFF
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC2,AC1				; OPT,HLF
+	MOVE	AC1,U.37			; AC1,CURGST
+	HRRZ	AC1,2(AC1)			; HLF,2(AC1)
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC13,AC1			; IPT,HLF
+L.1:	ILDB	AC14,AC13			; CHR,IPT
+	JUMPE	AC14,L.2			; CHR,L.2
+	IDPB	AC14,AC2			; CHR,OPT
+	JRST	L.1				; L.1
+L.2:	MOVE	AC13,C.2			; IPT,[POINT 7,P.AAB-1,34]  <1,7>
+L.3:	ILDB	AC14,AC13			; CHR,IPT
+	JUMPE	AC14,L.4			; CHR,L.4
+	IDPB	AC14,AC2			; CHR,OPT
+	JRST	L.3				; L.3
+L.4:	LDB	AC1,C.1				; AC1,[POINT 9,INSTR,11]  <24,9>
+	PUSHJ	SP,PCMITS			; SP,PCMITS
+	MOVE	AC2,AC1				; OPT,AC1
+	MOVEI	AC1,72				; AC1,72
+	IDPB	AC1,AC2				; AC1,OPT
+	MOVEI	AC1,40				; AC1,40
+	IDPB	AC1,AC2				; AC1,OPT
+	MOVE	AC1,AC12			; HLF,MSG
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC13,AC1			; IPT,HLF
+L.5:	ILDB	AC14,AC13			; CHR,IPT
+	CAIE	AC14,43				; CHR,43
+	JRST	L.8				; L.8
+	IBP	AC13				; IPT
+	MOVE	AC1,AC11			; HLF,PAR1
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC3,AC1				; INSRT,HLF
+L.6:	ILDB	AC14,AC3			; CHR,INSRT
+	JUMPE	AC14,L.7			; CHR,L.7
+	IDPB	AC14,AC2			; CHR,OPT
+	JRST	L.6				; L.6
+L.7:	SETO	AC14,				; CHR,
+	JRST	L.9				; L.9
+L.8:	IDPB	AC14,AC2			; CHR,OPT
+L.9:	JUMPN	AC14,L.5			; CHR,L.5
+	MOVEI	AC1,-30(SP)			; AC1,BUFF
+	PUSHJ	SP,PCMXER			; SP,PCMXER
+	ADJSP	SP,-31				; SP,-31
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POPJ	SP,				; SP,
+C.1:	POINT	9,U.35,11			; 9,INSTR,11
+C.2:	POINT	7,P.AAB-1,34			; 7,P.AAB-1,34
+
+; Routine Size:  61 words
+
+
+;	  0317	
+;	  0318	GLOBAL ROUTINE PCEAST (LEN) =	! Allocate string storage
+;	  0319	
+;	  0320	!++
+;	  0321	! Functional description:
+;	  0322	!	  Allocate from string storage a block large enough to store
+;	  0323	!	LEN+1 characters.
+;	  0324	!	  Strings are ALWAYS stored in ASCIZ format, but the final
+;	  0325	!	null is never seen by the user.  This makes things much easier
+;	  0326	!	when we have to deal with the rest of the system.  All real
+;	  0327	!	stringvalues consist of a length and an 18-bit address; the
+;	  0328	!	final null is NOT included in the length.
+;	  0329	!	  This system does not collect garbage, but requires all users
+;	  0330	!	of the string pool to return strings when they are done with
+;	  0331	!	them.  This means that every user string variable and every
+;	  0332	!	string system variable, if they contain pointers to strings
+;	  0333	!	at all, contain the ONLY pointers to those strings; LET A=B
+;	  0334	!	gives A a copy of the string in B, not aduplicate pointer.
+;	  0335	!	That allows a later LET A=C to release the string in A without
+;	  0336	!	requiring reference counters and other complexities.
+;	  0337	!	  To keep the string pool under control, whenever ANY string
+;	  0338	!	variable is destroyed (that is, whenever a routine with
+;	  0339	!	string variables is exited) it should be freed.  As a last
+;	  0340	!	resort, whenever the Exec exits from its outermost command
+;	  0341	!	context, we (will) free the entire string pool and start afresh.
+;	  0342	!
+;	  0343	! Formal parameters:
+;	  0344	!	Number of bytes the block should be able to store, excluding the null
+;	  0345	!
+;	  0346	! Implicit inputs:
+;	  0347	!	None
+;	  0348	!
+;	  0349	! Implicit outputs:
+;	  0350	!	Free space list
+;	  0351	!
+;	  0352	! Routine value:
+;	  0353	!	Real string value of block allocated.  If desired length is not
+;	  0354	!	positive, value is zero.
+;	  0355	!
+;	  0356	! Side effects:
+;	  0357	!	None
+;	  0358	!
+;	  0359	!--
+;	  0360	
+;	  0361	    BEGIN
+;	  0362	    EXTERNAL REGISTER Z;
+;	  0363	    LOCAL
+;	  0364		PTR,
+;	  0365		STR: STR_VAL;
+;	  0366	    IF .LEN LEQ 0 THEN RETURN 0;
+;	  0367	    PTR = PCMGMM((.LEN+5)/5, PCSFRE);
+;	  0368	    IF .PTR LEQ 0 THEN ERROR('Out of execution string space');
+;	  0369	    STR[STV_ADR] = .PTR;
+;	  0370	    STR[STV_LEN] = .LEN;
+;	  0371	    .STR
+;	  0372	    END;
+
+
+P.AAC:	BYTE	(7)"O","u","t"," ","o"		; Out o
+	BYTE	(7)"f"," ","e","x","e"		; f exe
+	BYTE	(7)"c","u","t","i","o"		; cutio
+	BYTE	(7)"n"," ","s","t","r"		; n str
+	BYTE	(7)"i","n","g"," ","s"		; ing s
+	BYTE	(7)"p","a","c","e",000		; pace
+
+
+U.2:
+PCEAST::PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; LEN,AC1
+	JUMPG	AC14,L.10			; LEN,L.10
+	SETZ	AC1,				; AC1,
+	JRST	L.12				; L.12
+L.10:	MOVE	AC1,AC14			; AC1,LEN
+	ADDI	AC1,5				; AC1,5
+	IDIVI	AC1,5				; AC1,5
+	MOVEI	AC2,PCSFRE			; AC2,PCSFRE
+	PUSHJ	SP,PCMGMM			; SP,PCMGMM
+	MOVE	AC13,AC1			; PTR,AC1
+	JUMPG	AC13,L.11			; PTR,L.11
+	MOVEI	AC1,P.AAC			; AC1,P.AAC
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.11:	HRR	AC1,AC13			; STR,PTR
+	HRL	AC1,AC14			; STR,LEN
+L.12:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+
+; Routine Size:  20 words
+
+
+;	  0373	
+;	  0374	GLOBAL ROUTINE PCEFST (STR): NOVALUE=	! Free string storage
+;	  0375	
+;	  0376	!++
+;	  0377	! Functional description:
+;	  0378	!	Release block obtained from free space by PCEAST.
+;	  0379	!
+;	  0380	! Formal parameters:
+;	  0381	!	String value of block to be freed
+;	  0382	!
+;	  0383	! Implicit inputs:
+;	  0384	!	None
+;	  0385	!
+;	  0386	! Implicit outputs:
+;	  0387	!	Free space list
+;	  0388	!
+;	  0389	! Routine value:
+;	  0390	!	None
+;	  0391	!
+;	  0392	! Side effects:
+;	  0393	!	None
+;	  0394	!
+;	  0395	!--
+;	  0396	
+;	  0397	    BEGIN
+;	  0398	    EXTERNAL REGISTER Z;
+;	  0399	    MAP
+;	  0400		STR: STR_VAL;
+;	  0401	    IF .STR[STV_LEN] NEQ 0
+;	  0402	    THEN
+;	  0403		RETMEM((.STR[STV_LEN]+5)/5, .STR[STV_ADR], PCSFRE)
+;	  0404	    END;
+
+
+U.3:
+PCEFST::MOVE	AC4,AC1				; STR,AC1
+	HLRZ	AC1,AC4				; AC1,STR
+	JUMPE	AC1,L.13			; AC1,L.13
+	ADDI	AC1,5				; AC1,5
+	IDIVI	AC1,5				; AC1,5
+	MOVEI	AC2,0(AC4)			; AC2,0(STR)
+	MOVEI	AC3,PCSFRE			; AC3,PCSFRE
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+L.13:	POPJ	SP,				; SP,
+
+; Routine Size:  9 words
+
+
+;	  0405	
+;	  0406	GLOBAL ROUTINE PCECST (STR) =	! Make copy of a string
+;	  0407	
+;	  0408	!++
+;	  0409	! Functional description:
+;	  0410	!	  Given a real stringvalue, get a free block of appropriate size,
+;	  0411	!	copy the string, and return the real stringvalue of the copy.
+;	  0412	!
+;	  0413	! Formal parameters:
+;	  0414	!	String value of original
+;	  0415	!
+;	  0416	! Implicit inputs:
+;	  0417	!	None
+;	  0418	!
+;	  0419	! Implicit outputs:
+;	  0420	!	None
+;	  0421	!
+;	  0422	! Routine value:
+;	  0423	!	Real string value of string copy.  If original string has no length,
+;	  0424	!	value is zero.
+;	  0425	!
+;	  0426	! Side effects:
+;	  0427	!	None
+;	  0428	!
+;	  0429	!--
+;	  0430	
+;	  0431	    BEGIN
+;	  0432	    EXTERNAL REGISTER Z;
+;	  0433	    MAP
+;	  0434		STR: STR_VAL;		! Original string
+;	  0435	    LOCAL
+;	  0436		NEW: STR_VAL;		! Copy being created
+;	  0437	    IF .STR[STV_LEN] EQL 0 THEN RETURN 0;
+;	  0438	    NEW = PCEAST(.STR[STV_LEN]);
+;	  0439	    CH$COPY(.STR[STV_LEN], BYTPTR(.STR[STV_ADR]),
+;	  0440		    0, .STR[STV_LEN]+1, BYTPTR(.NEW[STV_ADR]));
+;	  0441	    .NEW
+;	  0442	    END;
+
+
+U.4:
+PCECST::PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; STR,AC1
+	HLRZ	AC13,AC14			; AC13,STR
+	JUMPN	AC13,L.14			; AC13,L.14
+	SETZ	AC1,				; AC1,
+	JRST	L.15				; L.15
+L.14:	MOVE	AC1,AC13			; AC1,AC13
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; NEW,AC1
+	MOVEI	AC2,0(AC14)			; HLF,0(STR)
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC3,AC13			; AC3,AC13
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(NEW)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC13			; AC1,AC13
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.3				; AC1,C.3
+	JFCL					; 
+	MOVE	AC1,AC16			; AC1,NEW
+L.15:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+C.3:	MOVSLJ					; 
+	EXP	0				; 0
+
+; Routine Size:  26 words
+
+
+;	  0443	
+;	  0444	GLOBAL ROUTINE PCIRUN (RUNECB,RUNNAM) =	! Start command procedure
+;	  0445	
+;	  0446	!++
+;	  0447	! Functional description:
+;	  0448	!	  Control reaches here to execute a command.
+;	  0449	!	I initialize the system to execute a command, filling in an
+;	  0450	!	Execution Context Block and in general establishing all the
+;	  0451	!	context which the Executer will require to begin executing
+;	  0452	!	instructions.  I don't actually start the Executer now, but merely
+;	  0453	!	prepare it to "continue" execution of this command.  The caller
+;	  0454	!	will return to the Exec after causing it to forget that it was
+;	  0455	!	just starting to parse a command, and after defining NUL: as the
+;	  0456	!	command input device.  The Exec will then ask us for a whole new
+;	  0457	!	command, and at that point the command will be executed to
+;	  0458	!	generate a command.
+;	  0459	!
+;	  0460	! Formal parameters:
+;	  0461	!	Address of Execution Context Block
+;	  0462	!	Stringvalue of name of command
+;	  0463	!
+;	  0464	! Implicit inputs:
+;	  0465	!	Global symbol table
+;	  0466	!
+;	  0467	! Implicit outputs:
+;	  0468	!	Execution Context Block
+;	  0469	!
+;	  0470	! Routine value:
+;	  0471	!	True if command executed, False if could not be found
+;	  0472	!
+;	  0473	! Side effects:
+;	  0474	!	None
+;	  0475	!
+;	  0476	!--
+;	  0477	
+;	  0478	    BEGIN
+;	  0479	    EXTERNAL REGISTER Z;
+;	  0480	    LOCAL
+;	  0481		EP: REF ECB_BLK,	! ECB pointer
+;	  0482		GS: REF GST_BLK;	! Global symbol table entry
+;	  0483	    IF .PCCURC EQL 0		! If top-level PCL command
+;	  0484	    THEN
+;	  0485		STKP = PCEOWN;		! Initialize stack pointer
+;	  0486	    IF .STKP + FRM_LOC + .GS[GST_SLN] GTR STAKLN
+;	  0487	    THEN
+;	  0488		ERROR('Stack full');
+;	  0489	    EP = .RUNECB;
+;	  0490	    GS = .EP[ECB_GSC];
+;	  0491	    EP[ECB_PC] = 0;
+;	  0492	    EP[ECB_PRC] = .GS;
+;	  0493	    EP[ECB_FP] = 0;
+;	  0494	    EP[ECB_SP] = .STKP + FRM_LOC + .GS[GST_SLN];
+;	  0495	    EP[ECB_STK] = .STKP + 1;
+;	  0496	    EP[ECB_CTN] = 0;
+;	  0497	    EP[ECB_CTJ] = 0;
+;	  0498	    EP[ECB_DTN] = 0;
+;	  0499	    EP[ECB_DTJ] = 0;
+;	  0500	    EP[ECB_DCB] = 0;
+;	  0501	    EP[ECB_DTO] = %O'777777';
+;	  0502	    EP[ECB_RCL] = 0;
+;	  0503	    EP[ECB_PFL] = 0;
+;	  0504	    ep[ecb_pdl] = 0;            ! [fun24-2] Directorylist pointer
+;	  0505	    EP[ECB_CFK] = 0;
+;	  0506	    EP[ECB_PAR] = 1;
+;	  0507	    EP[ECB_SCM] = 0;
+;	  0508	    EP[ECB_ECO] = 0;
+;	  0509	    TRUE
+;	  0510	    END;
+
+
+P.AAD:	BYTE	(7)"S","t","a","c","k"		; Stack
+	BYTE	(7)" ","f","u","l","l"		;  full
+	BYTE	(7)000,000,000,000,000
+
+
+U.5:
+PCIRUN::PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC13,AC1			; RUNECB,AC1
+	SKIPE	PCCURC				; PCCURC
+	JRST	L.16				; L.16
+	MOVEI	AC1,15				; AC1,15
+	MOVEM	AC1,U.34			; AC1,STKP
+L.16:	MOVE	AC1,U.34			; AC1,STKP
+	LDB	AC2,C.4				; AC2,[POINT 8,0(GS),17]  <18,8>
+	ADD	AC1,AC2				; AC1,AC2
+	ADDI	AC1,2				; AC1,2
+	CAMG	AC1,C.5				; AC1,[<PCSTKL*1000>]
+	JRST	L.17				; L.17
+	MOVEI	AC1,P.AAD			; AC1,P.AAD
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.17:	MOVE	AC1,AC13			; EP,RUNECB
+	HRRZ	AC14,7(AC1)			; GS,7(EP)
+	HLLZS	2(AC1)				; 2(EP)
+	HRLM	AC14,0(AC1)			; GS,0(EP)
+	HRRZS	2(AC1)				; 2(EP)
+	MOVE	AC2,U.34			; AC2,STKP
+	LDB	AC3,C.4				; AC3,[POINT 8,0(GS),17]  <18,8>
+	ADD	AC2,AC3				; AC2,AC3
+	ADDI	AC2,2				; AC2,2
+	HRRM	AC2,3(AC1)			; AC2,3(EP)
+	MOVE	AC2,U.34			; AC2,STKP
+	ADDI	AC2,1				; AC2,1
+	HRLM	AC2,3(AC1)			; AC2,3(EP)
+	HLLZS	4(AC1)				; 4(EP)
+	HRRZS	4(AC1)				; 4(EP)
+	HLLZS	5(AC1)				; 5(EP)
+	HRRZS	5(AC1)				; 5(EP)
+	HLLZS	6(AC1)				; 6(EP)
+	HRROS	6(AC1)				; 6(EP)
+	HRRZS	7(AC1)				; 7(EP)
+	HLLZS	10(AC1)				; 10(EP)
+	HRRZS	15(AC1)				; 15(EP)
+	HRRZS	10(AC1)				; 10(EP)
+	MOVSI	AC2,10000			; AC2,10000
+	IORM	AC2,12(AC1)			; AC2,12(EP)
+	MOVSI	AC2,100000			; AC2,100000
+	ANDCAM	AC2,12(AC1)			; AC2,12(EP)
+	MOVSI	AC2,40000			; AC2,40000
+	ANDCAM	AC2,12(AC1)			; AC2,12(EP)
+	SETO	AC1,				; AC1,
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+C.4:	POINT	8,0(AC14),17			; 8,0(GS),17
+C.5:	EXP	<PCSTKL*1000>			; <PCSTKL*1000>
+
+; Routine Size:  50 words
+
+
+;	  0511	
+;	  0512	ROUTINE SETCTX: NOVALUE =	! Switch procedure context
+;	  0513	
+;	  0514	!++
+;	  0515	! Functional description:
+;	  0516	!	Given the address of a routine's global symbol table entry in
+;	  0517	!	CURGST, load the other pointers required for normal operation
+;	  0518	!	within that routine, defining the locations of the routine's
+;	  0519	!	instructions, constants, and symbols.
+;	  0520	!
+;	  0521	! Formal parameters:
+;	  0522	!	None
+;	  0523	!
+;	  0524	! Implicit inputs:
+;	  0525	!	CURGST, Global symbol table
+;	  0526	!
+;	  0527	! Implicit outputs:
+;	  0528	!	CURCOD, CURCDL, CURCNS, CURCNL, CURSMT, CURSML
+;	  0529	!
+;	  0530	! Routine value:
+;	  0531	!	None
+;	  0532	!
+;	  0533	! Side effects:
+;	  0534	!	None
+;	  0535	!
+;	  0536	!--
+;	  0537	
+;	  0538	    BEGIN
+;	  0539	    LOCAL
+;	  0540		GST: REF GST_BLK;	! Pointer to global symbol table entry
+;	  0541	    GST = .CURGST;
+;	  0542	    CURCOD = .GST[GST_TXT];
+;	  0543	    CURCDL = .GST[GST_COD];
+;	  0544	    IF .GST[GST_CLS] EQL GST_CLS_CMD
+;	  0545	    THEN
+;	  0546		CURCNS = .CURCOD + .CURCDL
+;	  0547	    ELSE
+;	  0548		CURCNS = .CURCOD + .CURCDL + .GST[GST_PCT];
+;	  0549	    CURCNL = .GST[GST_CNS];
+;	  0550	    CURSMT = .CURCNS + .CURCNL;
+;	  0551	    CURSML = .GST[GST_SML]
+;	  0552	    END;
+
+
+; SETCTX
+U.6:	MOVE	AC1,U.37			; GST,CURGST
+	HRRZ	AC2,0(AC1)			; AC2,0(GST)
+	MOVEM	AC2,U.38			; AC2,CURCOD
+	LDB	AC2,C.6				; AC2,[POINT 12,1(GST),35]  <0,12>
+	MOVEM	AC2,U.39			; AC2,CURCDL
+	MOVE	AC2,U.38			; AC2,CURCOD
+	ADD	AC2,U.39			; AC2,CURCDL
+	LDB	AC3,C.7				; AC3,[POINT 3,0(GST),4]  <31,3>
+	JUMPE	AC3,L.18			; AC3,L.18
+	LDB	AC3,C.8				; AC3,[POINT 4,0(GST),9]  <26,4>
+	ADD	AC2,AC3				; AC2,AC3
+L.18:	MOVEM	AC2,U.40			; AC2,CURCNS
+	LDB	AC2,C.9				; AC2,[POINT 12,1(GST),23]  <12,12>
+	MOVEM	AC2,U.41			; AC2,CURCNL
+	MOVE	AC2,U.40			; AC2,CURCNS
+	ADD	AC2,U.41			; AC2,CURCNL
+	MOVEM	AC2,U.42			; AC2,CURSMT
+	LDB	AC2,C.10			; AC2,[POINT 12,1(GST),11]  <24,12>
+	MOVEM	AC2,U.43			; AC2,CURSML
+	POPJ	SP,				; SP,
+C.6:	POINT	12,1(AC1),35			; 12,1(GST),35
+C.7:	POINT	3,0(AC1),4			; 3,0(GST),4
+C.8:	POINT	4,0(AC1),9			; 4,0(GST),9
+C.9:	POINT	12,1(AC1),23			; 12,1(GST),23
+C.10:	POINT	12,1(AC1),11			; 12,1(GST),11
+
+; Routine Size:  25 words
+
+
+;	  0553	
+;	  0554	GLOBAL ROUTINE PCEGOP (OPND,TYP ; TYP_OPND) : EXEC1 =
+;	  0555	                                ! Get value of operand
+;	  0556	
+;	  0557	!++
+;	  0558	! Functional description
+;	  0559	!	Given an operand descriptor taken from an instruction, identifies
+;	  0560	!	the object being referenced, locates the datum, and returns it.
+;	  0561	!	Possible data are integers and string values; caller provides
+;	  0562	!	expected type. If type is ste_typ_any, allow any type.
+;	  0563	!
+;	  0564	! Formal parameters:
+;	  0565	!	Operand descriptor
+;	  0566	!	Type to be fetched (STE_TYP_INT or STE_TYP_STR)
+;	  0567	!
+;	  0568	! Output parameters:
+;	  0569	!       Type of operand: ste_typ_int, _str or _any.
+;	  0570	!          The type ste_typ_any is returned if opnd is on the stack (temporary)
+;	  0571	!
+;	  0572	! Implicit inputs:
+;	  0573	!	Local symbol table, global symbol table, stack frame, constant area,
+;	  0574	!	string space
+;	  0575	!
+;	  0576	! Implicit outputs:
+;	  0577	!	None
+;	  0578	!
+;	  0579	! Routine value:
+;	  0580	!	Datum, either integer or stringvalue
+;	  0581	!
+;	  0582	! Side effects:
+;	  0583	!	None
+;	  0584	!
+;	  0585	!--
+;	  0586	
+;	  0587	    BEGIN
+;	  0588	    EXTERNAL REGISTER Z;
+;	  0589	    MAP
+;	  0590		OPND: OPRAND;
+;	  0591	    LOCAL
+;	  0592		OPA,			! Address of datum
+;	  0593		OPV;			! Value being located
+;	  0594	    OPA = .OPND[OPN_ADR];
+;	  0595	    CASE .OPND[OPN_CLS] FROM OPN_CLS_VAR TO OPN_CLS_TMP OF
+;	  0596		SET
+;	  0597	[OPN_CLS_VAR]:	BEGIN
+;	  0598			! User variable; OPA has local symbol table index
+;	  0599			LOCAL
+;	  0600			    STE: REF STE_BLK;
+;	  0601			STE = CURSMT[.OPA,STE_WRD];
+;	  0602	                                ! [fun44]+
+;	  0603	                typ_opnd = .ste[ste_typ];
+;	  0604	                if .typ neq ste_typ_any and
+;	  0605			   .typ neq .typ_opnd
+;	  0606	                then
+;	  0607	                ERROR('Incorrect operand type');
+;	  0608	                                ! [fun44]-
+;	  0609			CASE .STE[STE_CLS] FROM STE_CLS_VAR TO STE_CLS_FCN OF
+;	  0610			    SET
+;	  0611	    [STE_CLS_VAR]:  BEGIN
+;	  0612			    OPV = .PCSTAK[.FP+.STE[STE_LOC],FRM_WRD];
+;	  0613			    END;
+;	  0614	    [STE_CLS_GBL]:  BEGIN
+;	  0615			    LOCAL
+;	  0616				GST: REF GST_BLK;	! Global symbol table entry
+;	  0617			    GST = PCIFGS(.STE[STE_NAM]+.CURCNS,0);
+;	  0618			    IF .GST GEQ 0
+;	  0619			    THEN
+;	  0620				IF .GST[GST_CLS] NEQ GST_CLS_VAR THEN GST = -1;
+;	  0621			    IF .GST LSS 0
+;	  0622			    THEN
+;	  0623				ERROR('Undefined global variable referenced');
+;	  0624	                                ! [fun44]+
+;	  0625	                    typ_opnd = .gst[gst_typ];
+;	  0626	                    if .typ neq ste_typ_any and
+;	  0627	                       .typ neq .typ_opnd
+;	  0628	                                ! [fun44]-
+;	  0629			    THEN
+;	  0630				ERROR('Incorrect operand type');
+;	  0631			    OPV = .GST[GST_VAL]
+;	  0632			    END;
+;	  0633	    [STE_CLS_FML]:  BEGIN
+;	  0634			    LOCAL
+;	  0635				OPN: OPRAND,	! Operand descriptor
+;	  0636				SAVEFP,	! Save for current FP
+;	  0637				SAVEGS;	! ... CURGST
+;	  0638			    OPN[OPN_WRD] = .PCSTAK[.FP+.STE[STE_LOC],FRM_WRD];
+;	  0639			    IF .OPN[OPN_CLS] EQL OPN_CLS_TMP
+;	  0640			    THEN
+;	  0641				BEGIN
+;	  0642				OPA = .OPN[OPN_ADR];
+;	  0643				OPV = .PCSTAK[.OPA,FRM_WRD]
+;	  0644				END
+;	  0645			    ELSE
+;	  0646				BEGIN
+;	  0647				SAVEFP = .FP;
+;	  0648				SAVEGS = .CURGST;
+;	  0649				CURGST = .PCSTAK[.FP,FRM_PRC];
+;	  0650				FP = .PCSTAK[.FP,FRM_PRV];
+;	  0651				SETCTX();
+;	  0652	                                ! [fun44]:
+;	  0653				OPV = PCEGOP(.OPN[OPN_WRD],.TYP ; typ_opnd);
+;	  0654				FP = .SAVEFP;
+;	  0655				CURGST = .SAVEGS;
+;	  0656				SETCTX()
+;	  0657				END
+;	  0658			    END;
+;	  0659	    [STE_CLS_PRC,
+;	  0660	     STE_CLS_FCN]:  ERROR('Attempt to fetch from routine')
+;	  0661			    TES
+;	  0662			END;
+;	  0663	[OPN_CLS_SYN]:	BEGIN
+;	  0664			! System variable
+;	  0665			IF .PSDEFN[.OPA,SYN_CLS] NEQ SYN_CLS_VAR
+;	  0666			THEN
+;	  0667			    ERROR('Fetch from system procedure');
+;	  0668	                                ! [fun44]+
+;	  0669	                typ_opnd = .psdefn[.opa,syn_typ];
+;	  0670	                if .typ neq ste_typ_any and
+;	  0671	                   .typ neq .typ_opnd
+;	  0672	                                ! [fun44]-
+;	  0673			THEN
+;	  0674			    ERROR('Incorrect operand type');
+;	  0675			IF .PSDEFN[.OPA,SYN_RTV]
+;	  0676			THEN
+;	  0677			    OPV = (.PSDEFN[.OPA,SYN_ADR])(0,0)
+;	  0678			ELSE
+;	  0679			    OPV = ..PSDEFN[.OPA,SYN_ADR]
+;	  0680			END;
+;	  0681	[OPN_CLS_CNS]:	BEGIN
+;	  0682			! Constant
+;	  0683	                                ! [fun44]+
+;	  0684	                typ_opnd = .opnd[opn_str];
+;	  0685	                if .typ neq ste_typ_any and
+;	  0686			   .TYP NEQ .typ_opnd
+;	  0687	                                ! [fun44]-
+;	  0688			THEN
+;	  0689			    ERROR('Incorrect operand type');
+;	  0690			OPV = .CURCNS[.OPA];
+;	  0691			IF .OPND[OPN_STR] THEN OPV = .OPV + .CURCNS
+;	  0692			END;
+;	  0693	[OPN_CLS_TMP]:	BEGIN
+;	  0694			! Temporary variable to be popped from stack
+;	  0695	                typ_opnd = ste_typ_any; ! [fun4]
+;	  0696			OPV = .PCSTAK[.STKP,FRM_WRD];
+;	  0697			IF .STKP EQL PCEOWN
+;	  0698			THEN
+;	  0699			    ERROR('PCL internal error - stack underflow');
+;	  0700			STKP = .STKP - 1
+;	  0701			END
+;	  0702		TES;
+;	  0703	    .OPV
+;	  0704	    END;
+
+
+P.AAE:	BYTE	(7)"I","n","c","o","r"		; Incor
+	BYTE	(7)"r","e","c","t"," "		; rect
+	BYTE	(7)"o","p","e","r","a"		; opera
+	BYTE	(7)"n","d"," ","t","y"		; nd ty
+	BYTE	(7)"p","e",000,000,000		; pe
+P.AAF:	BYTE	(7)"U","n","d","e","f"		; Undef
+	BYTE	(7)"i","n","e","d"," "		; ined
+	BYTE	(7)"g","l","o","b","a"		; globa
+	BYTE	(7)"l"," ","v","a","r"		; l var
+	BYTE	(7)"i","a","b","l","e"		; iable
+	BYTE	(7)" ","r","e","f","e"		;  refe
+	BYTE	(7)"r","e","n","c","e"		; rence
+	BYTE	(7)"d",000,000,000,000		; d
+P.AAG:	BYTE	(7)"I","n","c","o","r"		; Incor
+	BYTE	(7)"r","e","c","t"," "		; rect
+	BYTE	(7)"o","p","e","r","a"		; opera
+	BYTE	(7)"n","d"," ","t","y"		; nd ty
+	BYTE	(7)"p","e",000,000,000		; pe
+P.AAH:	BYTE	(7)"A","t","t","e","m"		; Attem
+	BYTE	(7)"p","t"," ","t","o"		; pt to
+	BYTE	(7)" ","f","e","t","c"		;  fetc
+	BYTE	(7)"h"," ","f","r","o"		; h fro
+	BYTE	(7)"m"," ","r","o","u"		; m rou
+	BYTE	(7)"t","i","n","e",000		; tine
+P.AAI:	BYTE	(7)"F","e","t","c","h"		; Fetch
+	BYTE	(7)" ","f","r","o","m"		;  from
+	BYTE	(7)" ","s","y","s","t"		;  syst
+	BYTE	(7)"e","m"," ","p","r"		; em pr
+	BYTE	(7)"o","c","e","d","u"		; ocedu
+	BYTE	(7)"r","e",000,000,000		; re
+P.AAJ:	BYTE	(7)"I","n","c","o","r"		; Incor
+	BYTE	(7)"r","e","c","t"," "		; rect
+	BYTE	(7)"o","p","e","r","a"		; opera
+	BYTE	(7)"n","d"," ","t","y"		; nd ty
+	BYTE	(7)"p","e",000,000,000		; pe
+P.AAK:	BYTE	(7)"I","n","c","o","r"		; Incor
+	BYTE	(7)"r","e","c","t"," "		; rect
+	BYTE	(7)"o","p","e","r","a"		; opera
+	BYTE	(7)"n","d"," ","t","y"		; nd ty
+	BYTE	(7)"p","e",000,000,000		; pe
+P.AAL:	BYTE	(7)"P","C","L"," ","i"		; PCL i
+	BYTE	(7)"n","t","e","r","n"		; ntern
+	BYTE	(7)"a","l"," ","e","r"		; al er
+	BYTE	(7)"r","o","r"," ","-"		; ror -
+	BYTE	(7)" ","s","t","a","c"		;  stac
+	BYTE	(7)"k"," ","u","n","d"		; k und
+	BYTE	(7)"e","r","f","l","o"		; erflo
+	BYTE	(7)"w",000,000,000,000		; w
+
+
+U.7:
+PCEGOP::PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,2				; SP,2
+	MOVE	AC12,AC2			; TYP,AC2
+	MOVE	AC10,AC1			; OPND,AC1
+	LDB	AC13,C.11			; OPA,[POINT 15,OPND,35]  <0,15>
+	LDB	AC1,C.12			; AC1,[POINT 2,OPND,19]  <16,2>
+	JRST	L.19(AC1)			; L.19(AC1)
+L.19:	JRST	L.20				; L.20
+	JRST	L.31				; L.31
+	JRST	L.35				; L.35
+	JRST	L.37				; L.37
+L.20:	MOVE	AC14,AC13			; AC14,OPA
+	IMULI	AC14,2				; AC14,2
+	ADD	AC14,U.42			; AC14,CURSMT
+	LDB	AC1,C.13			; AC1,[POINT 1,0(STE),6]  <29,1>
+	MOVEM	AC1,0(SP)			; AC1,TYP_OPND
+	SETZM	-1(SP)				; -1(SP)
+	CAIN	AC12,2				; TYP,2
+	JRST	L.21				; L.21
+	MOVEI	AC1,1				; AC1,1
+	MOVEM	AC1,-1(SP)			; AC1,-1(SP)
+	CAMN	AC12,0(SP)			; TYP,TYP_OPND
+	JRST	L.21				; L.21
+	MOVEI	AC1,P.AAE			; AC1,P.AAE
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.21:	LDB	AC1,C.14			; AC1,[POINT 3,0(STE),5]  <30,3>
+	JRST	L.22(AC1)			; L.22(AC1)
+L.22:	JRST	L.23				; L.23
+	JRST	L.24				; L.24
+	JRST	L.28				; L.28
+	JRST	L.30				; L.30
+	JRST	L.30				; L.30
+L.23:	MOVE	AC1,U.33			; AC1,FP
+	HRRE	AC2,0(AC14)			; AC2,0(STE)
+	ADD	AC1,AC2				; AC1,AC2
+	MOVE	AC11,PCSTAK(AC1)		; OPV,PCSTAK(AC1)
+	JRST	L.39				; L.39
+L.24:	MOVE	AC1,1(AC14)			; AC1,1(STE)
+	ADD	AC1,U.40			; AC1,CURCNS
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCIFGS			; SP,PCIFGS
+	MOVE	AC14,AC1			; GST,AC1
+	JUMPL	AC14,L.25			; GST,L.25
+	LDB	AC1,C.15			; AC1,[POINT 3,0(GST),4]  <31,3>
+	CAIE	AC1,2				; AC1,2
+	SETO	AC14,				; GST,
+L.25:	JUMPGE	AC14,L.26			; GST,L.26
+	MOVEI	AC1,P.AAF			; AC1,P.AAF
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.26:	LDB	AC1,C.16			; AC1,[POINT 1,0(GST),5]  <30,1>
+	MOVEM	AC1,0(SP)			; AC1,TYP_OPND
+	MOVEI	AC1,1				; AC1,1
+	TDNE	AC1,-1(SP)			; AC1,-1(SP)
+	CAMN	AC12,0(SP)			; TYP,TYP_OPND
+	JRST	L.27				; L.27
+	MOVEI	AC1,P.AAG			; AC1,P.AAG
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.27:	MOVE	AC11,1(AC14)			; OPV,1(GST)
+	JRST	L.39				; L.39
+L.28:	MOVE	AC2,U.33			; AC2,FP
+	HRRE	AC3,0(AC14)			; AC3,0(STE)
+	MOVE	AC1,AC2				; AC1,AC2
+	ADD	AC1,AC3				; AC1,AC3
+	MOVE	AC10,PCSTAK(AC1)		; OPN,PCSTAK(AC1)
+	LDB	AC1,C.12			; AC1,[POINT 2,OPND,19]  <16,2>
+	CAIE	AC1,3				; AC1,3
+	JRST	L.29				; L.29
+	LDB	AC13,C.11			; OPA,[POINT 15,OPND,35]  <0,15>
+	MOVE	AC11,PCSTAK(AC13)		; OPV,PCSTAK(OPA)
+	JRST	L.39				; L.39
+L.29:	MOVE	AC14,AC2			; SAVEFP,AC2
+	MOVE	AC1,U.37			; AC1,CURGST
+	MOVEM	AC1,-1(SP)			; AC1,SAVEGS
+	HRRZ	AC1,PCSTAK+1(AC2)		; AC1,PCSTAK+1(AC2)
+	MOVEM	AC1,U.37			; AC1,CURGST
+	MOVE	AC1,U.33			; AC1,FP
+	HLRZ	AC2,PCSTAK(AC1)			; AC2,PCSTAK(AC1)
+	MOVEM	AC2,U.33			; AC2,FP
+	PUSHJ	SP,U.6				; SP,SETCTX
+	MOVE	AC1,AC10			; AC1,OPN
+	MOVE	AC2,AC12			; AC2,TYP
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC11,AC1			; OPV,AC1
+	MOVEM	AC2,0(SP)			; AC2,0(SP)
+	MOVEM	AC14,U.33			; SAVEFP,FP
+	MOVE	AC1,-1(SP)			; AC1,SAVEGS
+	MOVEM	AC1,U.37			; AC1,CURGST
+	PUSHJ	SP,U.6				; SP,SETCTX
+	JRST	L.39				; L.39
+L.30:	MOVEI	AC1,P.AAH			; AC1,P.AAH
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+	JRST	L.39				; L.39
+L.31:	MOVE	AC14,AC13			; AC14,OPA
+	IMULI	AC14,2				; AC14,2
+	LDB	AC1,C.17			; AC1,[POINT 3,PSDEFN(AC14),17]  <18,3>
+	CAIN	AC1,2				; AC1,2
+	JRST	L.32				; L.32
+	MOVEI	AC1,P.AAI			; AC1,P.AAI
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.32:	LDB	AC1,C.18			; AC1,[POINT 3,PSDEFN(AC14),14]  <21,3>
+	MOVEM	AC1,0(SP)			; AC1,TYP_OPND
+	CAIE	AC12,2				; TYP,2
+	CAMN	AC12,0(SP)			; TYP,TYP_OPND
+	JRST	L.33				; L.33
+	MOVEI	AC1,P.AAJ			; AC1,P.AAJ
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.33:	HRRZ	AC3,PSDEFN+1(AC14)		; AC3,PSDEFN+1(AC14)
+	SKIPL	PSDEFN(AC14)			; PSDEFN(AC14)
+	JRST	L.34				; L.34
+	SETZB	AC1,AC2				; AC1,AC2
+	PUSHJ	SP,0(AC3)			; SP,0(AC3)
+	MOVE	AC11,AC1			; OPV,AC1
+	JRST	L.39				; L.39
+L.34:	MOVE	AC11,0(AC3)			; OPV,0(AC3)
+	JRST	L.39				; L.39
+L.35:	LDB	AC1,C.19			; AC1,[POINT 1,OPND,20]  <15,1>
+	MOVEM	AC1,0(SP)			; AC1,TYP_OPND
+	CAIE	AC12,2				; TYP,2
+	CAMN	AC12,0(SP)			; TYP,TYP_OPND
+	JRST	L.36				; L.36
+	MOVEI	AC1,P.AAK			; AC1,P.AAK
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.36:	MOVE	AC1,U.40			; AC1,CURCNS
+	MOVE	AC2,AC1				; AC2,AC1
+	ADD	AC2,AC13			; AC2,OPA
+	MOVE	AC11,0(AC2)			; OPV,0(AC2)
+	TRNE	AC10,100000			; OPND,100000
+	ADD	AC11,AC1			; OPV,AC1
+	JRST	L.39				; L.39
+L.37:	MOVEI	AC1,2				; AC1,2
+	MOVEM	AC1,0(SP)			; AC1,TYP_OPND
+	MOVE	AC1,U.34			; AC1,STKP
+	MOVE	AC11,PCSTAK(AC1)		; OPV,PCSTAK(AC1)
+	CAIE	AC1,15				; AC1,15
+	JRST	L.38				; L.38
+	MOVEI	AC1,P.AAL			; AC1,P.AAL
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.38:	SOS	U.34				; STKP
+L.39:	MOVE	AC1,AC11			; AC1,OPV
+	MOVE	AC2,0(SP)			; AC2,TYP_OPND
+	ADJSP	SP,-2				; SP,-2
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+C.11:	POINT	15,AC10,35			; 15,OPND,35
+C.12:	POINT	2,AC10,19			; 2,OPND,19
+C.13:	POINT	1,0(AC14),6			; 1,0(STE),6
+C.14:	POINT	3,0(AC14),5			; 3,0(STE),5
+C.15:	POINT	3,0(AC14),4			; 3,0(GST),4
+C.16:	POINT	1,0(AC14),5			; 1,0(GST),5
+C.17:	POINT	3,PSDEFN(AC14),17		; 3,PSDEFN(AC14),17
+C.18:	POINT	3,PSDEFN(AC14),14		; 3,PSDEFN(AC14),14
+C.19:	POINT	1,AC10,20			; 1,OPND,20
+
+; Routine Size:  160 words
+
+
+;	  0705	
+;	  0706	GLOBAL ROUTINE PCESOP (OPND,OPV,TYP): NOVALUE =	! Store datum in operand
+;	  0707	
+;	  0708	!++
+;	  0709	! Functional description:
+;	  0710	!	Given an operand descriptor taken from an instruction, identifies
+;	  0711	!	the object being referenced and stores the datum in the appropriate
+;	  0712	!	location.  Requires that the destination is a fit repository for
+;	  0713	!	the type of datum.
+;	  0714	!
+;	  0715	! Formal parameters:
+;	  0716	!	Operand descriptor
+;	  0717	!	Datum, either integer or string value
+;	  0718	!	Type of datum (STE_TYP_INT or STE_TYP_STR)
+;	  0719	!
+;	  0720	! Implicit inputs:
+;	  0721	!	Symbol tables, stack frame
+;	  0722	!
+;	  0723	! Implicit outputs:
+;	  0724	!	Symbol tables, stack frame
+;	  0725	!
+;	  0726	! Routine value:
+;	  0727	!	None
+;	  0728	!
+;	  0729	! Side effects:
+;	  0730	!	None
+;	  0731	!
+;	  0732	!--
+;	  0733	
+;	  0734	    BEGIN
+;	  0735	    EXTERNAL REGISTER Z;
+;	  0736	    MAP
+;	  0737		OPND: OPRAND;
+;	  0738	    LOCAL
+;	  0739		OLD,
+;	  0740		OPA,
+;	  0741		OPS,
+;	  0742		STE: REF STE_BLK;	! Pointer to symbol table entry
+;	  0743	    OPA = .OPND[OPN_ADR];
+;	  0744	    CASE .OPND[OPN_CLS] FROM OPN_CLS_VAR TO OPN_CLS_TMP OF
+;	  0745		SET
+;	  0746	[OPN_CLS_VAR]:	BEGIN
+;	  0747			! User variable
+;	  0748			STE = CURSMT[.OPA,STE_WRD];
+;	  0749			IF .STE[STE_TYP] NEQ .TYP THEN ERROR('Incorrect operand type');
+;	  0750			CASE .STE[STE_CLS] FROM STE_CLS_VAR TO STE_CLS_FCN OF
+;	  0751			    SET
+;	  0752	    [STE_CLS_VAR]:  BEGIN
+;	  0753			    OLD = .PCSTAK[.FP+.STE[STE_LOC],FRM_WRD];
+;	  0754			    PCSTAK[.FP+.STE[STE_LOC],FRM_WRD] = .OPV;
+;	  0755			    IF .TYP EQL STE_TYP_STR THEN PCEFST(.OLD)
+;	  0756			    END;
+;	  0757	    [STE_CLS_GBL]:  BEGIN
+;	  0758			    LOCAL
+;	  0759				GST: REF GST_BLK,	! Global symbol table entry
+;	  0760				NEWV: STR_VAL,
+;	  0761				STRO: STR_VAL;
+;	  0762			    GST= PCIFGS(.STE[STE_NAM]+.CURCNS,0);
+;	  0763			    IF .GST GEQ 0
+;	  0764			    THEN
+;	  0765				IF .GST[GST_CLS] NEQ GST_CLS_VAR THEN GST = -1;
+;	  0766			    IF .GST LSS 0
+;	  0767			    THEN
+;	  0768				ERROR('Undefined global variable referenced');
+;	  0769			    IF .GST[GST_TYP] NEQ .TYP
+;	  0770			    THEN
+;	  0771				ERROR('Incorrect operand type');
+;	  0772			    IF .TYP EQL STE_TYP_INT
+;	  0773			    THEN
+;	  0774				GST[GST_VAL] = .OPV
+;	  0775			    ELSE
+;	  0776				BEGIN
+;	  0777				STRO = .GST[GST_VAL];
+;	  0778				IF .STRO NEQ 0
+;	  0779				THEN
+;	  0780				    BEGIN
+;	  0781				    RETMEM((.STRO[STV_LEN]+5)/5,.STRO[STV_ADR],XDICT);
+;	  0782				    GST[GST_VAL] = 0
+;	  0783				    END;
+;	  0784				NEWV = .OPV;
+;	  0785				IF .NEWV NEQ 0
+;	  0786				THEN
+;	  0787				    BEGIN
+;	  0788				    STRO = PCMGMM( (.NEWV[STV_LEN]+5)/5, XDICT);
+;	  0789				    STRO[STV_LEN] = .NEWV[STV_LEN];
+;	  0790				    CH$MOVE(.NEWV[STV_LEN]+1,BYTPTR(.NEWV[STV_ADR]),
+;	  0791					    BYTPTR(.STRO[STV_ADR]));
+;	  0792				    GST[GST_VAL] = .STRO;
+;	  0793				    PCEFST(.NEWV)
+;	  0794				    END
+;	  0795				END
+;	  0796			    END;
+;	  0797	    [STE_CLS_FML]:  BEGIN
+;	  0798			    LOCAL
+;	  0799				OPN: OPRAND,	! Operand descriptor
+;	  0800				SAVEFP,	! Save for current FP
+;	  0801				SAVEGS;	! ... CURGST
+;	  0802			    OPN[OPN_WRD] = .PCSTAK[.FP+.STE[STE_LOC],FRM_WRD];
+;	  0803			    IF .OPN[OPN_CLS] EQL OPN_CLS_TMP
+;	  0804			    THEN
+;	  0805				ERROR('Cannot store into value-only parameter');
+;	  0806			    SAVEFP = .FP;
+;	  0807			    SAVEGS = .CURGST;
+;	  0808			    CURGST = .PCSTAK[.FP,FRM_PRC];
+;	  0809			    FP = .PCSTAK[.FP,FRM_PRV];
+;	  0810			    SETCTX();
+;	  0811			    PCESOP(.OPN[OPN_WRD],.OPV,.TYP);
+;	  0812			    FP = .SAVEFP;
+;	  0813			    CURGST = .SAVEGS;
+;	  0814			    SETCTX()
+;	  0815			    END;
+;	  0816	    [STE_CLS_PRC,
+;	  0817	     STE_CLS_FCN]:  ERROR('Attempt to store into procedure')
+;	  0818			    TES
+;	  0819			END;
+;	  0820	[OPN_CLS_SYN]:	BEGIN
+;	  0821			! System variable
+;	  0822			IF .PSDEFN[.OPA,SYN_CLS] NEQ SYN_CLS_VAR
+;	  0823			THEN
+;	  0824			    ERROR('Cannot set system procedure');
+;	  0825			IF NOT .PSDEFN[.OPA,SYN_WRT]
+;	  0826			THEN
+;	  0827			    ERROR('Cannot set readonly system variable');
+;	  0828			IF .PSDEFN[.OPA,SYN_TYP] NEQ .TYP
+;	  0829			THEN
+;	  0830			    ERROR('Incorrect operand type');
+;	  0831			IF .PSDEFN[.OPA,SYN_RTV]
+;	  0832			THEN
+;	  0833			    (.PSDEFN[.OPA,SYN_ADR])(.OPV,-1)
+;	  0834			ELSE
+;	  0835			    .PSDEFN[.OPA,SYN_ADR] = .OPV
+;	  0836			END;
+;	  0837	[OPN_CLS_CNS]:	ERROR('Cannot store into a constant');
+;	  0838	[OPN_CLS_TMP]:	BEGIN
+;	  0839			! Temporary to be pushed onto stack
+;	  0840			IF .STKP EQL STAKLN
+;	  0841			THEN
+;	  0842			    ERROR('Stack full');
+;	  0843			STKP = .STKP + 1;
+;	  0844			PCSTAK[.STKP,FRM_WRD] = .OPV
+;	  0845			END
+;	  0846		TES
+;	  0847	    END;
+
+
+P.AAM:	BYTE	(7)"I","n","c","o","r"		; Incor
+	BYTE	(7)"r","e","c","t"," "		; rect
+	BYTE	(7)"o","p","e","r","a"		; opera
+	BYTE	(7)"n","d"," ","t","y"		; nd ty
+	BYTE	(7)"p","e",000,000,000		; pe
+P.AAN:	BYTE	(7)"U","n","d","e","f"		; Undef
+	BYTE	(7)"i","n","e","d"," "		; ined
+	BYTE	(7)"g","l","o","b","a"		; globa
+	BYTE	(7)"l"," ","v","a","r"		; l var
+	BYTE	(7)"i","a","b","l","e"		; iable
+	BYTE	(7)" ","r","e","f","e"		;  refe
+	BYTE	(7)"r","e","n","c","e"		; rence
+	BYTE	(7)"d",000,000,000,000		; d
+P.AAO:	BYTE	(7)"I","n","c","o","r"		; Incor
+	BYTE	(7)"r","e","c","t"," "		; rect
+	BYTE	(7)"o","p","e","r","a"		; opera
+	BYTE	(7)"n","d"," ","t","y"		; nd ty
+	BYTE	(7)"p","e",000,000,000		; pe
+P.AAP:	BYTE	(7)"C","a","n","n","o"		; Canno
+	BYTE	(7)"t"," ","s","t","o"		; t sto
+	BYTE	(7)"r","e"," ","i","n"		; re in
+	BYTE	(7)"t","o"," ","v","a"		; to va
+	BYTE	(7)"l","u","e","-","o"		; lue-o
+	BYTE	(7)"n","l","y"," ","p"		; nly p
+	BYTE	(7)"a","r","a","m","e"		; arame
+	BYTE	(7)"t","e","r",000,000		; ter
+P.AAQ:	BYTE	(7)"A","t","t","e","m"		; Attem
+	BYTE	(7)"p","t"," ","t","o"		; pt to
+	BYTE	(7)" ","s","t","o","r"		;  stor
+	BYTE	(7)"e"," ","i","n","t"		; e int
+	BYTE	(7)"o"," ","p","r","o"		; o pro
+	BYTE	(7)"c","e","d","u","r"		; cedur
+	BYTE	(7)"e",000,000,000,000		; e
+P.AAR:	BYTE	(7)"C","a","n","n","o"		; Canno
+	BYTE	(7)"t"," ","s","e","t"		; t set
+	BYTE	(7)" ","s","y","s","t"		;  syst
+	BYTE	(7)"e","m"," ","p","r"		; em pr
+	BYTE	(7)"o","c","e","d","u"		; ocedu
+	BYTE	(7)"r","e",000,000,000		; re
+P.AAS:	BYTE	(7)"C","a","n","n","o"		; Canno
+	BYTE	(7)"t"," ","s","e","t"		; t set
+	BYTE	(7)" ","r","e","a","d"		;  read
+	BYTE	(7)"o","n","l","y"," "		; only
+	BYTE	(7)"s","y","s","t","e"		; syste
+	BYTE	(7)"m"," ","v","a","r"		; m var
+	BYTE	(7)"i","a","b","l","e"		; iable
+	BYTE	(7)000,000,000,000,000
+P.AAT:	BYTE	(7)"I","n","c","o","r"		; Incor
+	BYTE	(7)"r","e","c","t"," "		; rect
+	BYTE	(7)"o","p","e","r","a"		; opera
+	BYTE	(7)"n","d"," ","t","y"		; nd ty
+	BYTE	(7)"p","e",000,000,000		; pe
+P.AAU:	BYTE	(7)"C","a","n","n","o"		; Canno
+	BYTE	(7)"t"," ","s","t","o"		; t sto
+	BYTE	(7)"r","e"," ","i","n"		; re in
+	BYTE	(7)"t","o"," ","a"," "		; to a
+	BYTE	(7)"c","o","n","s","t"		; const
+	BYTE	(7)"a","n","t",000,000		; ant
+P.AAV:	BYTE	(7)"S","t","a","c","k"		; Stack
+	BYTE	(7)" ","f","u","l","l"		;  full
+	BYTE	(7)000,000,000,000,000
+
+
+U.8:
+PCESOP::PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC13,AC3			; TYP,AC3
+	MOVE	AC11,AC2			; OPV,AC2
+	LDB	AC14,C.20			; OPA,[POINT 15,OPND,35]  <0,15>
+	LDB	AC1,C.21			; AC1,[POINT 2,OPND,19]  <16,2>
+	JRST	L.40(AC1)			; L.40(AC1)
+L.40:	JRST	L.41				; L.41
+	JRST	L.55				; L.55
+	JRST	L.60				; L.60
+	JRST	L.62				; L.62
+L.41:	IMULI	AC14,2				; OPA,2
+	ADD	AC14,U.42			; AC14,CURSMT
+	LDB	AC1,C.13			; AC1,[POINT 1,0(AC14),6]  <29,1>
+	CAMN	AC1,AC13			; AC1,TYP
+	JRST	L.42				; L.42
+	MOVEI	AC1,P.AAM			; AC1,P.AAM
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.42:	LDB	AC1,C.14			; AC1,[POINT 3,0(AC14),5]  <30,3>
+	JRST	L.43(AC1)			; L.43(AC1)
+L.43:	JRST	L.44				; L.44
+	JRST	L.45				; L.45
+	JRST	L.52				; L.52
+	JRST	L.54				; L.54
+	JRST	L.54				; L.54
+L.44:	MOVE	AC2,U.33			; AC2,FP
+	HRRE	AC1,0(AC14)			; AC1,0(STE)
+	ADD	AC2,AC1				; AC2,AC1
+	MOVE	AC1,PCSTAK(AC2)			; OLD,PCSTAK(AC2)
+	MOVEM	AC11,PCSTAK(AC2)		; OPV,PCSTAK(AC2)
+	CAIE	AC13,1				; TYP,1
+	JRST	L.64				; L.64
+	JRST	L.51				; L.51
+L.45:	MOVE	AC1,1(AC14)			; AC1,1(STE)
+	ADD	AC1,U.40			; AC1,CURCNS
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCIFGS			; SP,PCIFGS
+	MOVE	AC14,AC1			; GST,AC1
+	JUMPL	AC14,L.46			; GST,L.46
+	LDB	AC1,C.15			; AC1,[POINT 3,0(AC14),4]  <31,3>
+	CAIE	AC1,2				; AC1,2
+	SETO	AC14,				; GST,
+L.46:	JUMPGE	AC14,L.47			; GST,L.47
+	MOVEI	AC1,P.AAN			; AC1,P.AAN
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.47:	LDB	AC1,C.16			; AC1,[POINT 1,0(AC14),5]  <30,1>
+	CAMN	AC1,AC13			; AC1,TYP
+	JRST	L.48				; L.48
+	MOVEI	AC1,P.AAO			; AC1,P.AAO
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.48:	ADDI	AC14,1				; GST,1
+	JUMPN	AC13,L.49			; TYP,L.49
+	MOVEM	AC11,0(AC14)			; OPV,0(AC14)
+	JRST	L.64				; L.64
+L.49:	MOVE	AC12,0(AC14)			; STRO,0(AC14)
+	JUMPE	AC12,L.50			; STRO,L.50
+	HLRZ	AC1,AC12			; AC1,STRO
+	ADDI	AC1,5				; AC1,5
+	IDIVI	AC1,5				; AC1,5
+	MOVEI	AC2,0(AC12)			; AC2,0(STRO)
+	MOVEI	AC3,XDICT			; AC3,XDICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+	SETZM	0(AC14)				; 0(AC14)
+L.50:	MOVE	AC13,AC11			; NEWV,OPV
+	JUMPE	AC13,L.64			; NEWV,L.64
+	HLRZ	AC1,AC13			; AC1,NEWV
+	ADDI	AC1,5				; AC1,5
+	IDIVI	AC1,5				; AC1,5
+	MOVEI	AC2,XDICT			; AC2,XDICT
+	PUSHJ	SP,PCMGMM			; SP,PCMGMM
+	MOVE	AC12,AC1			; STRO,AC1
+	HLL	AC12,AC13			; STRO,NEWV
+	HLRZ	AC1,AC13			; AC1,NEWV
+	ADDI	AC1,1				; AC1,1
+	MOVEI	AC2,0(AC13)			; HLF,0(NEWV)
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVEI	AC5,0(AC12)			; HLF,0(STRO)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC4,AC1				; AC4,AC1
+	EXTEND	AC1,C.22			; AC1,[MOVSLJ ]
+	JFCL					; 
+	MOVEM	AC12,0(AC14)			; STRO,0(AC14)
+	MOVE	AC1,AC13			; AC1,NEWV
+L.51:	PUSHJ	SP,PCEFST			; SP,PCEFST
+	JRST	L.64				; L.64
+L.52:	MOVE	AC1,U.33			; AC1,FP
+	HRRE	AC2,0(AC14)			; AC2,0(STE)
+	ADD	AC1,AC2				; AC1,AC2
+	MOVE	AC12,PCSTAK(AC1)		; OPN,PCSTAK(AC1)
+	LDB	AC1,C.23			; AC1,[POINT 2,OPN,19]  <16,2>
+	CAIE	AC1,3				; AC1,3
+	JRST	L.53				; L.53
+	MOVEI	AC1,P.AAP			; AC1,P.AAP
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.53:	MOVE	AC1,U.33			; AC1,FP
+	MOVE	AC14,AC1			; SAVEFP,AC1
+	MOVE	AC10,U.37			; SAVEGS,CURGST
+	HRRZ	AC2,PCSTAK+1(AC1)		; AC2,PCSTAK+1(AC1)
+	MOVEM	AC2,U.37			; AC2,CURGST
+	MOVE	AC1,U.33			; AC1,FP
+	HLRZ	AC2,PCSTAK(AC1)			; AC2,PCSTAK(AC1)
+	MOVEM	AC2,U.33			; AC2,FP
+	PUSHJ	SP,U.6				; SP,SETCTX
+	MOVE	AC1,AC12			; AC1,OPN
+	MOVE	AC2,AC11			; AC2,OPV
+	MOVE	AC3,AC13			; AC3,TYP
+	PUSHJ	SP,PCESOP			; SP,PCESOP
+	MOVEM	AC14,U.33			; SAVEFP,FP
+	MOVEM	AC10,U.37			; SAVEGS,CURGST
+	PUSHJ	SP,U.6				; SP,SETCTX
+	JRST	L.64				; L.64
+L.54:	MOVEI	AC1,P.AAQ			; AC1,P.AAQ
+	JRST	L.61				; L.61
+L.55:	IMULI	AC14,2				; OPA,2
+	LDB	AC1,C.17			; AC1,[POINT 3,PSDEFN(AC14),17]  <18,3>
+	CAIN	AC1,2				; AC1,2
+	JRST	L.56				; L.56
+	MOVEI	AC1,P.AAR			; AC1,P.AAR
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.56:	MOVSI	AC1,200000			; AC1,200000
+	TDNE	AC1,PSDEFN(AC14)		; AC1,PSDEFN(AC14)
+	JRST	L.57				; L.57
+	MOVEI	AC1,P.AAS			; AC1,P.AAS
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.57:	LDB	AC1,C.18			; AC1,[POINT 3,PSDEFN(AC14),14]  <21,3>
+	CAMN	AC1,AC13			; AC1,TYP
+	JRST	L.58				; L.58
+	MOVEI	AC1,P.AAT			; AC1,P.AAT
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.58:	HRRZ	AC3,PSDEFN+1(AC14)		; AC3,PSDEFN+1(AC14)
+	SKIPL	PSDEFN(AC14)			; PSDEFN(AC14)
+	JRST	L.59				; L.59
+	MOVE	AC1,AC11			; AC1,OPV
+	SETO	AC2,				; AC2,
+	PUSHJ	SP,0(AC3)			; SP,0(AC3)
+	JRST	L.64				; L.64
+L.59:	MOVEM	AC11,0(AC3)			; OPV,0(AC3)
+	JRST	L.64				; L.64
+L.60:	MOVEI	AC1,P.AAU			; AC1,P.AAU
+L.61:	PUSHJ	SP,PCEERR			; SP,PCEERR
+	JRST	L.64				; L.64
+L.62:	MOVE	AC1,U.34			; AC1,STKP
+	CAME	AC1,C.24			; AC1,[<PCSTKL*1000>]
+	JRST	L.63				; L.63
+	MOVEI	AC1,P.AAV			; AC1,P.AAV
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.63:	AOS	AC1,U.34			; AC1,STKP
+	MOVEM	AC11,PCSTAK(AC1)		; OPV,PCSTAK(AC1)
+L.64:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+C.20:	POINT	15,AC1,35			; 15,OPND,35
+C.21:	POINT	2,AC1,19			; 2,OPND,19
+C.22:	MOVSLJ					; 
+C.23:	POINT	2,AC12,19			; 2,OPN,19
+C.24:	EXP	<PCSTKL*1000>			; <PCSTKL*1000>
+
+; Routine Size:  162 words
+
+
+;	  0848	
+;	  0849	ROUTINE CALPRC: NOVALUE =	! Call another procedure
+;	  0850	
+;	  0851	!++
+;	  0852	! Functional description:
+;	  0853	!	  Called by instruction dispatcher, with PC pointing after CAL
+;	  0854	!	instruction.  Instruction has procedure designator in operand A,
+;	  0855	!	constant displacement of actual parameter list in operand B,
+;	  0856	!	result destination descriptor in operand C (if typed procedure).
+;	  0857	!	This routine distinguishes between system and user procedures:
+;	  0858	!	for user procedures it checks for stack overflow, compares the actual
+;	  0859	!	and formal arguments for validity, pushes actual parameter descriptors
+;	  0860	!	onto the stack after this procedure's variables, pushes fixed fields
+;	  0861	!	of stack frame onto stack, updates stack and stack frame pointers,
+;	  0862	!	sets up	executer pointers to reference the new procedure, and sets
+;	  0863	!	the PC to the beginning of the procedure.  For system procedures it
+;	  0864	!	simply invokes the service routine.
+;	  0865	!	  The actual arguments placed on the stack are genuine operand
+;	  0866	!	descriptors, just as any other descriptors in the context of the
+;	  0867	!	CALLER's routine.  There is a complication, however: temporaries
+;	  0868	!	are not described by the generic OPN_TMP descriptor alone, but
+;	  0869	!	additionally by the stack location of the real data word; this
+;	  0870	!	is feasible because the called routine can never store into a
+;	  0871	!	temporary anyway.
+;	  0872	!	  If the called procedure returns a value, it will be stored in
+;	  0873	!	the destination provided in the CAL instruction when the RET
+;	  0874	!	is executed.
+;	  0875	!
+;	  0876	! Formal parameters:
+;	  0877	!	None
+;	  0878	!
+;	  0879	! Implicit inputs:
+;	  0880	!	PC, INSTR, symbol table, global symbol table,
+;	  0881	!	constants, context pointers
+;	  0882	!
+;	  0883	! Implicit outputs:
+;	  0884	!	Stack, FP, SP, context pointers
+;	  0885	!
+;	  0886	! Routine value:
+;	  0887	!	None
+;	  0888	!
+;	  0889	! Side effects:
+;	  0890	!	None
+;	  0891	!
+;	  0892	!--
+;	  0893	
+;	  0894	    BEGIN
+;	  0895	    EXTERNAL REGISTER Z;
+;	  0896	    LOCAL
+;	  0897		GST: REF GST_BLK,	! Global symbol table entry
+;	  0898		IDX,			! Symbol table index
+;	  0899		ARGI,			! Actual argument pointers
+;	  0900		ARGJ,
+;	  0901		NSPTR,			! New stack pointer
+;	  0902		TMPIDX,			! Stack index for allocating temporaries
+;	  0903		CNT;			! Argument count
+;	  0904	    IDX = .INSTR[COD_OPA];
+;	  0905	    GST = PCIFGS(.CURSMT[.IDX,STE_NAM]+.CURCNS,.PCCURC[ECB_PSV]);
+;	  0906	    IF .GST GEQ 0
+;	  0907	    THEN
+;	  0908		IF .GST[GST_CLS] NEQ GST_CLS_PRC AND .GST[GST_CLS] NEQ GST_CLS_FCN
+;	  0909		THEN
+;	  0910		    GST = -1;
+;	  0911	    IF .GST LSS 0
+;	  0912	    THEN
+;	  0913		PCEERR(	UPLIT(%ASCIZ 'Undefined procedure: #1'),
+;	  0914			.CURSMT[.IDX,STE_NMA]+.CURCNS);
+;	  0915	    IF .STKP + FRM_LOC + .GST[GST_SLN] GTR STAKLN
+;	  0916	    THEN
+;	  0917		ERROR('Stack full');
+;	  0918	    ARGI = .INSTR[COD_OPB];
+;	  0919	    IF .ARGI EQL %O'777777' THEN CNT = 0 ELSE CNT = .CURCNS[.ARGI];
+;	  0920	    IF .CNT NEQ .GST[GST_PCT] THEN ERROR('Argument count mismatch');
+;	  0921	%( The check for type mismatch is missing. Nobody references ARGJ at all )%
+;	  0922	    ARGJ = .GST[GST_TXT] + .GST[GST_COD];
+;	  0923	    ARGI = .ARGI + .CURCNS + .CNT;
+;	  0924	    NSPTR = .STKP + .CNT + 1;
+;	  0925	    TMPIDX = .STKP;
+;	  0926	    ! This is a DECR because any temporaries MUST BE PUSHED IN THIS ORDER
+;	  0927	    DECR I FROM .CNT-1 DO
+;	  0928		BEGIN
+;	  0929		LOCAL
+;	  0930		    OPN: OPRAND;	! Operand descriptor
+;	  0931		NSPTR = .NSPTR - 1;
+;	  0932		OPN[OPN_WRD] = ..ARGI;
+;	  0933		IF .OPN[OPN_CLS] EQL OPN_CLS_TMP
+;	  0934		THEN
+;	  0935		    BEGIN
+;	  0936		    OPN[OPN_ADR] = .TMPIDX;
+;	  0937		    TMPIDX = .TMPIDX - 1
+;	  0938		    END;
+;	  0939		ARGI = .ARGI - 1;
+;	  0940		PCSTAK[.NSPTR,FRM_WRD] = .OPN[OPN_WRD]
+;	  0941		END;
+;	  0942	    NSPTR = .STKP + .CNT + 1;
+;	  0943	    PCSTAK[.NSPTR,FRM_RET] = .PC;
+;	  0944	    PCSTAK[.NSPTR,FRM_PRV] = .FP;
+;	  0945	    PCSTAK[.NSPTR,FRM_STK] = .NSPTR - 1 - .CNT;
+;	  0946	    PCSTAK[.NSPTR,FRM_PRC] = .CURGST;
+;	  0947	    FP = .NSPTR;
+;	  0948	    STKP = .NSPTR + FRM_LOC + .GST[GST_SLN];
+;	  0949	    CURGST = .GST;
+;	  0950	    SETCTX();
+;	  0951	    DECR I FROM .GST[GST_SLN]-1 DO
+;	  0952		BEGIN
+;	  0953		PCSTAK[.NSPTR+FRM_LOC,FRM_WRD] = 0;
+;	  0954		NSPTR = .NSPTR + 1
+;	  0955		END;
+;	  0956	    PC = 0
+;	  0957	    END;
+
+
+P.AAW:	BYTE	(7)"U","n","d","e","f"		; Undef
+	BYTE	(7)"i","n","e","d"," "		; ined
+	BYTE	(7)"p","r","o","c","e"		; proce
+	BYTE	(7)"d","u","r","e",":"		; dure:
+	BYTE	(7)" ","#","1",000,000		;  #1
+P.AAX:	BYTE	(7)"S","t","a","c","k"		; Stack
+	BYTE	(7)" ","f","u","l","l"		;  full
+	BYTE	(7)000,000,000,000,000
+P.AAY:	BYTE	(7)"A","r","g","u","m"		; Argum
+	BYTE	(7)"e","n","t"," ","c"		; ent c
+	BYTE	(7)"o","u","n","t"," "		; ount
+	BYTE	(7)"m","i","s","m","a"		; misma
+	BYTE	(7)"t","c","h",000,000		; tch
+
+
+; CALPRC
+U.9:	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	HRRZ	AC2,U.35			; IDX,INSTR
+	MOVE	AC1,U.42			; AC1,CURSMT
+	MOVE	AC11,AC2			; AC11,IDX
+	IMULI	AC11,2				; AC11,2
+	ADD	AC1,AC11			; AC1,AC11
+	MOVE	AC1,1(AC1)			; AC1,1(AC1)
+	ADD	AC1,U.40			; AC1,CURCNS
+	MOVE	AC3,PCCURC			; AC3,PCCURC
+	LDB	AC2,C.25			; AC2,[POINT 1,12(AC3),0]  <35,1>
+	PUSHJ	SP,PCIFGS			; SP,PCIFGS
+	MOVE	AC13,AC1			; GST,AC1
+	JUMPL	AC13,L.65			; GST,L.65
+	LDB	AC1,C.26			; AC1,[POINT 3,0(GST),4]  <31,3>
+	CAIE	AC1,1				; AC1,1
+	CAIN	AC1,3				; AC1,3
+	JRST	L.65				; L.65
+	SETO	AC13,				; GST,
+L.65:	JUMPGE	AC13,L.66			; GST,L.66
+	MOVE	AC2,U.42			; AC2,CURSMT
+	ADD	AC2,AC11			; AC2,AC11
+	HRRZ	AC2,1(AC2)			; AC2,1(AC2)
+	ADD	AC2,U.40			; AC2,CURCNS
+	MOVEI	AC1,P.AAW			; AC1,P.AAW
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.66:	MOVE	AC1,U.34			; AC1,STKP
+	LDB	AC2,C.27			; AC2,[POINT 8,0(GST),17]  <18,8>
+	ADD	AC1,AC2				; AC1,AC2
+	ADDI	AC1,2				; AC1,2
+	CAMG	AC1,C.30			; AC1,[<PCSTKL*1000>]
+	JRST	L.67				; L.67
+	MOVEI	AC1,P.AAX			; AC1,P.AAX
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.67:	HLRZ	AC11,U.35+1			; ARGI,INSTR+1
+	CAIE	AC11,-1				; ARGI,-1
+	JRST	L.68				; L.68
+	SETZ	AC12,				; CNT,
+	JRST	L.69				; L.69
+L.68:	MOVE	AC1,U.40			; AC1,CURCNS
+	ADD	AC1,AC11			; AC1,ARGI
+	MOVE	AC12,0(AC1)			; CNT,0(AC1)
+L.69:	LDB	AC1,C.28			; AC1,[POINT 4,0(GST),9]  <26,4>
+	CAMN	AC12,AC1			; CNT,AC1
+	JRST	L.70				; L.70
+	MOVEI	AC1,P.AAY			; AC1,P.AAY
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.70:	HRRZ	AC1,0(AC13)			; ARGJ,0(GST)
+	LDB	AC2,C.29			; AC2,[POINT 12,1(GST),35]  <0,12>
+	ADD	AC1,AC2				; ARGJ,AC2
+	MOVE	AC1,AC11			; AC1,ARGI
+	ADD	AC1,U.40			; AC1,CURCNS
+	MOVE	AC11,AC1			; ARGI,AC1
+	ADD	AC11,AC12			; ARGI,CNT
+	MOVE	AC1,U.34			; AC1,STKP
+	ADD	AC1,AC12			; AC1,CNT
+	MOVE	AC14,AC1			; NSPTR,AC1
+	ADDI	AC14,1				; NSPTR,1
+	MOVE	AC2,U.34			; TMPIDX,STKP
+	MOVE	AC3,AC12			; I,CNT
+	JRST	L.73				; L.73
+L.71:	SUBI	AC14,1				; NSPTR,1
+	MOVE	AC1,0(AC11)			; OPN,0(ARGI)
+	LDB	AC4,C.21			; AC4,[POINT 2,AC1,19]  <16,2>
+	CAIE	AC4,3				; AC4,3
+	JRST	L.72				; L.72
+	DPB	AC2,C.20			; TMPIDX,[POINT 15,AC1,35]  <0,15>
+	SUBI	AC2,1				; TMPIDX,1
+L.72:	SUBI	AC11,1				; ARGI,1
+	MOVEM	AC1,PCSTAK(AC14)		; OPN,PCSTAK(NSPTR)
+L.73:	SOJGE	AC3,L.71			; I,L.71
+	MOVE	AC1,U.34			; AC1,STKP
+	ADD	AC1,AC12			; AC1,CNT
+	MOVE	AC14,AC1			; NSPTR,AC1
+	ADDI	AC14,1				; NSPTR,1
+	MOVE	AC1,U.32			; AC1,PC
+	HRRM	AC1,PCSTAK(AC14)		; AC1,PCSTAK(NSPTR)
+	MOVE	AC1,U.33			; AC1,FP
+	HRLM	AC1,PCSTAK(AC14)		; AC1,PCSTAK(NSPTR)
+	MOVE	AC1,AC14			; AC1,NSPTR
+	SUB	AC1,AC12			; AC1,CNT
+	SUBI	AC1,1				; AC1,1
+	HRLM	AC1,PCSTAK+1(AC14)		; AC1,PCSTAK+1(NSPTR)
+	MOVE	AC1,U.37			; AC1,CURGST
+	HRRM	AC1,PCSTAK+1(AC14)		; AC1,PCSTAK+1(NSPTR)
+	MOVEM	AC14,U.33			; NSPTR,FP
+	MOVE	AC1,AC14			; AC1,NSPTR
+	LDB	AC2,C.27			; AC2,[POINT 8,0(GST),17]  <18,8>
+	ADD	AC1,AC2				; AC1,AC2
+	ADDI	AC1,2				; AC1,2
+	MOVEM	AC1,U.34			; AC1,STKP
+	MOVEM	AC13,U.37			; GST,CURGST
+	PUSHJ	SP,U.6				; SP,SETCTX
+	LDB	AC1,C.27			; I,[POINT 8,0(GST),17]  <18,8>
+	JRST	L.75				; L.75
+L.74:	SETZM	PCSTAK+2(AC14)			; PCSTAK+2(NSPTR)
+	ADDI	AC14,1				; NSPTR,1
+L.75:	SOJGE	AC1,L.74			; I,L.74
+	SETZM	U.32				; PC
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POPJ	SP,				; SP,
+C.25:	POINT	1,12(AC3),0			; 1,12(AC3),0
+C.26:	POINT	3,0(AC13),4			; 3,0(GST),4
+C.27:	POINT	8,0(AC13),17			; 8,0(GST),17
+C.28:	POINT	4,0(AC13),9			; 4,0(GST),9
+C.29:	POINT	12,1(AC13),35			; 12,1(GST),35
+C.30:	EXP	<PCSTKL*1000>			; <PCSTKL*1000>
+
+; Routine Size:  112 words
+
+
+;	  0958	
+;	  0959	ROUTINE RETPRC: NOVALUE =	! Return from procedure
+;	  0960	
+;	  0961	!++
+;	  0962	! Functional description:
+;	  0963	!	Unwinds stack frame to reference calling procedure, resets
+;	  0964	!	context to caller, and continues.  If caller expected a value,
+;	  0965	!	returned value is deposited.
+;	  0966	!
+;	  0967	! Formal parameters:
+;	  0968	!	None
+;	  0969	!
+;	  0970	! Implicit inputs:
+;	  0971	!	FP, stack frame
+;	  0972	!
+;	  0973	! Implicit outputs:
+;	  0974	!	Stack frame pointer, PC, CURGST
+;	  0975	!
+;	  0976	! Routine value:
+;	  0977	!	None
+;	  0978	!
+;	  0979	! Side effects:
+;	  0980	!	Frees string variables in the called routine's stack frame
+;	  0981	!
+;	  0982	!--
+;	  0983	
+;	  0984	    BEGIN
+;	  0985	    EXTERNAL REGISTER Z;
+;	  0986	    LOCAL
+;	  0987		FPTR,			! Copy of frame pointer in a register
+;	  0988		LSP: REF BLOCK[1] FIELD(FRM_FLD),	! Local stack pointer
+;	  0989		OPN: OPRAND,		! Operand descriptor
+;	  0990		CNT,			! Argument count
+;	  0991		CLS,			! Class of returning routine
+;	  0992		VAL;			! Returned value
+;	  0993	    CLS = .CURGST[GST_CLS];
+;	  0994	    IF .CLS EQL GST_CLS_FCN
+;	  0995	    THEN
+;	  0996		IF .CURGST[GST_TYP] EQL GST_TYP_INT
+;	  0997		THEN
+;	  0998		    VAL = PCEGOP(.INSTR[COD_OPA],STE_TYP_INT)
+;	  0999		ELSE
+;	  1000		    BEGIN
+;	  1001		    VAL = PCEGOP(.INSTR[COD_OPA],STE_TYP_STR);
+;	  1002		    IF .INSTR[COD_OPA] NEQ OPN_TMP_STR THEN VAL = PCECST(.VAL)
+;	  1003		    END;
+;	  1004	    CLNVAR();
+;	  1005	    FPTR = .FP;
+;	  1006	    CNT = .CURGST[GST_PCT];
+;	  1007	    PC = .PCSTAK[.FPTR,FRM_RET];
+;	  1008	    CURGST = .PCSTAK[.FPTR,FRM_PRC];
+;	  1009	    STKP = .PCSTAK[.FPTR,FRM_STK];
+;	  1010	    FP = .PCSTAK[.FPTR,FRM_PRV];
+;	  1011	    SETCTX();
+;	  1012	    LSP = PCSTAK[.STKP,FRM_WRD];
+;	  1013	    DECR I FROM .CNT-1 DO
+;	  1014		BEGIN
+;	  1015		LSP = .LSP + 1;
+;	  1016		OPN[OPN_WRD] = .LSP[FRM_WRD];
+;	  1017		IF .OPN[OPN_CLS] EQL OPN_CLS_TMP
+;	  1018		THEN
+;	  1019		    BEGIN
+;	  1020		    IF .OPN[OPN_STR]
+;	  1021		    THEN
+;	  1022			BEGIN
+;	  1023			OPN[OPN_WRD] = .OPN[OPN_ADR];
+;	  1024			PCEFST(.PCSTAK[.OPN[OPN_WRD],FRM_WRD])
+;	  1025			END;
+;	  1026		    IF .STKP EQL PCEOWN
+;	  1027		    THEN
+;	  1028			ERROR('PCL internal error - stack underflow');
+;	  1029		    STKP = .STKP - 1
+;	  1030		    END
+;	  1031		END;
+;	  1032	    IF .CLS EQL GST_CLS_FCN
+;	  1033	    THEN
+;	  1034		BEGIN
+;	  1035		OPN[OPN_WRD] = .CURCOD[.PC-2,COD_OPC];
+;	  1036		PCESOP(.OPN[OPN_WRD], .VAL, STE_TYP_STR)
+;	  1037		END
+;	  1038	    END;
+
+
+P.AAZ:	BYTE	(7)"P","C","L"," ","i"		; PCL i
+	BYTE	(7)"n","t","e","r","n"		; ntern
+	BYTE	(7)"a","l"," ","e","r"		; al er
+	BYTE	(7)"r","o","r"," ","-"		; ror -
+	BYTE	(7)" ","s","t","a","c"		;  stac
+	BYTE	(7)"k"," ","u","n","d"		; k und
+	BYTE	(7)"e","r","f","l","o"		; erflo
+	BYTE	(7)"w",000,000,000,000		; w
+
+
+; RETPRC
+U.10:	PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC2,U.37			; AC2,CURGST
+	LDB	AC1,C.31			; CLS,[POINT 3,0(AC2),4]  <31,3>
+	SETZ	AC11,				; AC11,
+	CAIE	AC1,3				; CLS,3
+	JRST	L.78				; L.78
+	MOVEI	AC11,1				; AC11,1
+	LDB	AC1,C.32			; AC1,[POINT 1,0(AC2),5]  <30,1>
+	JUMPN	AC1,L.76			; AC1,L.76
+	HRRZ	AC1,U.35			; AC1,INSTR
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	JRST	L.77				; L.77
+L.76:	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC10,AC1			; VAL,AC1
+	HRRZ	AC1,U.35			; AC1,INSTR
+	CAIN	AC1,-100000			; AC1,-100000
+	JRST	L.78				; L.78
+	MOVE	AC1,AC10			; AC1,VAL
+	PUSHJ	SP,PCECST			; SP,PCECST
+L.77:	MOVE	AC10,AC1			; VAL,AC1
+L.78:	PUSHJ	SP,U.12				; SP,CLNVAR
+	MOVE	AC1,U.33			; FPTR,FP
+	MOVE	AC2,U.37			; AC2,CURGST
+	LDB	AC14,C.33			; CNT,[POINT 4,0(AC2),9]  <26,4>
+	HRRZ	AC2,PCSTAK(AC1)			; AC2,PCSTAK(FPTR)
+	MOVEM	AC2,U.32			; AC2,PC
+	HRRZ	AC2,PCSTAK+1(AC1)		; AC2,PCSTAK+1(FPTR)
+	MOVEM	AC2,U.37			; AC2,CURGST
+	HLRZ	AC2,PCSTAK+1(AC1)		; AC2,PCSTAK+1(FPTR)
+	MOVEM	AC2,U.34			; AC2,STKP
+	HLRZ	AC2,PCSTAK(AC1)			; AC2,PCSTAK(FPTR)
+	MOVEM	AC2,U.33			; AC2,FP
+	PUSHJ	SP,U.6				; SP,SETCTX
+	MOVE	AC13,U.34			; LSP,STKP
+	ADDI	AC13,PCSTAK			; LSP,PCSTAK
+	JRST	L.82				; L.82
+L.79:	ADDI	AC13,1				; LSP,1
+	MOVE	AC12,0(AC13)			; OPN,0(LSP)
+	LDB	AC1,C.23			; AC1,[POINT 2,AC12,19]  <16,2>
+	CAIE	AC1,3				; AC1,3
+	JRST	L.82				; L.82
+	TRNN	AC12,100000			; OPN,100000
+	JRST	L.80				; L.80
+	ANDI	AC12,77777			; OPN,77777
+	MOVE	AC1,PCSTAK(AC12)		; AC1,PCSTAK(OPN)
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.80:	MOVEI	AC1,15				; AC1,15
+	CAME	AC1,U.34			; AC1,STKP
+	JRST	L.81				; L.81
+	MOVEI	AC1,P.AAZ			; AC1,P.AAZ
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.81:	SOS	U.34				; STKP
+L.82:	SOJGE	AC14,L.79			; I,L.79
+	TRNN	AC11,1				; AC11,1
+	JRST	L.83				; L.83
+	MOVE	AC1,U.38			; AC1,CURCOD
+	MOVE	AC2,U.32			; AC2,PC
+	ADD	AC1,AC2				; AC1,AC2
+	HRRZ	AC12,-1(AC1)			; OPN,-1(AC1)
+	MOVE	AC1,AC12			; AC1,OPN
+	MOVE	AC2,AC10			; AC2,VAL
+	MOVEI	AC3,1				; AC3,1
+	PUSHJ	SP,PCESOP			; SP,PCESOP
+L.83:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+C.31:	POINT	3,0(AC2),4			; 3,0(AC2),4
+C.32:	POINT	1,0(AC2),5			; 1,0(AC2),5
+C.33:	POINT	4,0(AC2),9			; 4,0(AC2),9
+
+; Routine Size:  79 words
+
+
+;	  1039	
+;	  1040	ROUTINE DOCASE: NOVALUE =	! Indexed jump
+;	  1041	
+;	  1042	!++
+;	  1043	! Functional description:
+;	  1044	!	Using integer A is index, jump to A'th code index in table B,
+;	  1045	!	which is C(B) words long, biasing each index by constant indexed
+;	  1046	!	by C.  If A is outside the range, jump to the C(B)-1'th code index
+;	  1047	!	unless C(B)-1 EQL -1 (ie, no OUTRANGE was specified), in which case
+;	  1048	!	we abort.
+;	  1049	!
+;	  1050	! Formal parameters:
+;	  1051	!	None
+;	  1052	!
+;	  1053	! Implicit inputs:
+;	  1054	!	Instruction, user's operands
+;	  1055	!
+;	  1056	! Implicit outputs:
+;	  1057	!	PC
+;	  1058	!
+;	  1059	! Routine value:
+;	  1060	!	None
+;	  1061	!
+;	  1062	! Side effects:
+;	  1063	!	None
+;	  1064	!
+;	  1065	!--
+;	  1066	
+;	  1067	    BEGIN
+;	  1068	    EXTERNAL REGISTER Z;
+;	  1069	    LOCAL
+;	  1070		IDX,			! Jump index
+;	  1071		TBL;			! Jump table location
+;	  1072	    IDX = PCEGOP(.INSTR[COD_OPA],STE_TYP_INT);
+;	  1073	    TBL = .INSTR[COD_OPB];
+;	  1074	    IDX = .IDX - .CURCNS[.INSTR[COD_OPC]];
+;	  1075	    IF .IDX LSS 0 OR .IDX GEQ .CURCNS[.TBL] ! Case out of range?
+;	  1076	    THEN
+;	  1077		BEGIN
+;	  1078		IF .CURCNS[.TBL-1] NEQ -1	    ! Yes, OUTRANGE, specified?
+;	  1079		THEN
+;	  1080		    PC = .CURCNS[.TBL-1]	    ! Yes, go to OUTRANGE statement
+;	  1081		ELSE
+;	  1082		    ERROR('Index outside range')    ! Nope, die
+;	  1083		END
+;	  1084	    ELSE
+;	  1085	        PC = .CURCNS[.TBL+.IDX+1]	    ! In range, do normal stuff
+;	  1086	    END;
+
+
+P.ABA:	BYTE	(7)"I","n","d","e","x"		; Index
+	BYTE	(7)" ","o","u","t","s"		;  outs
+	BYTE	(7)"i","d","e"," ","r"		; ide r
+	BYTE	(7)"a","n","g","e",000		; ange
+
+
+; DOCASE
+U.11:	HRRZ	AC1,U.35			; AC1,INSTR
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	HLRZ	AC3,U.35+1			; TBL,INSTR+1
+	MOVE	AC4,U.40			; AC4,CURCNS
+	HRRZ	AC5,U.35+1			; AC5,INSTR+1
+	MOVE	AC2,AC4				; AC2,AC4
+	ADD	AC2,AC5				; AC2,AC5
+	SUB	AC1,0(AC2)			; IDX,0(AC2)
+	JUMPL	AC1,L.84			; IDX,L.84
+	MOVE	AC2,AC4				; AC2,AC4
+	ADD	AC2,AC3				; AC2,TBL
+	CAMGE	AC1,0(AC2)			; IDX,0(AC2)
+	JRST	L.86				; L.86
+L.84:	MOVE	AC2,AC4				; AC2,AC4
+	ADD	AC2,AC3				; AC2,TBL
+	SETO	AC1,				; AC1,
+	CAMN	AC1,-1(AC2)			; AC1,-1(AC2)
+	JRST	L.85				; L.85
+	MOVE	AC1,-1(AC2)			; AC1,-1(AC2)
+	JRST	L.87				; L.87
+L.85:	MOVEI	AC1,P.ABA			; AC1,P.ABA
+	JRST	PCEERR				; PCEERR
+L.86:	ADD	AC3,AC1				; TBL,IDX
+	MOVE	AC2,AC4				; AC2,AC4
+	ADD	AC2,AC3				; AC2,AC3
+	MOVE	AC1,1(AC2)			; AC1,1(AC2)
+L.87:	MOVEM	AC1,U.32			; AC1,PC
+	POPJ	SP,				; SP,
+
+; Routine Size:  29 words
+
+
+;	  1087	
+;	  1088	ROUTINE CLNVAR: NOVALUE =	! Clean up local string variables
+;	  1089	
+;	  1090	!++
+;	  1091	! Functional description:
+;	  1092	!	Called just before exit from a command or procedure, to
+;	  1093	!	free all strings contained in local string variables.
+;	  1094	!
+;	  1095	! Formal parameters:
+;	  1096	!	None
+;	  1097	!
+;	  1098	! Implicit inputs:
+;	  1099	!	Current symbol table
+;	  1100	!
+;	  1101	! Implicit outputs:
+;	  1102	!	String pool
+;	  1103	!
+;	  1104	! Routine value:
+;	  1105	!	None
+;	  1106	!
+;	  1107	! Side effects:
+;	  1108	!	None
+;	  1109	!
+;	  1110	!--
+;	  1111	
+;	  1112	%( This should take an argument to work its way up the stack frames )%
+;	  1113	DECR I FROM .CURSML DO
+;	  1114	    IF .CURSMT[.I,STE_VLD] EQL STE_VLD_NUM AND
+;	  1115	       .CURSMT[.I,STE_CLS] EQL STE_CLS_VAR AND
+;	  1116	       .CURSMT[.I,STE_TYP] EQL STE_TYP_STR
+;	  1117	    THEN
+;	  1118		IF .PCSTAK[.FP+.CURSMT[.I,STE_LOC],FRM_WRD] NEQ 0
+;	  1119		THEN
+;	  1120		    BEGIN
+;	  1121		    EXTERNAL REGISTER Z;
+;	  1122		    PCEFST(.PCSTAK[.FP+.CURSMT[.I,STE_LOC],FRM_WRD])
+;	  1123		    END;
+
+
+; CLNVAR
+U.12:	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,U.43			; I,CURSML
+	AOJA	AC14,L.89			; I,L.89
+L.88:	MOVE	AC2,U.42			; AC2,CURSMT
+	MOVE	AC1,AC14			; AC1,I
+	IMULI	AC1,2				; AC1,2
+	ADD	AC2,AC1				; AC2,AC1
+	LDB	AC1,C.34			; AC1,[POINT 3,0(AC2),2]  <33,3>
+	CAIE	AC1,2				; AC1,2
+	JRST	L.89				; L.89
+	LDB	AC1,C.35			; AC1,[POINT 3,0(AC2),5]  <30,3>
+	JUMPN	AC1,L.89			; AC1,L.89
+	LDB	AC1,C.36			; AC1,[POINT 1,0(AC2),6]  <29,1>
+	CAIE	AC1,1				; AC1,1
+	JRST	L.89				; L.89
+	MOVE	AC1,U.33			; AC1,FP
+	HRRE	AC2,0(AC2)			; AC2,0(AC2)
+	ADD	AC1,AC2				; AC1,AC2
+	SKIPE	AC1,PCSTAK(AC1)			; AC1,PCSTAK(AC1)
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.89:	SOJGE	AC14,L.88			; I,L.88
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+C.34:	POINT	3,0(AC2),2			; 3,0(AC2),2
+C.35:	POINT	3,0(AC2),5			; 3,0(AC2),5
+C.36:	POINT	1,0(AC2),6			; 1,0(AC2),6
+
+; Routine Size:  26 words
+
+
+;	  1124	
+;	  1125	ROUTINE DOSBSS: NOVALUE =	! Extract substring
+;	  1126	
+;	  1127	!++
+;	  1128	! Functional description:
+;	  1129	!	Performs SBS instruction: Extracts substring of string C, stores
+;	  1130	!	substring in A.  B points to two constant words, containing
+;	  1131	!	integer descriptors: First character (starts with 1) and length.
+;	  1132	!	A length-designator of -1 means to extract to the end of the string.
+;	  1133	!
+;	  1134	! Formal parameters:
+;	  1135	!	None
+;	  1136	!
+;	  1137	! Implicit inputs:
+;	  1138	!	Instruction, operands
+;	  1139	!
+;	  1140	! Implicit outputs:
+;	  1141	!	Instruction operand
+;	  1142	!
+;	  1143	! Routine value:
+;	  1144	!	None
+;	  1145	!
+;	  1146	! Side effects:
+;	  1147	!	None
+;	  1148	!
+;	  1149	!--
+;	  1150	
+;	  1151	    BEGIN
+;	  1152	    EXTERNAL REGISTER Z;
+;	  1153	    LOCAL
+;	  1154		OPAV: STR_VAL,		! Stringvalues
+;	  1155		OPCV: STR_VAL,
+;	  1156		STRT,			! Character offset
+;	  1157		LEN;			! Character count
+;	  1158	
+;	  1159	    ! Take care to get the operands in this order; they might be on the stack
+;	  1160	    LEN = .CURCNS[.INSTR[COD_OPB]+1];
+;	  1161	    IF .LEN GEQ 0 THEN LEN = PCEGOP(.LEN,STE_TYP_INT);
+;	  1162	    STRT = PCEGOP(.CURCNS[.INSTR[COD_OPB]],STE_TYP_INT);
+;	  1163	    OPCV = PCEGOP(.INSTR[COD_OPC],STE_TYP_STR);
+;	  1164	    IF .STRT LEQ 0 THEN ERROR('Substring start less than one');
+;	  1165	    IF .LEN EQL -1 THEN LEN = .OPCV[STV_LEN]-.STRT+1;
+;	  1166	    IF .STRT+.LEN-1 GTR .OPCV[STV_LEN] THEN LEN = .OPCV[STV_LEN]-.STRT+1;
+;	  1167	    IF .LEN LSS 1
+;	  1168	    THEN
+;	  1169		PCESOP(.INSTR[COD_OPA], 0, STE_TYP_STR)
+;	  1170	    ELSE
+;	  1171		BEGIN
+;	  1172		OPAV = PCEAST(.LEN);
+;	  1173		CH$COPY(.LEN, CH$PTR(.OPCV[STV_ADR],.STRT-1),
+;	  1174			0, .LEN+1, BYTPTR(.OPAV[STV_ADR]));
+;	  1175		PCESOP(.INSTR[COD_OPA], .OPAV, STE_TYP_STR)
+;	  1176		END;
+;	  1177	    IF .INSTR[COD_OPC] EQL OPN_TMP_STR THEN PCEFST(.OPCV)
+;	  1178	    END;
+
+
+P.ABB:	BYTE	(7)"S","u","b","s","t"		; Subst
+	BYTE	(7)"r","i","n","g"," "		; ring
+	BYTE	(7)"s","t","a","r","t"		; start
+	BYTE	(7)" ","l","e","s","s"		;  less
+	BYTE	(7)" ","t","h","a","n"		;  than
+	BYTE	(7)" ","o","n","e",000		;  one
+
+
+; DOSBSS
+U.13:	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC1,U.40			; AC1,CURCNS
+	HLRZ	AC2,U.35+1			; AC2,INSTR+1
+	ADD	AC1,AC2				; AC1,AC2
+	MOVE	AC13,1(AC1)			; LEN,1(AC1)
+	JUMPL	AC13,L.90			; LEN,L.90
+	MOVE	AC1,AC13			; AC1,LEN
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC13,AC1			; LEN,AC1
+L.90:	MOVE	AC3,U.40			; AC3,CURCNS
+	HLRZ	AC1,U.35+1			; AC1,INSTR+1
+	ADD	AC3,AC1				; AC3,AC1
+	MOVE	AC1,0(AC3)			; AC1,0(AC3)
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC14,AC1			; STRT,AC1
+	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC12,AC1			; OPCV,AC1
+	JUMPG	AC14,L.91			; STRT,L.91
+	MOVEI	AC1,P.ABB			; AC1,P.ABB
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.91:	CAME	AC13,C.37			; LEN,[-1]
+	JRST	L.92				; L.92
+	HLRZ	AC1,AC12			; AC1,OPCV
+	SUB	AC1,AC14			; AC1,STRT
+	MOVE	AC13,AC1			; LEN,AC1
+	ADDI	AC13,1				; LEN,1
+L.92:	MOVE	AC1,AC14			; AC1,STRT
+	ADD	AC1,AC13			; AC1,LEN
+	SUBI	AC1,1				; AC1,1
+	HLRZ	AC2,AC12			; AC2,OPCV
+	CAMG	AC1,AC2				; AC1,AC2
+	JRST	L.93				; L.93
+	HLRZ	AC1,AC12			; AC1,OPCV
+	SUB	AC1,AC14			; AC1,STRT
+	MOVE	AC13,AC1			; LEN,AC1
+	ADDI	AC13,1				; LEN,1
+L.93:	JUMPG	AC13,L.94			; LEN,L.94
+	HRRZ	AC1,U.35			; AC1,INSTR
+	SETZ	AC2,				; AC2,
+	JRST	L.95				; L.95
+L.94:	MOVE	AC1,AC13			; AC1,LEN
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC16,AC1			; OPAV,AC1
+	MOVEI	AC2,0(AC12)			; AC2,0(OPCV)
+	MOVE	AC1,AC14			; AC1,STRT
+	SUBI	AC1,1				; AC1,1
+	MOVEI	AC3,0(AC2)			; AC3,0(AC2)
+	HRLI	AC3,-337100			; AC3,-337100
+	MOVE	AC2,AC1				; AC2,AC1
+	ADJBP	AC2,AC3				; AC2,AC3
+	MOVE	AC3,AC13			; AC3,LEN
+	ADDI	AC3,1				; AC3,1
+	MOVEI	AC5,0(AC16)			; HLF,0(OPAV)
+	HRLI	AC5,-337100			; HLF,-337100
+	MOVE	AC1,AC13			; AC1,LEN
+	MOVE	AC4,AC3				; AC4,AC3
+	EXTEND	AC1,C.3				; AC1,C.3
+	JFCL					; 
+	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVE	AC2,AC16			; AC2,OPAV
+L.95:	MOVEI	AC3,1				; AC3,1
+	PUSHJ	SP,PCESOP			; SP,PCESOP
+	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	CAIE	AC1,-100000			; AC1,-100000
+	JRST	L.96				; L.96
+	MOVE	AC1,AC12			; AC1,OPCV
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.96:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POPJ	SP,				; SP,
+C.37:	EXP	-1				; -1
+
+; Routine Size:  78 words
+
+
+;	  1179	
+;	  1180	ROUTINE DOCMND =		! DoCommand Statement
+;	  1181	
+;	  1182	!++
+;	  1183	! Functional description:
+;	  1184	!	Copies string to be performed from A operand to
+;	  1185	!	Exec's Command Buffer, after pointer CMPTR as
+;	  1186	!	reported by EXECPM; appends newline.  Returns
+;	  1187	!	number of characters in string inserted.  If B
+;	  1188	!	operand field is zero, sets flag to indicate
+;	  1189	!	Original mode.  If C is not -1, sets up Exec
+;	  1190	!	to store Exec output into that string variable.
+;	  1191	!	If string contains more than one line, generates
+;	  1192	!	string block containing remaining lines.
+;	  1193	!
+;	  1194	! Formal parameters:
+;	  1195	!	None
+;	  1196	!
+;	  1197	! Implicit inputs:
+;	  1198	!	Instruction being executed
+;	  1199	!
+;	  1200	! Implicit outputs:
+;	  1201	!	Exec Command Buffer
+;	  1202	!
+;	  1203	! Routine value:
+;	  1204	!	Number of characters copied
+;	  1205	!
+;	  1206	! Side effects:
+;	  1207	!	None
+;	  1208	!
+;	  1209	!--
+;	  1210	
+;	  1211	    BEGIN
+;	  1212	    EXTERNAL REGISTER Z;
+;	  1213	    LOCAL
+;	  1214		OPND: STR_VAL,		! Operand descriptor
+;	  1215		PTRI,			! String pointers
+;	  1216		PTRO,
+;	  1217		ICNT,			! Characters inserted
+;	  1218		CHR;			! Character
+;	  1219	    IF .PCCURC[ECB_PAR] NEQ 0
+;	  1220	    THEN
+;	  1221		BEGIN
+;	  1222		IF PCIPRS(CFM_FLDDB,0) LSS 0 THEN PCMPER(0);
+;	  1223		PCCURC[ECB_PAR] = 0
+;	  1224		END;
+;	  1225	    PCLDCO = 0;
+;	  1226	    IF .INSTR[COD_OPB] EQL 0
+;	  1227	    THEN
+;	  1228		IF .PCCURC[ECB_PSV] THEN PCLDCO = 1 ELSE PCLDCO = -1;
+;	  1229	    IF (PCCURC[ECB_DTO] = .INSTR[COD_OPC]) NEQ %O'777777' THEN PCIPEO();
+;	  1230	    OPND = PCEGOP(.INSTR[COD_OPA],STE_TYP_STR);
+;	  1231	    PTRI = BYTPTR(.OPND[STV_ADR]);
+;	  1232	    PTRO = .CMPTR;
+;	  1233	    ICNT = 0;
+;	  1234	    IF .OPND[STV_LEN] NEQ 0 THEN
+;	  1235	    WHILE 1 DO
+;	  1236		BEGIN
+;	  1237		CHR = CH$RCHAR_A(PTRI);
+;	  1238		IF .CHR EQL $CHNUL THEN EXITLOOP;
+;	  1239		IF .CHR EQL $CHCRT
+;	  1240		THEN
+;	  1241		    BEGIN
+;	  1242		    LOCAL
+;	  1243			BLK: REF STB_BLK,	! String block
+;	  1244			SCNT,		! Characters skipped
+;	  1245			LEN;
+;	  1246		    SCNT = .ICNT + 1;
+;	  1247		    IF (CHR = CH$RCHAR(.PTRI)) EQL $CHLFD
+;	  1248		    THEN
+;	  1249			BEGIN
+;	  1250			CHR = CH$RCHAR_A(PTRI);
+;	  1251			SCNT = .SCNT + 1
+;	  1252			END;
+;	  1253		    IF .CHR EQL $CHNUL THEN EXITLOOP;
+;	  1254		    LEN = (.OPND[STV_LEN] - .SCNT + 9)/5;
+;	  1255		    BLK = PCMGMM(.LEN, XDICT);
+;	  1256		    BLK[STB_CNT] = .OPND[STV_LEN] - .SCNT;
+;	  1257		    BLK[STB_LEN] = .LEN;
+;	  1258		    PCCURC[ECB_DCB] = .BLK;
+;	  1259		    CH$MOVE(.BLK[STB_CNT], .PTRI, BYTPTR(BLK[STB_BUF]));
+;	  1260		    EXITLOOP
+;	  1261		    END
+;	  1262		ELSE
+;	  1263		    BEGIN
+;	  1264		    CH$WCHAR_A(.CHR,PTRO);
+;	  1265		    ICNT = .ICNT + 1
+;	  1266		    END
+;	  1267		END;
+;	  1268	    IF .INSTR[COD_OPA] EQL OPN_TMP_STR THEN PCEFST(.OPND);
+;	  1269	    CH$WCHAR_A($CHCRT,PTRO);
+;	  1270	    CH$WCHAR_A($CHLFD,PTRO);
+;	  1271	    CH$WCHAR_A($CHNUL,PTRO);
+;	  1272	    .ICNT + 2
+;	  1273	    END;
+
+
+; DOCMND
+U.14:	PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,2				; SP,2
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	LDB	AC2,C.38			; AC2,[POINT 1,12(AC1),5]  <30,1>
+	JUMPE	AC2,L.98			; AC2,L.98
+	MOVEI	AC1,U.29			; AC1,CFM_FLDDB
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCIPRS			; SP,PCIPRS
+	JUMPGE	AC1,L.97			; AC1,L.97
+	SETZ	AC1,				; AC1,
+	PUSHJ	SP,PCMPER			; SP,PCMPER
+L.97:	MOVE	AC1,PCCURC			; AC1,PCCURC
+	MOVSI	AC2,10000			; AC2,10000
+	ANDCAM	AC2,12(AC1)			; AC2,12(AC1)
+L.98:	SETZM	PCLDCO				; PCLDCO
+	HLRZ	AC1,U.35+1			; AC1,INSTR+1
+	JUMPN	AC1,L.100			; AC1,L.100
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	SKIPL	12(AC1)				; 12(AC1)
+	JRST	L.99				; L.99
+	MOVEI	AC1,1				; AC1,1
+	MOVEM	AC1,PCLDCO			; AC1,PCLDCO
+	JRST	L.100				; L.100
+L.99:	SETOM	PCLDCO				; PCLDCO
+L.100:	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HRRZ	AC2,U.35+1			; AC2,INSTR+1
+	HRLM	AC2,6(AC1)			; AC2,6(AC1)
+	CAIE	AC2,-1				; AC2,-1
+	PUSHJ	SP,PCIPEO			; SP,PCIPEO
+	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,-1(SP)			; AC1,OPND
+	HRRZ	AC1,-1(SP)			; HLF,OPND
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC11,AC1			; PTRI,HLF
+	MOVE	AC10,U.44			; PTRO,CMPTR
+	SETZM	0(SP)				; ICNT
+	HLRZ	AC1,-1(SP)			; AC1,OPND
+	JUMPE	AC1,L.104			; AC1,L.104
+L.101:	ILDB	AC13,AC11			; CHR,PTRI
+	JUMPE	AC13,L.104			; CHR,L.104
+	CAIE	AC13,15				; CHR,15
+	JRST	L.103				; L.103
+	MOVE	AC1,0(SP)			; SCNT,ICNT
+	ADDI	AC1,1				; SCNT,1
+	MOVE	AC2,AC11			; AC2,PTRI
+	ILDB	AC13,AC2			; CHR,AC2
+	CAIE	AC13,12				; CHR,12
+	JRST	L.102				; L.102
+	ILDB	AC13,AC11			; CHR,PTRI
+	ADDI	AC1,1				; SCNT,1
+L.102:	JUMPE	AC13,L.104			; CHR,L.104
+	HLRZ	AC14,-1(SP)			; AC14,OPND
+	SUB	AC14,AC1			; AC14,SCNT
+	MOVE	AC1,AC14			; AC1,AC14
+	ADDI	AC1,11				; AC1,11
+	IDIVI	AC1,5				; AC1,5
+	MOVE	AC12,AC1			; LEN,AC1
+	MOVEI	AC2,XDICT			; AC2,XDICT
+	PUSHJ	SP,PCMGMM			; SP,PCMGMM
+	MOVE	AC3,AC1				; BLK,AC1
+	HRLM	AC14,0(AC3)			; AC14,0(BLK)
+	HRRM	AC12,0(AC3)			; LEN,0(BLK)
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HRRM	AC3,6(AC1)			; BLK,6(AC1)
+	MOVE	AC5,AC3				; HLF,BLK
+	ADDI	AC5,1				; HLF,1
+	HRLI	AC5,-337100			; HLF,-337100
+	HLRZ	AC1,0(AC3)			; AC1,0(BLK)
+	MOVE	AC2,AC11			; AC2,PTRI
+	HLRZ	AC4,0(AC3)			; AC4,0(BLK)
+	EXTEND	AC1,C.22			; AC1,[MOVSLJ ]
+	JFCL					; 
+	JRST	L.104				; L.104
+L.103:	IDPB	AC13,AC10			; CHR,PTRO
+	AOS	0(SP)				; ICNT
+	JRST	L.101				; L.101
+L.104:	HRRZ	AC1,U.35			; AC1,INSTR
+	CAIE	AC1,-100000			; AC1,-100000
+	JRST	L.105				; L.105
+	MOVE	AC1,-1(SP)			; AC1,OPND
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.105:	MOVEI	AC1,15				; AC1,15
+	IDPB	AC1,AC10			; AC1,PTRO
+	MOVEI	AC1,12				; AC1,12
+	IDPB	AC1,AC10			; AC1,PTRO
+	SETZ	AC1,				; AC1,
+	IDPB	AC1,AC10			; AC1,PTRO
+	MOVE	AC1,0(SP)			; AC1,ICNT
+	ADDI	AC1,2				; AC1,2
+	ADJSP	SP,-2				; SP,-2
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+C.38:	POINT	1,12(AC1),5			; 1,12(AC1),5
+
+; Routine Size:  103 words
+
+
+;	  1274	
+;	  1275	ROUTINE PUTDCL =		! Send additional DoCommand line
+;	  1276	
+;	  1277	!++
+;	  1278	! Functional description:
+;	  1279	!	Pass additional DoCommand lines to Exec from string block
+;	  1280	!	saved in ECB.
+;	  1281	!
+;	  1282	! Formal parameters:
+;	  1283	!	None
+;	  1284	!
+;	  1285	! Implicit inputs:
+;	  1286	!	Execution Context Block
+;	  1287	!
+;	  1288	! Implicit outputs:
+;	  1289	!	Command string, Execution Context Block
+;	  1290	!
+;	  1291	! Routine value:
+;	  1292	!	Number of characters inserted
+;	  1293	!
+;	  1294	! Side effects:
+;	  1295	!	None
+;	  1296	!
+;	  1297	!--
+;	  1298	
+;	  1299	    BEGIN
+;	  1300	    EXTERNAL REGISTER Z;
+;	  1301	    LOCAL
+;	  1302		BLK: REF STB_BLK,	! String block
+;	  1303		PTRI,			! String pointers
+;	  1304		PTRO,
+;	  1305		ICNT,			! Characters inserted
+;	  1306		RCNT,			! Characters remaining in string
+;	  1307		CHR;
+;	  1308	
+;	  1309	    BLK = .PCCURC[ECB_DCB];
+;	  1310	    PCCURC[ECB_DCB] = 0;
+;	  1311	    ICNT = 0;
+;	  1312	    PTRI = BYTPTR(BLK[STB_BUF]);
+;	  1313	    PTRO = .CMPTR;
+;	  1314	    RCNT = .BLK[STB_CNT];
+;	  1315	    IF .RCNT GTR 0 THEN
+;	  1316	    WHILE (RCNT=.RCNT-1) GEQ 0 DO
+;	  1317		BEGIN
+;	  1318		CHR = CH$RCHAR_A(PTRI);
+;	  1319		IF .CHR EQL $CHCRT
+;	  1320		THEN
+;	  1321		    BEGIN
+;	  1322		    LOCAL
+;	  1323			NBLK : REF STB_BLK,	! New string block
+;	  1324			LEN;
+;	  1325		    IF (CHR = CH$RCHAR(.PTRI)) EQL $CHLFD
+;	  1326		    THEN
+;	  1327			BEGIN
+;	  1328			CHR = CH$RCHAR_A(PTRI);
+;	  1329			CHR = CH$RCHAR(.PTRI);
+;	  1330			RCNT = .RCNT - 1
+;	  1331			END;
+;	  1332		    IF .RCNT LSS 0 THEN EXITLOOP;
+;	  1333		    LEN = (.RCNT + 9)/5;
+;	  1334		    NBLK = PCMGMM(.LEN, XDICT);
+;	  1335		    NBLK[STB_CNT] = .RCNT;
+;	  1336		    NBLK[STB_LEN] = .LEN;
+;	  1337		    PCCURC[ECB_DCB] = .NBLK;
+;	  1338		    CH$MOVE(.RCNT, .PTRI, BYTPTR(NBLK[STB_BUF]));
+;	  1339		    EXITLOOP
+;	  1340		    END
+;	  1341		ELSE
+;	  1342		    BEGIN
+;	  1343		    CH$WCHAR_A(.CHR,PTRO);
+;	  1344		    ICNT = .ICNT + 1
+;	  1345		    END
+;	  1346		END;
+;	  1347	    RETMEM( .BLK[STB_LEN], .BLK, XDICT);
+;	  1348	    CH$WCHAR_A($CHCRT,PTRO);
+;	  1349	    CH$WCHAR_A($CHLFD,PTRO);
+;	  1350	    .ICNT + 2
+;	  1351	    END;
+
+
+; PUTDCL
+U.15:	PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,2				; SP,2
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HRRZ	AC10,6(AC1)			; BLK,6(AC1)
+	HLLZS	6(AC1)				; 6(AC1)
+	SETZM	-1(SP)				; ICNT
+	MOVE	AC2,AC10			; HLF,BLK
+	ADDI	AC2,1				; HLF,1
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC11,AC2			; PTRI,HLF
+	MOVE	AC1,U.44			; AC1,CMPTR
+	MOVEM	AC1,0(SP)			; AC1,PTRO
+	HLRZ	AC14,0(AC10)			; RCNT,0(BLK)
+	JUMPLE	AC14,L.109			; RCNT,L.109
+L.106:	SOJL	AC14,L.109			; RCNT,L.109
+	ILDB	AC12,AC11			; CHR,PTRI
+	CAIE	AC12,15				; CHR,15
+	JRST	L.108				; L.108
+	MOVE	AC2,AC11			; AC2,PTRI
+	ILDB	AC12,AC2			; CHR,AC2
+	CAIE	AC12,12				; CHR,12
+	JRST	L.107				; L.107
+	ILDB	AC12,AC11			; CHR,PTRI
+	MOVE	AC2,AC11			; AC2,PTRI
+	ILDB	AC12,AC2			; CHR,AC2
+	SUBI	AC14,1				; RCNT,1
+L.107:	JUMPL	AC14,L.109			; RCNT,L.109
+	MOVE	AC1,AC14			; AC1,RCNT
+	ADDI	AC1,11				; AC1,11
+	IDIVI	AC1,5				; AC1,5
+	MOVE	AC13,AC1			; LEN,AC1
+	MOVEI	AC2,XDICT			; AC2,XDICT
+	PUSHJ	SP,PCMGMM			; SP,PCMGMM
+	HRLM	AC14,0(AC1)			; RCNT,0(NBLK)
+	HRRM	AC13,0(AC1)			; LEN,0(NBLK)
+	MOVE	AC2,PCCURC			; AC2,PCCURC
+	HRRM	AC1,6(AC2)			; NBLK,6(AC2)
+	MOVE	AC3,AC1				; HLF,NBLK
+	ADDI	AC3,1				; HLF,1
+	HRLI	AC3,-337100			; HLF,-337100
+	MOVE	AC1,AC14			; AC1,RCNT
+	MOVE	AC2,AC11			; AC2,PTRI
+	MOVE	AC4,AC14			; AC4,RCNT
+	MOVE	AC5,AC3				; AC5,HLF
+	EXTEND	AC1,C.22			; AC1,[MOVSLJ ]
+	JFCL					; 
+	JRST	L.109				; L.109
+L.108:	IDPB	AC12,0(SP)			; CHR,PTRO
+	AOS	-1(SP)				; ICNT
+	JRST	L.106				; L.106
+L.109:	HRRZ	AC1,0(AC10)			; AC1,0(BLK)
+	MOVE	AC2,AC10			; AC2,BLK
+	MOVEI	AC3,XDICT			; AC3,XDICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+	MOVEI	AC1,15				; AC1,15
+	IDPB	AC1,0(SP)			; AC1,PTRO
+	MOVEI	AC1,12				; AC1,12
+	IDPB	AC1,0(SP)			; AC1,PTRO
+	MOVE	AC1,-1(SP)			; AC1,ICNT
+	ADDI	AC1,2				; AC1,2
+	ADJSP	SP,-2				; SP,-2
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+
+; Routine Size:  71 words
+
+;	  1352	
+;	  1353	ROUTINE DOCARG(FFDB): NOVALUE =	! Get command arguments
+;	  1354	
+;	  1355	!++
+;	  1356	! Functional description:
+;	  1357	!	Perform simple-format command parameter parsing.
+;	  1358	!	Starting at first FLDDB, copy and execute each FLDDB,
+;	  1359	!	storing the results of each successful one and aborting
+;	  1360	!	to any error exit for each unsuccessful one.  After
+;	  1361	!	the last FLDDB, require a .CMCFM.
+;	  1362	!
+;	  1363	! Formal parameters:
+;	  1364	!	Constant index of first FLDDB, or -1 if only CONFIRM wanted
+;	  1365	!
+;	  1366	! Implicit inputs:
+;	  1367	!	FLDDB list
+;	  1368	!
+;	  1369	! Implicit outputs:
+;	  1370	!	User's variables
+;	  1371	!
+;	  1372	! Routine value:
+;	  1373	!	None
+;	  1374	!
+;	  1375	! Side effects:
+;	  1376	!	May change PC to enter error handler
+;	  1377	!
+;	  1378	!--
+;	  1379	
+;	  1380	    BEGIN
+;	  1381	    EXTERNAL REGISTER Z;
+;	  1382	    LOCAL
+;	  1383		PFDB: REF VECTOR,	! Proto-FLDDB pointer
+;	  1384		RFDB: REF VECTOR,	! Read-FLDDB pointer
+;	  1385		OPTFLG,			! Options
+;	  1386		HLFTMP: HLF_WRD;
+;	  1387	    BIND
+;	  1388		TXT_FLDDB = UPLIT(%O'017000000000',0,0,0);
+;	  1389	
+;	  1390	    PFDB = .FFDB;
+;	  1391	    IF .PFDB GEQ 0
+;	  1392	    THEN
+;	  1393	    DO
+;	  1394		BEGIN
+;	  1395		RFDB = COPFDB(.PFDB);
+;	  1396		PFDB = .PFDB + .CURCNS;
+;	  1397		POINTR((RFDB[$CMFNP]),CM_LST) = 0;
+;	  1398		OPTFLG = (IF .POINTR((RFDB[$CMFNP]),CM_NIN) EQL 0 THEN 2 ELSE 0);
+;	  1399		! This stores results in system variables
+;	  1400		IF PCIPRS(.RFDB, .OPTFLG) LSS 0
+;	  1401		THEN
+;	  1402		    BEGIN
+;	  1403		    ! Take failure jump if provided, otherwise give standard error
+;	  1404		    RELFDB(.RFDB);
+;	  1405		    HLFTMP = .PFDB[$CMBRK];
+;	  1406		    IF .HLFTMP[HLF_RGT] EQL %O'777777'
+;	  1407		    THEN
+;	  1408			! Give this some text if there is ever any demand
+;	  1409			PCMPER(0)
+;	  1410		    ELSE
+;	  1411			BEGIN
+;	  1412			PC = .HLFTMP[HLF_RGT];
+;	  1413			PCIPRS(TXT_FLDDB, 0);
+;	  1414			RETURN
+;	  1415			END
+;	  1416		    END;
+;	  1417		RELFDB(.RFDB);
+;	  1418		HLFTMP = .PFDB[$CMBRK];
+;	  1419		IF .HLFTMP[HLF_LFT] NEQ %O'777777'
+;	  1420		THEN                    ! [fun24]:
+;	  1421		    CASE .POINTR((PFDB[$CMFNP]),CM_FNC) FROM $CMKEY TO $CMULS OF
+;	  1422			SET
+;	  1423	[$CMKEY,
+;	  1424	 $CMNUM,
+;	  1425	 $CMSWI]:	PCESOP(.HLFTMP[HLF_LFT], .PCVVAL, STE_TYP_INT);
+;	  1426	[$CMIFI,
+;	  1427	 $CMOFI,
+;	  1428	 $CMFIL,
+;	  1429	 $CMFLS,                        ! [fun24]+ Add directory list function to pcl
+;	  1430	 $CMDLS,
+;	  1431	 $CMULS]:
+;	  1432		PCESOP(.HLFTMP[HLF_LFT], PCECST(DIVFNM()), STE_TYP_STR);
+;	  1433	                                ! [fun24]- Add directory list function to pcl
+;	  1434	[$CMFLD,
+;	  1435	 $CMDIR,
+;	  1436	 $CMUSR,
+;	  1437	 $CMDEV,
+;	  1438	 $CMTXT,
+;	  1439	 $CMTAD,
+;	  1440	 $CMQST,
+;	  1441	 $CMNOD]:	PCESOP(.HLFTMP[HLF_LFT], PCECST(.PCVATM), STE_TYP_STR);
+;	  1442	[INRANGE]:	;
+;	  1443			TES
+;	  1444		END
+;	  1445		    UNTIL (PFDB = .POINTR((PFDB[$CMFNP]),CM_LST)) EQL 0;
+;	  1446	    IF PCIPRS(CFM_FLDDB, 0) LSS 0 THEN PCMPER(0);
+;	  1447	    PCCURC[ECB_PAR] = 0
+;	  1448	    END;
+
+
+P.ABC:	EXP	17000000000
+	EXP	0
+	EXP	0
+	EXP	0
+
+
+; TXT_FLDDB
+U.49=		    P.ABC
+
+
+; DOCARG
+U.16:	PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; PFDB,FFDB
+	JUMPL	AC14,L.122			; PFDB,L.122
+L.110:	MOVE	AC1,AC14			; AC1,PFDB
+	PUSHJ	SP,U.18				; SP,COPFDB
+	MOVE	AC11,AC1			; RFDB,AC1
+	ADD	AC14,U.40			; PFDB,CURCNS
+	HLLZS	0(AC11)				; 0(RFDB)
+	LDB	AC1,C.39			; AC1,[POINT 1,0(RFDB),9]  <26,1>
+	JUMPN	AC1,L.111			; AC1,L.111
+	MOVEI	AC10,2				; OPTFLG,2
+	JRST	L.112				; L.112
+L.111:	SETZ	AC10,				; OPTFLG,
+L.112:	MOVE	AC1,AC11			; AC1,RFDB
+	MOVE	AC2,AC10			; AC2,OPTFLG
+	PUSHJ	SP,PCIPRS			; SP,PCIPRS
+	JUMPGE	AC1,L.114			; AC1,L.114
+	MOVE	AC1,AC11			; AC1,RFDB
+	PUSHJ	SP,U.21				; SP,RELFDB
+	MOVE	AC12,4(AC14)			; HLFTMP,4(PFDB)
+	MOVEI	AC1,0(AC12)			; AC1,0(HLFTMP)
+	CAIE	AC1,-1				; AC1,-1
+	JRST	L.113				; L.113
+	SETZ	AC1,				; AC1,
+	PUSHJ	SP,PCMPER			; SP,PCMPER
+	JRST	L.114				; L.114
+L.113:	MOVEM	AC1,U.32			; AC1,PC
+	MOVEI	AC1,U.49			; AC1,TXT_FLDDB
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCIPRS			; SP,PCIPRS
+	JRST	L.124				; L.124
+L.114:	MOVE	AC1,AC11			; AC1,RFDB
+	PUSHJ	SP,U.21				; SP,RELFDB
+	MOVE	AC12,4(AC14)			; HLFTMP,4(PFDB)
+	HLRZ	AC13,AC12			; AC13,HLFTMP
+	CAIN	AC13,-1				; AC13,-1
+	JRST	L.121				; L.121
+	LDB	AC1,C.40			; AC1,[POINT 9,0(PFDB),8]  <27,9>
+	JRST	L.115(AC1)			; L.115(AC1)
+L.115:	JRST	L.116				; L.116
+	JRST	L.116				; L.116
+	JRST	L.121				; L.121
+	JRST	L.116				; L.116
+	JRST	L.117				; L.117
+	JRST	L.117				; L.117
+	JRST	L.117				; L.117
+	JRST	L.118				; L.118
+	JRST	L.121				; L.121
+	JRST	L.118				; L.118
+	JRST	L.118				; L.118
+	JRST	L.121				; L.121
+	JRST	L.121				; L.121
+	JRST	L.121				; L.121
+	JRST	L.118				; L.118
+	JRST	L.118				; L.118
+	JRST	L.118				; L.118
+	JRST	L.118				; L.118
+	JRST	L.121				; L.121
+	JRST	L.121				; L.121
+	JRST	L.121				; L.121
+	JRST	L.121				; L.121
+	JRST	L.118				; L.118
+	JRST	L.117				; L.117
+	JRST	L.117				; L.117
+	JRST	L.117				; L.117
+L.116:	MOVE	AC1,AC13			; AC1,AC13
+	MOVE	AC2,PCVVAL			; AC2,PCVVAL
+	SETZ	AC3,				; AC3,
+	JRST	L.120				; L.120
+L.117:	PUSHJ	SP,DIVFNM			; SP,DIVFNM
+	JRST	L.119				; L.119
+L.118:	MOVE	AC1,PCVATM			; AC1,PCVATM
+L.119:	PUSHJ	SP,PCECST			; SP,PCECST
+	MOVE	AC2,AC1				; AC2,AC1
+	MOVE	AC1,AC13			; AC1,AC13
+	MOVEI	AC3,1				; AC3,1
+L.120:	PUSHJ	SP,PCESOP			; SP,PCESOP
+L.121:	HRRZ	AC14,0(AC14)			; PFDB,0(PFDB)
+	JUMPN	AC14,L.110			; PFDB,L.110
+L.122:	MOVEI	AC1,U.29			; AC1,CFM_FLDDB
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCIPRS			; SP,PCIPRS
+	JUMPGE	AC1,L.123			; AC1,L.123
+	SETZ	AC1,				; AC1,
+	PUSHJ	SP,PCMPER			; SP,PCMPER
+L.123:	MOVE	AC1,PCCURC			; AC1,PCCURC
+	MOVSI	AC2,10000			; AC2,10000
+	ANDCAM	AC2,12(AC1)			; AC2,12(AC1)
+L.124:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+C.39:	POINT	1,0(AC11),9			; 1,0(RFDB),9
+C.40:	POINT	9,0(AC14),8			; 9,0(PFDB),8
+
+; Routine Size:  100 words
+
+
+;	  1449	
+;	  1450	ROUTINE DPARSE: NOVALUE =	! Parse instruction
+;	  1451	
+;	  1452	!++
+;	  1453	! Functional description:
+;	  1454	!	Execute PRS instruction.  Field A contains location of
+;	  1455	!	first field descriptor block in the chain; it is position
+;	  1456	!	independent so I must allocate temporary space for each
+;	  1457	!	block and rebuild everything.  Then I pass the copied list
+;	  1458	!	to the Interface to do a COMND%.  The Interface will return
+;	  1459	!	the address of the successful FLDDB, so I can jump
+;	  1460	!	accordingly.  If nothing succeeded, I jump to operand C,
+;	  1461	!	or issue a standard error message if C is -1.
+;	  1462	!	If a reparse happened, I jump back to the user's last
+;	  1463	!	Prompt instruction.
+;	  1464	!	After releasing the temporary space, I am done.
+;	  1465	!
+;	  1466	! Formal parameters:
+;	  1467	!	None
+;	  1468	!
+;	  1469	! Implicit inputs:
+;	  1470	!	Instruction stream, field descriptor blocks
+;	  1471	!
+;	  1472	! Implicit outputs:
+;	  1473	!	None
+;	  1474	!
+;	  1475	! Routine value:
+;	  1476	!	None
+;	  1477	!
+;	  1478	! Side effects:
+;	  1479	!	Causes a Jump to the selected processing
+;	  1480	!	routine, and causes appropriate system variables to be set.
+;	  1481	!
+;	  1482	!--
+;	  1483	
+;	  1484	    BEGIN
+;	  1485	    EXTERNAL REGISTER Z;
+;	  1486	    LOCAL
+;	  1487		IFDB,			! Proto-FLDDB pointer
+;	  1488		OFDB,			! Real-FLDDB pointer
+;	  1489		TFDB,			! First real FLDDB
+;	  1490		SUCC,			! Success address
+;	  1491		OPTFLG;			! Options for the parse
+;	  1492	
+;	  1493	    IF .PCCURC[ECB_PAR] EQL 0 THEN ERROR('No command parse in progress');
+;	  1494	    IFDB = .INSTR[COD_OPA];
+;	  1495	    OFDB = COPFDB(.IFDB);
+;	  1496	    TFDB = .OFDB;
+;	  1497	    OPTFLG = (IF .POINTR((.OFDB+$CMFNP),CM_NIN) EQL 0 THEN 2 ELSE 0);
+;	  1498	    IF .PCCURC[ECB_SCM] THEN OPTFLG = .OPTFLG + 1;
+;	  1499	    WHILE .POINTR((CURCNS[.IFDB+$CMFNP]),CM_LST) NEQ 0 DO
+;	  1500		BEGIN
+;	  1501		IFDB = .POINTR((CURCNS[.IFDB+$CMFNP]),CM_LST);
+;	  1502		POINTR((.OFDB+$CMFNP),CM_LST) = COPFDB(.IFDB);
+;	  1503		OFDB = .POINTR((.OFDB+$CMFNP),CM_LST)
+;	  1504		END;
+;	  1505	    POINTR((.OFDB+$CMFNP),CM_LST) = 0;
+;	  1506	    SUCC = PCIPRS(.TFDB, .OPTFLG);
+;	  1507	    IFDB = .TFDB;
+;	  1508	    IF .SUCC GTR 0
+;	  1509	    THEN
+;	  1510		BEGIN
+;	  1511		PC = .(.SUCC+$CMBRK);
+;	  1512		IF .POINTR((.SUCC+$CMFNP),CM_FNC) EQL $CMCFM THEN PCCURC[ECB_PAR] = 0
+;	  1513		END;
+;	  1514	    WHILE .IFDB NEQ 0 DO
+;	  1515		BEGIN
+;	  1516		OFDB = .IFDB;
+;	  1517		IFDB = .POINTR((.IFDB+$CMFNP),CM_LST);
+;	  1518		RELFDB(.OFDB)
+;	  1519		END;
+;	  1520	    IF .SUCC LEQ 0
+;	  1521	    THEN
+;	  1522		IF .SUCC EQL -2
+;	  1523		THEN
+;	  1524		    PC = .LSTPMT
+;	  1525		ELSE
+;	  1526		IF .INSTR[COD_OPC] EQL %O'777777'
+;	  1527		THEN
+;	  1528		    PCMPER(0)
+;	  1529		ELSE
+;	  1530		    PC = .INSTR[COD_OPC]
+;	  1531	    END;
+
+
+P.ABD:	BYTE	(7)"N","o"," ","c","o"		; No co
+	BYTE	(7)"m","m","a","n","d"		; mmand
+	BYTE	(7)" ","p","a","r","s"		;  pars
+	BYTE	(7)"e"," ","i","n"," "		; e in
+	BYTE	(7)"p","r","o","g","r"		; progr
+	BYTE	(7)"e","s","s",000,000		; ess
+
+
+; DPARSE
+U.17:	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	LDB	AC2,C.38			; AC2,[POINT 1,12(AC1),5]  <30,1>
+	JUMPN	AC2,L.125			; AC2,L.125
+	MOVEI	AC1,P.ABD			; AC1,P.ABD
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.125:	HRRZ	AC13,U.35			; IFDB,INSTR
+	MOVE	AC1,AC13			; AC1,IFDB
+	PUSHJ	SP,U.18				; SP,COPFDB
+	MOVE	AC12,AC1			; OFDB,AC1
+	MOVE	AC11,AC12			; TFDB,OFDB
+	LDB	AC1,C.41			; AC1,[POINT 1,0(OFDB),9]  <26,1>
+	JUMPN	AC1,L.126			; AC1,L.126
+	MOVEI	AC14,2				; OPTFLG,2
+	JRST	L.127				; L.127
+L.126:	SETZ	AC14,				; OPTFLG,
+L.127:	MOVE	AC1,PCCURC			; AC1,PCCURC
+	MOVSI	AC2,100000			; AC2,100000
+	TDNE	AC2,12(AC1)			; AC2,12(AC1)
+	ADDI	AC14,1				; OPTFLG,1
+L.128:	MOVE	AC1,U.40			; AC1,CURCNS
+	ADD	AC1,AC13			; AC1,IFDB
+	HRRZ	AC1,0(AC1)			; AC1,0(AC1)
+	JUMPE	AC1,L.129			; AC1,L.129
+	MOVE	AC13,AC1			; IFDB,AC1
+	PUSHJ	SP,U.18				; SP,COPFDB
+	HRRM	AC1,0(AC12)			; AC1,0(OFDB)
+	HRRZ	AC12,0(AC12)			; OFDB,0(OFDB)
+	JRST	L.128				; L.128
+L.129:	HLLZS	0(AC12)				; 0(OFDB)
+	MOVE	AC1,AC11			; AC1,TFDB
+	MOVE	AC2,AC14			; AC2,OPTFLG
+	PUSHJ	SP,PCIPRS			; SP,PCIPRS
+	MOVE	AC14,AC1			; SUCC,AC1
+	MOVE	AC13,AC11			; IFDB,TFDB
+	JUMPLE	AC14,L.130			; SUCC,L.130
+	MOVE	AC1,4(AC14)			; AC1,4(SUCC)
+	MOVEM	AC1,U.32			; AC1,PC
+	LDB	AC1,C.40			; AC1,[POINT 9,0(AC14),8]  <27,9>
+	CAIE	AC1,10				; AC1,10
+	JRST	L.130				; L.130
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	MOVSI	AC2,10000			; AC2,10000
+	ANDCAM	AC2,12(AC1)			; AC2,12(AC1)
+L.130:	JUMPE	AC13,L.131			; IFDB,L.131
+	MOVE	AC12,AC13			; OFDB,IFDB
+	HRRZ	AC13,0(AC13)			; IFDB,0(IFDB)
+	MOVE	AC1,AC12			; AC1,OFDB
+	PUSHJ	SP,U.21				; SP,RELFDB
+	JRST	L.130				; L.130
+L.131:	JUMPG	AC14,L.134			; SUCC,L.134
+	CAME	AC14,C.42			; SUCC,[-2]
+	JRST	L.132				; L.132
+	MOVE	AC1,U.36			; AC1,LSTPMT
+	JRST	L.133				; L.133
+L.132:	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	CAIE	AC1,-1				; AC1,-1
+	JRST	L.133				; L.133
+	SETZ	AC1,				; AC1,
+	PUSHJ	SP,PCMPER			; SP,PCMPER
+	JRST	L.134				; L.134
+L.133:	MOVEM	AC1,U.32			; AC1,PC
+L.134:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POPJ	SP,				; SP,
+C.41:	POINT	1,0(AC12),9			; 1,0(OFDB),9
+C.42:	EXP	-2				; -2
+
+; Routine Size:  72 words
+
+
+;	  1532	
+;	  1533	ROUTINE COPFDB(IFDB) =	! Make real FLDDB from prototype
+;	  1534	
+;	  1535	!++
+;	  1536	! Functional description:
+;	  1537	!	  Given a proto-FLDDB, get a temporary block and make a real
+;	  1538	!	FLDDB in it from the proto-FLDDB.  If the field type requires
+;	  1539	!	only the basic five words, fine; if not, copy and relocate all
+;	  1540	!	the additional information (help string, keyword table, etc.).
+;	  1541	!	Returns the real address of this real FLDDB, which must be
+;	  1542	!	completely ready for a COMND%.
+;	  1543	!	  This routine is necessary because routines are stored in
+;	  1544	!	position-independent format.  This position independence
+;	  1545	!	applies to the pointers in FLDDB's, so all pointers to
+;	  1546	!	strings and TBLUK% tables must be relocated.
+;	  1547	!
+;	  1548	! Formal parameters:
+;	  1549	!	Index into constants of prototype FLDDB
+;	  1550	!
+;	  1551	! Implicit inputs:
+;	  1552	!	None
+;	  1553	!
+;	  1554	! Implicit outputs:
+;	  1555	!	None
+;	  1556	!
+;	  1557	! Routine value:
+;	  1558	!	Real address of real FLDDB
+;	  1559	!
+;	  1560	! Side effects:
+;	  1561	!	None
+;	  1562	!
+;	  1563	!--
+;	  1564	
+;	  1565	    BEGIN
+;	  1566	    EXTERNAL REGISTER Z;
+;	  1567	    LOCAL
+;	  1568		OPV: STR_VAL,		! String temporary
+;	  1569		PFDB: REF VECTOR,	! Prototype FLDDB
+;	  1570		RFDB: REF VECTOR;	! Real FLDDB
+;	  1571	    PFDB = .IFDB + .CURCNS;
+;	  1572	    RFDB = GETBUF(5);
+;	  1573	    RFDB[$CMFNP] = .PFDB[$CMFNP];    
+;	  1574	    RFDB[$CMBRK] = .PFDB[$CMBRK];
+;	  1575	                                ! [fun24]: add DirectoryList function to PCL
+;	  1576	    CASE .POINTR((RFDB[$CMFNP]),CM_FNC) FROM $CMKEY TO $cmuls OF
+;	  1577		SET
+;	  1578	[$CMKEY]:   RFDB[$CMDAT] = COPKWT(.PFDB);
+;	  1579	[$CMNUM]:   RFDB[$CMDAT] = .PFDB[$CMDAT];
+;	  1580	[$CMNOI]:   BEGIN
+;	  1581		    OPV = PCEGOP(.PFDB[$CMDAT],STE_TYP_STR);
+;	  1582		    RFDB[$CMDAT] = BYTPTR(.OPV[STV_ADR])
+;	  1583		    END;
+;	  1584	[$CMSWI]:   RFDB[$CMDAT] = COPKWT(.PFDB);
+;	  1585	[$CMFIL,
+;	  1586	 $CMFLS]:   COPFDF(.PFDB[$CMDAT]);
+;	  1587	                                ! [fun24]+ add directory list
+;	  1588	[$cmdls,
+;	  1589	 $cmdir,
+;	  1590	 $cmuls,
+;	  1591	 $cmusr]:   rfdb[$cmdat] = .pfdb[$cmdat];
+;	  1592	                                ! [fun24]- add directory list
+;	  1593	[$CMTAD]:   RFDB[$CMDAT] = .PFDB[$CMDAT];
+;	  1594	[$CMTOK]:   BEGIN
+;	  1595		    OPV = PCEGOP(.PFDB[$CMDAT],STE_TYP_STR);
+;	  1596		    RFDB[$CMDAT] = BYTPTR(.OPV[STV_ADR])
+;	  1597		    END;
+;	  1598	[INRANGE]:  ;
+;	  1599		TES;
+;	  1600	    IF .POINTR((RFDB[$CMFNP]),CM_HPP)
+;	  1601	    THEN
+;	  1602		BEGIN
+;	  1603		OPV = PCEGOP(.PFDB[$CMHLP],STE_TYP_STR);
+;	  1604		RFDB[$CMHLP] = BYTPTR(.OPV[STV_ADR])
+;	  1605		END;
+;	  1606	    IF .POINTR((RFDB[$CMFNP]),CM_DPP)
+;	  1607	    THEN
+;	  1608		BEGIN
+;	  1609		OPV = PCEGOP(.PFDB[$CMDEF],STE_TYP_STR);
+;	  1610		RFDB[$CMDEF] = BYTPTR(.OPV[STV_ADR])
+;	  1611		END;
+;	  1612	    .RFDB
+;	  1613	    END;
+
+
+; COPFDB
+U.18:	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; PFDB,IFDB
+	ADD	AC14,U.40			; PFDB,CURCNS
+	MOVEI	AC1,5				; AC1,5
+	PUSHJ	SP,GETBUF			; SP,GETBUF
+	MOVE	AC13,AC1			; RFDB,AC1
+	MOVE	AC1,0(AC14)			; AC1,0(PFDB)
+	MOVEM	AC1,0(AC13)			; AC1,0(RFDB)
+	MOVE	AC1,4(AC14)			; AC1,4(PFDB)
+	MOVEM	AC1,4(AC13)			; AC1,4(RFDB)
+	LDB	AC1,C.43			; AC1,[POINT 9,0(RFDB),8]  <27,9>
+	JRST	L.135(AC1)			; L.135(AC1)
+L.135:	JRST	L.136				; L.136
+	JRST	L.138				; L.138
+	JRST	L.139				; L.139
+	JRST	L.136				; L.136
+	JRST	L.141				; L.141
+	JRST	L.141				; L.141
+	JRST	L.137				; L.137
+	JRST	L.141				; L.141
+	JRST	L.141				; L.141
+	JRST	L.138				; L.138
+	JRST	L.138				; L.138
+	JRST	L.141				; L.141
+	JRST	L.141				; L.141
+	JRST	L.141				; L.141
+	JRST	L.141				; L.141
+	JRST	L.141				; L.141
+	JRST	L.138				; L.138
+	JRST	L.141				; L.141
+	JRST	L.141				; L.141
+	JRST	L.139				; L.139
+	JRST	L.141				; L.141
+	JRST	L.141				; L.141
+	JRST	L.141				; L.141
+	JRST	L.137				; L.137
+	JRST	L.138				; L.138
+	JRST	L.138				; L.138
+L.136:	MOVE	AC1,AC14			; AC1,PFDB
+	PUSHJ	SP,U.19				; SP,COPKWT
+	JRST	L.140				; L.140
+L.137:	MOVE	AC1,1(AC14)			; AC1,1(PFDB)
+	PUSHJ	SP,U.20				; SP,COPFDF
+	JRST	L.141				; L.141
+L.138:	MOVE	AC1,1(AC14)			; AC1,1(PFDB)
+	JRST	L.140				; L.140
+L.139:	MOVE	AC1,1(AC14)			; AC1,1(PFDB)
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC3,AC1				; OPV,AC1
+	MOVEI	AC1,0(AC3)			; HLF,0(OPV)
+	HRLI	AC1,-337100			; HLF,-337100
+L.140:	MOVEM	AC1,1(AC13)			; HLF,1(RFDB)
+L.141:	MOVSI	AC1,4				; AC1,4
+	TDNN	AC1,0(AC13)			; AC1,0(RFDB)
+	JRST	L.142				; L.142
+	MOVE	AC1,2(AC14)			; AC1,2(PFDB)
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC3,AC1				; OPV,AC1
+	MOVEI	AC1,0(AC3)			; HLF,0(OPV)
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVEM	AC1,2(AC13)			; HLF,2(RFDB)
+L.142:	MOVSI	AC1,2				; AC1,2
+	TDNN	AC1,0(AC13)			; AC1,0(RFDB)
+	JRST	L.143				; L.143
+	MOVE	AC1,3(AC14)			; AC1,3(PFDB)
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC3,AC1				; OPV,AC1
+	MOVEI	AC1,0(AC3)			; HLF,0(OPV)
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVEM	AC1,3(AC13)			; HLF,3(RFDB)
+L.143:	MOVE	AC1,AC13			; AC1,RFDB
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+C.43:	POINT	9,0(AC13),8			; 9,0(RFDB),8
+
+; Routine Size:  79 words
+
+
+;	  1614	
+;	  1615	ROUTINE COPKWT(PFDB) =	! Copy keyword table
+;	  1616	
+;	  1617	!++
+;	  1618	! Functional description:
+;	  1619	!	Copies keyword table for Parse.
+;	  1620	!
+;	  1621	! Formal parameters:
+;	  1622	!	Address of prototype FLDDB
+;	  1623	!
+;	  1624	! Implicit inputs:
+;	  1625	!	None
+;	  1626	!
+;	  1627	! Implicit outputs:
+;	  1628	!	None
+;	  1629	!
+;	  1630	! Routine value:
+;	  1631	!	Real address of real keyword table
+;	  1632	!
+;	  1633	! Side effects:
+;	  1634	!	None
+;	  1635	!
+;	  1636	!--
+;	  1637	
+;	  1638	    BEGIN
+;	  1639	    EXTERNAL REGISTER Z;
+;	  1640	    MAP
+;	  1641		PFDB: REF VECTOR;	! Prototype FLDDB
+;	  1642	    LOCAL
+;	  1643		CNT: HLF_WRD,		! Keyword count
+;	  1644		HLFTMP: HLF_WRD,	! Temporary
+;	  1645		RTBL: REF VECTOR,	! Pointer to real keyword table
+;	  1646		PTBL: REF VECTOR;	! Pointer to prototype keyword table
+;	  1647	    PTBL = .PFDB[$CMDAT] + .CURCNS;
+;	  1648	    CNT = .PTBL[0];
+;	  1649	    CNT = .CNT[HLF_RGT];
+;	  1650	    RTBL = GETBUF(.CNT+1);
+;	  1651	    RTBL[0] = .PTBL[0];
+;	  1652	    PTBL = .PTBL+1;
+;	  1653	    DECR I FROM .CNT-1 DO
+;	  1654		BEGIN
+;	  1655		HLFTMP = .PTBL[.I];
+;	  1656		HLFTMP[HLF_LFT] = .HLFTMP[HLF_LFT] + .CURCNS;
+;	  1657		RTBL[.I+1] = .HLFTMP
+;	  1658		END;
+;	  1659	    .RTBL
+;	  1660	    END;
+
+
+; COPKWT
+U.19:	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC13,1(AC1)			; PTBL,1(PFDB)
+	ADD	AC13,U.40			; PTBL,CURCNS
+	MOVE	AC14,0(AC13)			; CNT,0(PTBL)
+	MOVEI	AC14,0(AC14)			; CNT,0(CNT)
+	MOVE	AC1,AC14			; AC1,CNT
+	ADDI	AC1,1				; AC1,1
+	PUSHJ	SP,GETBUF			; SP,GETBUF
+	MOVE	AC4,AC1				; RTBL,AC1
+	MOVE	AC1,0(AC13)			; AC1,0(PTBL)
+	MOVEM	AC1,0(AC4)			; AC1,0(RTBL)
+	ADDI	AC13,1				; PTBL,1
+	MOVE	AC2,AC14			; I,CNT
+	JRST	L.145				; L.145
+L.144:	MOVE	AC1,AC13			; AC1,PTBL
+	ADD	AC1,AC2				; AC1,I
+	MOVE	AC3,0(AC1)			; HLFTMP,0(AC1)
+	HLRZ	AC1,AC3				; AC1,HLFTMP
+	ADD	AC1,U.40			; AC1,CURCNS
+	HRL	AC3,AC1				; HLFTMP,AC1
+	MOVE	AC1,AC4				; AC1,RTBL
+	ADD	AC1,AC2				; AC1,I
+	MOVEM	AC3,1(AC1)			; HLFTMP,1(AC1)
+L.145:	SOJGE	AC2,L.144			; I,L.144
+	MOVE	AC1,AC4				; AC1,RTBL
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+
+; Routine Size:  29 words
+
+
+;	  1661	
+;	  1662	ROUTINE COPFDF(DAT): NOVALUE =	! Copy FILE defaults
+;	  1663	
+;	  1664	!++
+;	  1665	! Functional description:
+;	  1666	!	Set up the GTJFN block for a .CMFIL or .CMFLS parse.  If the user
+;	  1667	!	supplies a list of defaults, fill in the appropriate fields; otherwise
+;	  1668	!	clear the GTJFN block.
+;	  1669	!
+;	  1670	! Formal parameters:
+;	  1671	!	Constant index of default list from prototype
+;	  1672	!
+;	  1673	! Implicit inputs:
+;	  1674	!	None
+;	  1675	!
+;	  1676	! Implicit outputs:
+;	  1677	!	GTJFN block
+;	  1678	!
+;	  1679	! Routine value:
+;	  1680	!	None
+;	  1681	!
+;	  1682	! Side effects:
+;	  1683	!	None
+;	  1684	!
+;	  1685	!--
+;	  1686	
+;	  1687	    BEGIN
+;	  1688	    EXTERNAL REGISTER Z;
+;	  1689	    LOCAL
+;	  1690		STR: STR_VAL;		! User's string
+;	  1691	
+;	  1692	    DECR I FROM $GJACT-1 DO CJFNBK[.I] = 0;
+;	  1693	    CJFNBK[$GJF2] = 0;
+;	  1694	    IF .DAT EQL 0 THEN RETURN;
+;	  1695	    CJFNBK[$GJGEN] = .CURCNS[.DAT];
+;	  1696	    CJFNBK[$GJF2] = .CURCNS[.DAT+1];
+;	  1697	    DECR I FROM $GJEXT TO $GJDEV DO
+;	  1698		IF .CURCNS[.DAT+.I] NEQ -1
+;	  1699		THEN
+;	  1700		    BEGIN
+;	  1701		    STR = PCEGOP(.CURCNS[.DAT+.I],STE_TYP_STR);
+;	  1702		    CJFNBK[.I] = BYTPTR(.STR[STV_ADR])
+;	  1703		    END
+;	  1704	    END;
+
+
+; COPFDF
+U.20:	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC13,AC1			; DAT,AC1
+	MOVEI	AC1,6				; I,6
+L.146:	SETZM	CJFNBK(AC1)			; CJFNBK(I)
+	SOJGE	AC1,L.146			; I,L.146
+	SETZM	CJFNBK+11			; CJFNBK+11
+	JUMPE	AC13,L.149			; DAT,L.149
+	MOVE	AC1,U.40			; AC1,CURCNS
+	MOVE	AC2,AC1				; AC2,AC1
+	ADD	AC2,AC13			; AC2,DAT
+	MOVE	AC3,0(AC2)			; AC3,0(AC2)
+	MOVEM	AC3,CJFNBK			; AC3,CJFNBK
+	ADD	AC1,AC13			; AC1,DAT
+	MOVE	AC2,1(AC1)			; AC2,1(AC1)
+	MOVEM	AC2,CJFNBK+11			; AC2,CJFNBK+11
+	MOVEI	AC14,5				; I,5
+L.147:	MOVE	AC3,U.40			; AC3,CURCNS
+	MOVE	AC1,AC13			; AC1,DAT
+	ADD	AC1,AC14			; AC1,I
+	ADD	AC3,AC1				; AC3,AC1
+	SETO	AC1,				; AC1,
+	CAMN	AC1,0(AC3)			; AC1,0(AC3)
+	JRST	L.148				; L.148
+	MOVE	AC1,0(AC3)			; AC1,0(AC3)
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC4,AC1				; STR,AC1
+	MOVEI	AC1,0(AC4)			; HLF,0(STR)
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVEM	AC1,CJFNBK(AC14)		; HLF,CJFNBK(I)
+L.148:	SUBI	AC14,1				; I,1
+	CAIL	AC14,2				; I,2
+	JRST	L.147				; L.147
+L.149:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+
+; Routine Size:  37 words
+
+
+;	  1705	
+;	  1706	ROUTINE RELFDB(OFDB): NOVALUE =	! Free storage for real FLDDB
+;	  1707	
+;	  1708	!++
+;	  1709	! Functional description:
+;	  1710	!	Frees temporary block used for real FLDDB, including copies
+;	  1711	!	of Help and Default strings, and keyword table
+;	  1712	!
+;	  1713	! Formal parameters:
+;	  1714	!	Real address of FLDDB
+;	  1715	!
+;	  1716	! Implicit inputs:
+;	  1717	!	None
+;	  1718	!
+;	  1719	! Implicit outputs:
+;	  1720	!	None
+;	  1721	!
+;	  1722	! Routine value:
+;	  1723	!	None
+;	  1724	!
+;	  1725	! Side effects:
+;	  1726	!	None
+;	  1727	!
+;	  1728	!--
+;	  1729	
+;	  1730	    BEGIN
+;	  1731	    EXTERNAL REGISTER Z;
+;	  1732	    MAP
+;	  1733		OFDB: REF VECTOR;
+;	  1734	    IF (.POINTR((OFDB[$CMFNP]),CM_FNC) EQL $CMKEY) OR
+;	  1735		(.POINTR((OFDB[$CMFNP]),CM_FNC) EQL $CMSWI)
+;	  1736	    THEN
+;	  1737		BEGIN
+;	  1738		LOCAL
+;	  1739		    PTR,
+;	  1740		    CNT: HLF_WRD;
+;	  1741		PTR = .OFDB[$CMDAT];
+;	  1742		CNT = ..PTR;
+;	  1743		RETMEM( .CNT[HLF_RGT]+1, .PTR, DICT)
+;	  1744		END;
+;	  1745	    RETMEM(5,.OFDB,DICT);       ! [fun58] Make Relfdb release 5 words, not 4.
+;	  1746	    END;
+
+
+; RELFDB
+U.21:	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; OFDB,AC1
+	LDB	AC1,C.40			; AC1,[POINT 9,0(AC14),8]  <27,9>
+	JUMPE	AC1,L.150			; AC1,L.150
+	CAIE	AC1,3				; AC1,3
+	JRST	L.151				; L.151
+L.150:	MOVE	AC2,1(AC14)			; PTR,1(OFDB)
+	MOVE	AC1,0(AC2)			; CNT,0(PTR)
+	MOVEI	AC1,0(AC1)			; AC1,0(CNT)
+	ADDI	AC1,1				; AC1,1
+	MOVEI	AC3,DICT			; AC3,DICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+L.151:	MOVEI	AC1,5				; AC1,5
+	MOVE	AC2,AC14			; AC2,OFDB
+	MOVEI	AC3,DICT			; AC3,DICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+	POP	SP,AC14				; SP,AC14
+	POPJ	SP,				; SP,
+
+; Routine Size:  18 words
+
+
+;	  1747	
+;	  1748	ROUTINE DPRMPT: NOVALUE =	! Prompt instruction
+;	  1749	
+;	  1750	!++
+;	  1751	! Functional description:
+;	  1752	!	Execute PMT/PMN instruction.  Begin new command-parse line
+;	  1753	!	with the prompt given in string A.
+;	  1754	!
+;	  1755	! Formal parameters:
+;	  1756	!	None
+;	  1757	!
+;	  1758	! Implicit inputs:
+;	  1759	!	Instruction stream
+;	  1760	!
+;	  1761	! Implicit outputs:
+;	  1762	!	None
+;	  1763	!
+;	  1764	! Routine value:
+;	  1765	!	None
+;	  1766	!
+;	  1767	! Side effects:
+;	  1768	!	None
+;	  1769	!
+;	  1770	!--
+;	  1771	
+;	  1772	    BEGIN
+;	  1773	    EXTERNAL REGISTER Z;
+;	  1774	    LOCAL STR: STR_VAL;
+;	  1775	    LSTPMT = .PC;
+;	  1776	    PCCURC[ECB_SCM] = 1;
+;	  1777	    PCCURC[ECB_PAR] = 1;
+;	  1778	    PCCURC[ECB_ECO] = (IF .INSTR[COD_OPR] EQL OPR_PMT THEN 0 ELSE 1);
+;	  1779	    STR = PCEGOP(.INSTR[COD_OPA],STE_TYP_STR);
+;	  1780	    PCIPRS(0,.PCCURC[ECB_ECO],BYTPTR(.STR[STV_ADR]));
+;	  1781	    END;
+
+
+; DPRMPT
+U.22:	MOVE	AC1,U.32			; AC1,PC
+	MOVEM	AC1,U.36			; AC1,LSTPMT
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	MOVSI	AC2,100000			; AC2,100000
+	IORM	AC2,12(AC1)			; AC2,12(AC1)
+	MOVSI	AC2,10000			; AC2,10000
+	IORM	AC2,12(AC1)			; AC2,12(AC1)
+	LDB	AC2,C.44			; AC2,[POINT 6,INSTR,17]  <18,6>
+	CAIN	AC2,51				; AC2,51
+	TDZA	AC2,AC2				; AC2,AC2
+	MOVEI	AC2,1				; AC2,1
+	DPB	AC2,C.45			; AC2,[POINT 1,12(AC1),3]  <32,1>
+	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC4,PCCURC			; AC4,PCCURC
+	MOVEI	AC3,0(AC1)			; HLF,0(STR)
+	HRLI	AC3,-337100			; HLF,-337100
+	SETZ	AC1,				; AC1,
+	LDB	AC2,C.46			; AC2,[POINT 1,12(AC4),3]  <32,1>
+	JRST	PCIPRS				; PCIPRS
+C.44:	POINT	6,U.35,17			; 6,INSTR,17
+C.45:	POINT	1,12(AC1),3			; 1,12(AC1),3
+C.46:	POINT	1,12(AC4),3			; 1,12(AC4),3
+
+; Routine Size:  24 words
+
+
+;	  1782	
+;	  1783	ROUTINE GETEOP: NOVALUE =	! Get Exec output
+;	  1784	
+;	  1785	!++
+;	  1786	! Functional description:
+;	  1787	!	Get accumulated Exec typeout saved through PCL's PTY,
+;	  1788	!	and store it in the user variable designated in the last
+;	  1789	!	DoCommand instruction.
+;	  1790	!
+;	  1791	! Formal parameters:
+;	  1792	!	None
+;	  1793	!
+;	  1794	! Implicit inputs:
+;	  1795	!	Designator saved in ECB, PCPEOP
+;	  1796	!
+;	  1797	! Implicit outputs:
+;	  1798	!	None
+;	  1799	!
+;	  1800	! Routine value:
+;	  1801	!	None
+;	  1802	!
+;	  1803	! Side effects:
+;	  1804	!	None
+;	  1805	!
+;	  1806	!--
+;	  1807	
+;	  1808	    BEGIN
+;	  1809	    EXTERNAL REGISTER Z;
+;	  1810	    LOCAL
+;	  1811		PTR: REF STB_BLK,	! String block
+;	  1812		DESIG,			! Designator of result
+;	  1813		OPV: STR_VAL;		! Stringvalue being created
+;	  1814	    PCIPSO();
+;	  1815	    ! Perhaps this should use EXCH
+;	  1816	    PTR = .PCPEOP;
+;	  1817	    PCPEOP = 0;
+;	  1818	    DESIG = .PCCURC[ECB_DTO];
+;	  1819	    PCCURC[ECB_DTO] = %O'777777';
+;	  1820	    IF .PTR EQL 0
+;	  1821	    THEN
+;	  1822		OPV = 0
+;	  1823	    ELSE
+;	  1824	    IF .PTR LSS 0
+;	  1825	    THEN
+;	  1826		ERROR('Exec ran out of space storing typeout')
+;	  1827	    ELSE
+;	  1828		BEGIN
+;	  1829		OPV = PCEAST(.PTR[STB_CNT]);
+;	  1830		IF .OPV NEQ 0
+;	  1831		THEN
+;	  1832		    CH$COPY(.PTR[STB_CNT], BYTPTR(PTR[STB_BUF]),
+;	  1833			    0, .OPV[STV_LEN]+1, BYTPTR(.OPV[STV_ADR]));
+;	  1834		RETMEM(.PTR[STB_LEN], .PTR, XDICT)
+;	  1835		END;
+;	  1836	    PCESOP(.DESIG, .OPV, STE_TYP_STR)
+;	  1837	    END;
+
+
+P.ABE:	BYTE	(7)"E","x","e","c"," "		; Exec
+	BYTE	(7)"r","a","n"," ","o"		; ran o
+	BYTE	(7)"u","t"," ","o","f"		; ut of
+	BYTE	(7)" ","s","p","a","c"		;  spac
+	BYTE	(7)"e"," ","s","t","o"		; e sto
+	BYTE	(7)"r","i","n","g"," "		; ring
+	BYTE	(7)"t","y","p","e","o"		; typeo
+	BYTE	(7)"u","t",000,000,000		; ut
+
+
+; GETEOP
+U.23:	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	PUSHJ	SP,PCIPSO			; SP,PCIPSO
+	MOVE	AC14,PCPEOP			; PTR,PCPEOP
+	SETZM	PCPEOP				; PCPEOP
+	MOVE	AC1,PCCURC			; AC1,PCCURC
+	HLRZ	AC12,6(AC1)			; DESIG,6(AC1)
+	HRROS	6(AC1)				; 6(AC1)
+	JUMPN	AC14,L.152			; PTR,L.152
+	SETZ	AC13,				; OPV,
+	JRST	L.155				; L.155
+L.152:	JUMPGE	AC14,L.153			; PTR,L.153
+	MOVEI	AC1,P.ABE			; AC1,P.ABE
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+	JRST	L.155				; L.155
+L.153:	HLRZ	AC1,0(AC14)			; AC1,0(PTR)
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC13,AC1			; OPV,AC1
+	JUMPE	AC13,L.154			; OPV,L.154
+	MOVE	AC2,AC14			; HLF,PTR
+	ADDI	AC2,1				; HLF,1
+	HRLI	AC2,-337100			; HLF,-337100
+	HLRZ	AC4,AC13			; AC4,OPV
+	ADDI	AC4,1				; AC4,1
+	MOVEI	AC5,0(AC13)			; HLF,0(OPV)
+	HRLI	AC5,-337100			; HLF,-337100
+	HLRZ	AC1,0(AC14)			; AC1,0(PTR)
+	EXTEND	AC1,C.3				; AC1,C.3
+	JFCL					; 
+L.154:	HRRZ	AC1,0(AC14)			; AC1,0(PTR)
+	MOVE	AC2,AC14			; AC2,PTR
+	MOVEI	AC3,XDICT			; AC3,XDICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+L.155:	MOVE	AC1,AC12			; AC1,DESIG
+	MOVE	AC2,AC13			; AC2,OPV
+	MOVEI	AC3,1				; AC3,1
+	PUSHJ	SP,PCESOP			; SP,PCESOP
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POPJ	SP,				; SP,
+
+; Routine Size:  42 words
+
+
+;	  1838	
+;	  1839	ROUTINE DOTINP(FLG): NOVALUE =	! Typein instruction
+;	  1840	
+;	  1841	!++
+;	  1842	! Functional description:
+;	  1843	!	Executes TIN or TIX instruction: Takes string operand A and copies
+;	  1844	!	the string into the PTY controlling the user program.  PCL
+;	  1845	!	execution waits until the program requires input.
+;	  1846	!
+;	  1847	! Formal parameters:
+;	  1848	!	Flag: 0=TIN, 1=TIX
+;	  1849	!
+;	  1850	! Implicit inputs:
+;	  1851	!	Instruction, operand
+;	  1852	!
+;	  1853	! Implicit outputs:
+;	  1854	!	None
+;	  1855	!
+;	  1856	! Routine value:
+;	  1857	!	None
+;	  1858	!
+;	  1859	! Side effects:
+;	  1860	!	Waits for controlled program to need attention
+;	  1861	!
+;	  1862	!--
+;	  1863	
+;	  1864	    BEGIN
+;	  1865	    EXTERNAL REGISTER Z;
+;	  1866	    LOCAL
+;	  1867		OPND: STR_VAL,		! Operand descriptor
+;	  1868		SV: STR_VAL,		! Another string
+;	  1869		PTRI,			! String pointers
+;	  1870		PTRO,
+;	  1871		CHR,
+;	  1872		CNT;
+;	  1873	    OPND = PCEGOP(.INSTR[COD_OPA],STE_TYP_STR);
+;	  1874	    SV = PCEAST(.OPND[STV_LEN]+(IF .FLG EQL 0 THEN 1 ELSE 0));
+;	  1875	    PTRI = BYTPTR(.OPND[STV_ADR]);
+;	  1876	    PTRO = BYTPTR(.SV[STV_ADR]);
+;	  1877	    CNT = .SV[STV_LEN];
+;	  1878	    DECR I FROM .OPND[STV_LEN]-1 DO
+;	  1879		IF (CHR = CH$RCHAR_A(PTRI)) NEQ $CHLFD
+;	  1880		THEN
+;	  1881		    CH$WCHAR_A(.CHR,PTRO)
+;	  1882		ELSE
+;	  1883		    CNT = .CNT - 1;
+;	  1884	    IF .FLG EQL 0 THEN CH$WCHAR_A($CHCRT,PTRO);
+;	  1885	    CH$WCHAR_A($CHNUL,PTRO);
+;	  1886	    IF .INSTR[COD_OPA] EQL OPN_TMP_STR THEN PCEFST(.OPND);
+;	  1887	    PCITIN(BYTPTR(.SV[STV_ADR]), .CNT);
+;	  1888	    PCEFST(.SV)
+;	  1889	    END;
+
+
+; DOTINP
+U.24:	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC1			; FLG,AC1
+	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC13,AC1			; OPND,AC1
+	JUMPN	AC14,L.156			; FLG,L.156
+	MOVEI	AC1,1				; AC1,1
+	JRST	L.157				; L.157
+L.156:	SETZ	AC1,				; AC1,
+L.157:	HLRZ	AC2,AC13			; AC2,OPND
+	ADD	AC1,AC2				; AC1,AC2
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC11,AC1			; SV,AC1
+	MOVEI	AC1,0(AC13)			; HLF,0(OPND)
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC4,AC1				; PTRI,HLF
+	MOVEI	AC1,0(AC11)			; HLF,0(SV)
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC2,AC1				; PTRO,HLF
+	HLRZ	AC12,AC11			; CNT,SV
+	HLRZ	AC3,AC13			; I,OPND
+	JRST	L.160				; L.160
+L.158:	ILDB	AC1,AC4				; CHR,PTRI
+	CAIN	AC1,12				; CHR,12
+	JRST	L.159				; L.159
+	IDPB	AC1,AC2				; CHR,PTRO
+	JRST	L.160				; L.160
+L.159:	SUBI	AC12,1				; CNT,1
+L.160:	SOJGE	AC3,L.158			; I,L.158
+	JUMPN	AC14,L.161			; FLG,L.161
+	MOVEI	AC1,15				; AC1,15
+	IDPB	AC1,AC2				; AC1,PTRO
+L.161:	SETZ	AC1,				; AC1,
+	IDPB	AC1,AC2				; AC1,PTRO
+	HRRZ	AC1,U.35			; AC1,INSTR
+	CAIE	AC1,-100000			; AC1,-100000
+	JRST	L.162				; L.162
+	MOVE	AC1,AC13			; AC1,OPND
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.162:	MOVEI	AC1,0(AC11)			; HLF,0(SV)
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC2,AC12			; AC2,CNT
+	PUSHJ	SP,PCITIN			; SP,PCITIN
+	MOVE	AC1,AC11			; AC1,SV
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POPJ	SP,				; SP,
+
+; Routine Size:  54 words
+
+
+;	  1890	
+;	  1891	ROUTINE DOGTYO: NOVALUE =	! Gettypout instruction
+;	  1892	
+;	  1893	!++
+;	  1894	! Functional description:
+;	  1895	!	Obtains all output from user program accumulated since start
+;	  1896	!	(or since last call to this routine) and stores in operand A
+;	  1897	!	if not -1.
+;	  1898	
+;	  1899	!
+;	  1900	! Formal parameters:
+;	  1901	!	None
+;	  1902	!
+;	  1903	! Implicit inputs:
+;	  1904	!	Accumulated output string block
+;	  1905	!
+;	  1906	! Implicit outputs:
+;	  1907	!	User's string variable
+;	  1908	!
+;	  1909	! Routine value:
+;	  1910	!	None
+;	  1911	!
+;	  1912	! Side effects:
+;	  1913	!	None
+;	  1914	!
+;	  1915	!--
+;	  1916	
+;	  1917	    BEGIN
+;	  1918	    EXTERNAL REGISTER Z;
+;	  1919	    LOCAL
+;	  1920		PTR: REF STB_BLK,	! String block
+;	  1921		OPV: STR_VAL;		! Stringvalue being created
+;	  1922	    BUILTIN MACHOP;
+;	  1923	    REGISTER R1=1;
+;	  1924	    PCIPSO();
+;	  1925	    R1 = 0;
+;	  1926	    ! I wish there were still an EXCH primitive
+;	  1927	    MACHOP(%O'250',R1,PCPOTP);
+;	  1928	    PTR = .R1;
+;	  1929	    IF .PTR EQL 0
+;	  1930	    THEN
+;	  1931		OPV = 0
+;	  1932	    ELSE
+;	  1933	    IF .PTR LSS 0
+;	  1934	    THEN
+;	  1935		ERROR('Exec ran out of space storing typeout')
+;	  1936	    ELSE
+;	  1937		BEGIN
+;	  1938		IF .INSTR[COD_OPA] NEQ %O'777777'
+;	  1939		THEN
+;	  1940		    BEGIN
+;	  1941		    OPV = PCEAST(.PTR[STB_CNT]);
+;	  1942		    CH$COPY(.PTR[STB_CNT], BYTPTR(PTR[STB_BUF]),
+;	  1943			    0, .OPV[STV_LEN]+1, BYTPTR(.OPV[STV_ADR]))
+;	  1944		    END;
+;	  1945		RETMEM(.PTR[STB_LEN], .PTR, XDICT)
+;	  1946		END;
+;	  1947	    IF .INSTR[COD_OPA] NEQ %O'777777'
+;	  1948	    THEN
+;	  1949		PCESOP(.INSTR[COD_OPA], .OPV, STE_TYP_STR)
+;	  1950	    END;
+
+
+P.ABF:	BYTE	(7)"E","x","e","c"," "		; Exec
+	BYTE	(7)"r","a","n"," ","o"		; ran o
+	BYTE	(7)"u","t"," ","o","f"		; ut of
+	BYTE	(7)" ","s","p","a","c"		;  spac
+	BYTE	(7)"e"," ","s","t","o"		; e sto
+	BYTE	(7)"r","i","n","g"," "		; ring
+	BYTE	(7)"t","y","p","e","o"		; typeo
+	BYTE	(7)"u","t",000,000,000		; ut
+
+
+; DOGTYO
+U.25:	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	PUSHJ	SP,PCIPSO			; SP,PCIPSO
+	SETZ	AC1,				; R1,
+	EXCH	AC1,PCPOTP			; R1,PCPOTP
+	MOVE	AC14,AC1			; PTR,R1
+	JUMPN	AC14,L.163			; PTR,L.163
+	SETZ	AC13,				; OPV,
+	JRST	L.166				; L.166
+L.163:	JUMPGE	AC14,L.164			; PTR,L.164
+	MOVEI	AC1,P.ABF			; AC1,P.ABF
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+	JRST	L.166				; L.166
+L.164:	HRRZ	AC1,U.35			; AC1,INSTR
+	CAIN	AC1,-1				; AC1,-1
+	JRST	L.165				; L.165
+	HLRZ	AC1,0(AC14)			; AC1,0(PTR)
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC13,AC1			; OPV,AC1
+	MOVE	AC2,AC14			; HLF,PTR
+	ADDI	AC2,1				; HLF,1
+	HRLI	AC2,-337100			; HLF,-337100
+	HLRZ	AC4,AC13			; AC4,OPV
+	ADDI	AC4,1				; AC4,1
+	MOVEI	AC5,0(AC13)			; HLF,0(OPV)
+	HRLI	AC5,-337100			; HLF,-337100
+	HLRZ	AC1,0(AC14)			; AC1,0(PTR)
+	EXTEND	AC1,C.3				; AC1,C.3
+	JFCL					; 
+L.165:	HRRZ	AC1,0(AC14)			; AC1,0(PTR)
+	MOVE	AC2,AC14			; AC2,PTR
+	MOVEI	AC3,XDICT			; AC3,XDICT
+	PUSHJ	SP,RETMEM			; SP,RETMEM
+L.166:	HRRZ	AC1,U.35			; AC1,INSTR
+	CAIN	AC1,-1				; AC1,-1
+	JRST	L.167				; L.167
+	MOVE	AC2,AC13			; AC2,OPV
+	MOVEI	AC3,1				; AC3,1
+	PUSHJ	SP,PCESOP			; SP,PCESOP
+L.167:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POPJ	SP,				; SP,
+
+; Routine Size:  42 words
+
+
+;	  1951	
+;	  1952	ROUTINE DODPLY(FLG,TYP): NOVALUE =	! Display instruction
+;	  1953	
+;	  1954	!++
+;	  1955	! Functional description:
+;	  1956	!	Display string in operand A on real terminal.
+;	  1957	!
+;	  1958	! Formal parameters:
+;	  1959	!	0 for normal display, 1 for binary, -1 for normal without CRLF
+;	  1960	!	GST_TYP_INT or GST_TYP_STR (type of value being displayed)
+;	  1961	!
+;	  1962	! Implicit inputs:
+;	  1963	!	Instruction, operand
+;	  1964	!
+;	  1965	! Implicit outputs:
+;	  1966	!	None
+;	  1967	!
+;	  1968	! Routine value:
+;	  1969	!	None
+;	  1970	!
+;	  1971	! Side effects:
+;	  1972	!	None
+;	  1973	!
+;	  1974	!--
+;	  1975	
+;	  1976	    BEGIN
+;	  1977	    EXTERNAL REGISTER Z;
+;	  1978	    LOCAL
+;	  1979		OPNS: STR_VAL,		! Operand (if a string)
+;	  1980		OPNI;			! Operand (if an integer)
+;	  1981	    IF .TYP EQL GST_TYP_STR
+;	  1982	    THEN
+;	  1983		BEGIN
+;	  1984		OPNS = PCEGOP(.INSTR[COD_OPA],STE_TYP_STR);
+;	  1985	        PCIDPY(.OPNS[STV_ADR], .OPNS[STV_LEN], .FLG, .TYP);
+;	  1986	        IF .INSTR[COD_OPA] EQL OPN_TMP_STR THEN PCEFST(.OPNS)
+;	  1987		END
+;	  1988	    ELSE			! Integer
+;	  1989		BEGIN
+;	  1990		OPNI = PCEGOP(.INSTR[COD_OPA],STE_TYP_INT);
+;	  1991	        PCIDPY(.OPNI, 0, .FLG, .TYP);
+;	  1992		END
+;	  1993	    END;
+
+
+; DODPLY
+U.26:	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	MOVE	AC14,AC2			; TYP,AC2
+	MOVE	AC13,AC1			; FLG,AC1
+	CAIE	AC14,1				; TYP,1
+	JRST	L.168				; L.168
+	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC12,AC1			; OPNS,AC1
+	MOVEI	AC1,0(AC12)			; AC1,0(OPNS)
+	HLRZ	AC2,AC12			; AC2,OPNS
+	MOVE	AC3,AC13			; AC3,FLG
+	MOVE	AC4,AC14			; AC4,TYP
+	PUSHJ	SP,PCIDPY			; SP,PCIDPY
+	HRRZ	AC1,U.35			; AC1,INSTR
+	CAIE	AC1,-100000			; AC1,-100000
+	JRST	L.169				; L.169
+	MOVE	AC1,AC12			; AC1,OPNS
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+	JRST	L.169				; L.169
+L.168:	HRRZ	AC1,U.35			; AC1,INSTR
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	SETZ	AC2,				; AC2,
+	MOVE	AC3,AC13			; AC3,FLG
+	MOVE	AC4,AC14			; AC4,TYP
+	PUSHJ	SP,PCIDPY			; SP,PCIDPY
+L.169:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POPJ	SP,				; SP,
+
+; Routine Size:  33 words
+
+
+;	  1994	
+;	  1995	ROUTINE CLIPRC: NOVALUE =	! Call internal routine
+;	  1996	
+;	  1997	!++
+;	  1998	! Functional description:
+;	  1999	!	  After slightly validating the operands, this routine invokes
+;	  2000	!	the requested system procedure, passing it the user's
+;	  2001	!	argument list, and storing the value if the procedure returns one.
+;	  2002	!
+;	  2003	! Formal parameters:
+;	  2004	!	None
+;	  2005	!
+;	  2006	! Implicit inputs:
+;	  2007	!	PC, instruction word, symbol table, definition table
+;	  2008	!
+;	  2009	! Implicit outputs:
+;	  2010	!	None
+;	  2011	!
+;	  2012	! Routine value:
+;	  2013	!	None
+;	  2014	!
+;	  2015	! Side effects:
+;	  2016	!	None
+;	  2017	!
+;	  2018	!--
+;	  2019	
+;	  2020	%( Needs optimization of PSDEFN reference )%
+;	  2021	
+;	  2022	    BEGIN
+;	  2023	    EXTERNAL REGISTER Z;
+;	  2024	    LOCAL
+;	  2025		ARG,
+;	  2026		CNT,
+;	  2027		RTN: OPRAND,
+;	  2028		IDX,
+;	  2029		VAL;
+;	  2030	    ARG = .INSTR[COD_OPB];
+;	  2031	    IF .ARG EQL %O'777777' THEN CNT = 0 ELSE CNT = .CURCNS[.ARG];
+;	  2032	    ARG = .ARG + .CURCNS + 1;
+;	  2033	    RTN[OPN_WRD] = .INSTR[COD_OPA];
+;	  2034	    IDX = .RTN[OPN_ADR];
+;	  2035	    IF .IDX GEQ PSDEFL THEN ERROR('Bad system procedure index');
+;	  2036	                                ! [fun31]+ Fix string system variables
+;	  2037	                                ! garbage collection problem
+;	  2038	    IF .PSDEFN[.IDX,SYN_CLS] EQL SYN_CLS_VAR THEN
+;	  2039	       if not .psdefn[.idx,syn_rtv] then ERROR('Not a procedure');
+;	  2040	                                ! [fun31]-
+;	  2041	    VAL = EXEC(.PSDEFN[.IDX,SYN_ADR],.ARG,.CNT);
+;	  2042	    IF .PSDEFN[.IDX,SYN_CLS] GEQ SYN_CLS_FCN
+;	  2043	    THEN
+;	  2044		PCESOP(.INSTR[COD_OPC], .VAL, .PSDEFN[.IDX,SYN_TYP])
+;	  2045	    END;
+
+
+P.ABG:	BYTE	(7)"B","a","d"," ","s"		; Bad s
+	BYTE	(7)"y","s","t","e","m"		; ystem
+	BYTE	(7)" ","p","r","o","c"		;  proc
+	BYTE	(7)"e","d","u","r","e"		; edure
+	BYTE	(7)" ","i","n","d","e"		;  inde
+	BYTE	(7)"x",000,000,000,000		; x
+P.ABH:	BYTE	(7)"N","o","t"," ","a"		; Not a
+	BYTE	(7)" ","p","r","o","c"		;  proc
+	BYTE	(7)"e","d","u","r","e"		; edure
+	BYTE	(7)000,000,000,000,000
+
+
+; CLIPRC
+U.27:	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	HLRZ	AC13,U.35+1			; ARG,INSTR+1
+	CAIE	AC13,-1				; ARG,-1
+	JRST	L.170				; L.170
+	SETZ	AC12,				; CNT,
+	JRST	L.171				; L.171
+L.170:	MOVE	AC1,U.40			; AC1,CURCNS
+	ADD	AC1,AC13			; AC1,ARG
+	MOVE	AC12,0(AC1)			; CNT,0(AC1)
+L.171:	MOVE	AC1,AC13			; AC1,ARG
+	ADD	AC1,U.40			; AC1,CURCNS
+	MOVE	AC13,AC1			; ARG,AC1
+	ADDI	AC13,1				; ARG,1
+	HRRZ	AC1,U.35			; RTN,INSTR
+	LDB	AC14,C.20			; IDX,[POINT 15,AC1,35]  <0,15>
+	CAIGE	AC14,PSDEFL			; IDX,PSDEFL
+	JRST	L.172				; L.172
+	MOVEI	AC1,P.ABG			; AC1,P.ABG
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.172:	IMULI	AC14,2				; IDX,2
+	LDB	AC1,C.17			; AC1,[POINT 3,PSDEFN(AC14),17]  <18,3>
+	CAIN	AC1,2				; AC1,2
+	SKIPGE	PSDEFN(AC14)			; PSDEFN(AC14)
+	JRST	L.173				; L.173
+	MOVEI	AC1,P.ABH			; AC1,P.ABH
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.173:	HRRZ	AC3,PSDEFN+1(AC14)		; AC3,PSDEFN+1(AC14)
+	MOVE	AC1,AC13			; AC1,ARG
+	MOVE	AC2,AC12			; AC2,CNT
+	PUSHJ	SP,0(AC3)			; SP,0(AC3)
+	MOVE	AC2,AC1				; VAL,AC1
+	LDB	AC1,C.17			; AC1,[POINT 3,PSDEFN(AC14),17]  <18,3>
+	JUMPLE	AC1,L.174			; AC1,L.174
+	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	LDB	AC3,C.18			; AC3,[POINT 3,PSDEFN(AC14),14]  <21,3>
+	PUSHJ	SP,PCESOP			; SP,PCESOP
+L.174:	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POPJ	SP,				; SP,
+
+; Routine Size:  42 words
+
+
+;	  2046	
+;	  2047	GLOBAL ROUTINE PCEXCT(XCTPTR) =	! Main executer loop
+;	  2048	
+;	  2049	!++
+;	  2050	! Functional description:
+;	  2051	!	This routine makes up the outer loop of the executer.
+;	  2052	!	It is called with the address of the Execution Context Block to
+;	  2053	!	be executed.  After establishing the context defined there,
+;	  2054	!	it starts it running (or continues an execution interrupted by
+;	  2055	!	a DoCommand statement) by entering the fetch-execute cycle until
+;	  2056	!	it is terminated by a Return from the outermost procedure, or
+;	  2057	!	by a DoCommand statement.  The return value indicates which case
+;	  2058	!	holds.  It may be that execution was terminated by a DoCommand
+;	  2059	!	statement which generated more than one line; in that case, the
+;	  2060	!	next line is passed to the Exec and control returns immediately.
+;	  2061	!
+;	  2062	! Formal parameters:
+;	  2063	!	Byte pointer to Command Buffer to be filled
+;	  2064	!
+;	  2065	! Implicit inputs:
+;	  2066	!	Everything that matters
+;	  2067	!
+;	  2068	! Implicit outputs:
+;	  2069	!	Everything that matters
+;	  2070	!
+;	  2071	! Routine value:
+;	  2072	!	-1 or -2 if completed by Exit, number of characters inserted
+;	  2073	!	into Command Buffer if Perform, -3 to exit to the program.
+;	  2074	!
+;	  2075	! Side effects:
+;	  2076	!	Uncountable and unpredictable
+;	  2077	!
+;	  2078	!--
+;	  2079	
+;	  2080	
+;	  2081	    BEGIN
+;	  2082	    EXTERNAL REGISTER Z;
+;	  2083	    LOCAL
+;	  2084		OPR,			! Current instruction code
+;	  2085		OPAV: STR_VAL,		! Temporaries for operands
+;	  2086		OPBV: STR_VAL,
+;	  2087		OPCV: STR_VAL,
+;	  2088		HALTCD,			! Halt code
+;	  2089		ECB: REF ECB_BLK;	! Temporary for current Execution Context Block
+;	  2090	    LABEL
+;	  2091		HALTEX;			! Stop execution
+;	  2092	    ECB = .PCCURC;
+;	  2093	    CMPTR = .XCTPTR;
+;	  2094	    IF .ECB[ECB_DCB] NEQ 0 THEN RETURN PUTDCL();
+;	  2095	    CURGST = .ECB[ECB_PRC];
+;	  2096	    SETCTX();
+;	  2097	    PC = .ECB[ECB_PC];
+;	  2098	    STKP = .ECB[ECB_SP];
+;	  2099	    FP = .ECB[ECB_FP];
+;	  2100	    IF .FP EQL 0
+;	  2101	    THEN
+;	  2102		BEGIN
+;	  2103		LOCAL
+;	  2104		    GST: REF GST_BLK,	! Global symbol table entry
+;	  2105		    PTR;		! Temporary
+;	  2106		PTR = .ECB[ECB_STK];
+;	  2107		FP = .PTR;
+;	  2108		PTR = .PTR + PCSTAK + FRM_LOC;
+;	  2109		GST = .CURGST;
+;	  2110		DECR I FROM .GST[GST_SLN]-1 DO
+;	  2111		    BEGIN
+;	  2112		    .PTR = 0;
+;	  2113		    PTR = .PTR + 1
+;	  2114		    END;
+;	  2115		IF .GST[GST_CMA] GEQ -1
+;	  2116		THEN
+;	  2117		    DOCARG(.GST[GST_CMA]);
+;	  2118		END
+;	  2119	    ELSE
+;	  2120	    IF .ECB[ECB_DTO] NEQ %O'777777' THEN GETEOP();
+;	  2121	
+;	  2122	    HALTCD =
+;	  2123	HALTEX:(WHILE .PC GEQ 0 DO
+;	  2124		BEGIN
+;	  2125		IF .PC GTR .CURCDL THEN ERROR('PC out of bounds');
+;	  2126		INSTR = .CURCOD[.PC,COD_CNS];
+;	  2127		INSTR+1 = .CURCOD[.PC+1,COD_CNS];
+;	  2128		IF .INSTR[COD_VLD] NEQ COD_VLD_NUM
+;	  2129		THEN
+;	  2130		    ERROR('Jump to non-instruction');
+;	  2131		OPR = .INSTR[COD_OPR];
+;	  2132		IF .OPR LSS 0 OR .OPR GTR OPR_LST THEN ERROR('Illegal operation code');
+;	  2133		PC = .PC+1;
+;	  2134		IF .OPR LSS OPR_11W THEN PC = .PC+1;
+;	  2135		IF .OPR GEQ OPR_ADD AND .OPR LEQ OPR_DIV THEN
+;	  2136		    BEGIN
+;	  2137		    ! Must fetch C before B because if they are temporaries
+;	  2138		    ! B will have been generated (and pushed) before C
+;	  2139		    OPCV = PCEGOP(.INSTR[COD_OPC],STE_TYP_INT);
+;	  2140		    OPBV = PCEGOP(.INSTR[COD_OPB],STE_TYP_INT);
+;	  2141		    OPAV = (CASE .OPR FROM OPR_ADD TO OPR_DIV OF
+;	  2142			SET
+;	  2143	[OPR_ADD]:	.OPBV + .OPCV;
+;	  2144	[OPR_SUB]:	.OPBV - .OPCV;
+;	  2145	[OPR_MUL]:	.OPBV * .OPCV;
+;	  2146	[OPR_DIV]:	.OPBV / .OPCV;
+;	  2147			TES);
+;	  2148		    PCESOP(.INSTR[COD_OPA],.OPAV,STE_TYP_INT)
+;	  2149		    END ELSE
+;	  2150		IF .OPR EQL OPR_CNS
+;	  2151		THEN
+;	  2152		    BEGIN
+;	  2153		    OPCV = PCEGOP(.INSTR[COD_OPC],STE_TYP_STR);
+;	  2154		    OPBV = PCEGOP(.INSTR[COD_OPB],STE_TYP_STR);
+;	  2155		    OPAV = PCEAST(.OPBV[STV_LEN] + .OPCV[STV_LEN]);
+;	  2156		    CH$COPY(.OPBV[STV_LEN], BYTPTR(.OPBV[STV_ADR]),
+;	  2157			    .OPCV[STV_LEN], BYTPTR(.OPCV[STV_ADR]),
+;	  2158			    0, .OPBV[STV_LEN]+.OPCV[STV_LEN]+1,BYTPTR(.OPAV[STV_ADR]));
+;	  2159		    IF .INSTR[COD_OPB] EQL OPN_TMP_STR THEN PCEFST(.OPBV);
+;	  2160		    IF .INSTR[COD_OPC] EQL OPN_TMP_STR THEN PCEFST(.OPCV);
+;	  2161		    PCESOP(.INSTR[COD_OPA],.OPAV,STE_TYP_STR)
+;	  2162		    END
+;	  2163		ELSE
+;	  2164		IF .OPR EQL OPR_STO
+;	  2165		THEN
+;	  2166		    PCESOP(.INSTR[COD_OPA],
+;	  2167			    PCEGOP(.INSTR[COD_OPC],STE_TYP_INT),STE_TYP_INT)
+;	  2168		ELSE
+;	  2169		IF .OPR EQL OPR_STS
+;	  2170		THEN
+;	  2171		    BEGIN
+;	  2172		    OPCV = PCEGOP(.INSTR[COD_OPC],STE_TYP_STR);
+;	  2173		    IF .INSTR[COD_OPC] NEQ OPN_TMP_STR THEN OPCV = PCECST(.OPCV);
+;	  2174		    PCESOP ( .INSTR[COD_OPA], .OPCV, STE_TYP_STR)
+;	  2175		    END
+;	  2176		ELSE
+;	  2177		IF .OPR GEQ OPR_BLE AND .OPR LEQ OPR_BGT THEN
+;	  2178		    BEGIN
+;	  2179		    OPAV = .INSTR[COD_OPA];
+;	  2180		    OPCV = PCEGOP(.INSTR[COD_OPC],STE_TYP_INT);
+;	  2181		    OPBV = PCEGOP(.INSTR[COD_OPB],STE_TYP_INT);
+;	  2182		    CASE .OPR FROM OPR_BLE TO OPR_BGT OF
+;	  2183			SET
+;	  2184	[OPR_BLE]:	IF .OPBV LEQ .OPCV THEN PC = .OPAV;
+;	  2185	[OPR_BLT]:	IF .OPBV LSS .OPCV THEN PC = .OPAV;
+;	  2186	[OPR_BEQ]:	IF .OPBV EQL .OPCV THEN PC = .OPAV;
+;	  2187	[OPR_BNE]:	IF .OPBV NEQ .OPCV THEN PC = .OPAV;
+;	  2188	[OPR_BGE]:	IF .OPBV GEQ .OPCV THEN PC = .OPAV;
+;	  2189	[OPR_BGT]:	IF .OPBV GTR .OPCV THEN PC = .OPAV;
+;	  2190			TES
+;	  2191		    END ELSE
+;	  2192		IF .OPR GEQ OPR_CLE AND .OPR LEQ OPR_CGT THEN
+;	  2193		    BEGIN
+;	  2194		    LOCAL
+;	  2195			OPBL,
+;	  2196			OPCL,
+;	  2197			OPBP,
+;	  2198			OPCP;
+;	  2199		    OPCV = PCEGOP(.INSTR[COD_OPC],STE_TYP_STR);
+;	  2200		    OPCL = .OPCV[STV_LEN];
+;	  2201		    OPCP = BYTPTR(.OPCV[STV_ADR]);
+;	  2202		    OPBV = PCEGOP(.INSTR[COD_OPB],STE_TYP_STR);
+;	  2203		    OPBL = .OPBV[STV_LEN];
+;	  2204		    OPBP = BYTPTR(.OPBV[STV_ADR]);
+;	  2205		    IF (CASE .OPR FROM OPR_CLE TO OPR_CGT OF
+;	  2206			SET
+;	  2207	[OPR_CLE]:	CH$LEQ(.OPBL,.OPBP,.OPCL,.OPCP);
+;	  2208	[OPR_CLT]:	CH$LSS(.OPBL,.OPBP,.OPCL,.OPCP);
+;	  2209	[OPR_CEQ]:	CH$EQL(.OPBL,.OPBP,.OPCL,.OPCP);
+;	  2210	[OPR_CNE]:	CH$NEQ(.OPBL,.OPBP,.OPCL,.OPCP);
+;	  2211	[OPR_CGE]:	CH$GEQ(.OPBL,.OPBP,.OPCL,.OPCP);
+;	  2212	[OPR_CGT]:	CH$GTR(.OPBL,.OPBP,.OPCL,.OPCP);
+;	  2213			TES) THEN PC = .INSTR[COD_OPA];
+;	  2214		    IF .INSTR[COD_OPB] EQL OPN_TMP_STR THEN PCEFST(.OPBV);
+;	  2215		    IF .INSTR[COD_OPC] EQL OPN_TMP_STR THEN PCEFST(.OPCV)
+;	  2216		    END
+;	  2217		ELSE
+;	  2218	                                ! [FUN45]:
+;	  2219		CASE .OPR FROM OPR_CAL TO OPR_JSP OF
+;	  2220		    SET
+;	  2221	[OPR_CAL]:	BEGIN
+;	  2222			LOCAL
+;	  2223			    OPN: OPRAND;
+;	  2224			OPN[OPN_WRD]=.INSTR[COD_OPA];
+;	  2225			IF .OPN[OPN_CLS] EQL OPN_CLS_SYN
+;	  2226			THEN
+;	  2227			    CLIPRC()
+;	  2228			ELSE
+;	  2229			    CALPRC()
+;	  2230			END;
+;	  2231	[OPR_SBS]:	DOSBSS();
+;	  2232	[OPR_DCM]:	LEAVE HALTEX WITH DOCMND();
+;	  2233	[OPR_PRS]:	DPARSE();
+;	  2234	[OPR_JMP]:	PC = .INSTR[COD_OPA];
+;	  2235	                                ! [fun45]+ Jump to code index a if top
+;	  2236	                                ! of stack is > 0
+;	  2237	[OPR_JSP]:      if .pcstak[.stkp,frm_wrd] gtr 0 then pc = .instr[cod_opa];
+;	  2238	                                ! [fun45]-
+;	  2239	
+;	  2240	[OPR_RET]:	IF .FP EQL .ECB[ECB_STK]
+;	  2241			THEN
+;	  2242			    LEAVE HALTEX WITH -1
+;	  2243			ELSE
+;	  2244			    RETPRC();
+;	  2245	[OPR_CAS]:	DOCASE();
+;	  2246	[OPR_IVP,
+;	  2247	 OPR_IVO]:	BEGIN
+;	  2248			OPAV = PCEGOP(.INSTR[COD_OPA],STE_TYP_STR);
+;	  2249			PCIIVK(.OPAV,(IF .OPR EQL OPR_IVP THEN 0 ELSE 1));
+;	  2250			IF .INSTR[COD_OPA] EQL OPN_TMP_STR THEN PCEFST(.OPAV)
+;	  2251			END;
+;	  2252	[OPR_TIN]:	DOTINP(0);
+;	  2253	[OPR_TIX]:	DOTINP(1);
+;	  2254	[OPR_GTO]:	DOGTYO();
+;	  2255	[OPR_KIL]:	PCIKIF();
+;	  2256	[OPR_DPY]:	DODPLY(0,GST_TYP_STR);
+;	  2257	[OPR_DPB]:	DODPLY(1,GST_TYP_STR);
+;	  2258	[OPR_DPN]:	DODPLY(-1,GST_TYP_STR);
+;	  2259	[OPR_DIY]:	DODPLY(0,GST_TYP_INT);
+;	  2260	[OPR_DIB]:	DODPLY(1,GST_TYP_INT);
+;	  2261	[OPR_DIN]:	DODPLY(-1,GST_TYP_INT);
+;	  2262	[OPR_XIT]:	LEAVE HALTEX WITH -.INSTR[COD_OPA]-1;
+;	  2263	[OPR_ABT]:	BEGIN
+;	  2264			OPAV = PCEGOP(.INSTR[COD_OPA],STE_TYP_STR);
+;	  2265			IF .OPAV NEQ 0
+;	  2266			THEN
+;	  2267			    BEGIN
+;	  2268			    LOCAL
+;	  2269				PTRO,
+;	  2270				CHR;
+;	  2271			    OPAV = BYTPTR(.OPAV[STV_ADR]);
+;	  2272			    PTRO = BYTPTR(.CSBUFP[STV_ADR]+1);
+;	  2273			    DO (CHR=CH$RCHAR_A(OPAV); CH$WCHAR_A(.CHR,PTRO))
+;	  2274			      WHILE .CHR NEQ $CHNUL;
+;	  2275			    OPAV = .CSBUFP[STV_ADR]+1
+;	  2276			    END;
+;	  2277			PCICLP(1);
+;	  2278			CLNVAR();
+;	  2279			PCMXER(.OPAV)
+;	  2280			END;
+;	  2281	[OPR_NOP]:	;
+;	  2282	
+;	  2283	                                ! [FUN45]+ Push and pop are actually push a
+;	  2284	                                ! select target and pop it. The stack is:
+;	  2285	                                !           target       }
+;	  2286	                                !   stkp -> select flag  } if selectall
+;	  2287	                                ! 
+;	  2288	                                !   stkp -> target       } if select
+;	  2289	                                ! PST pushes a copy of the target.
+;	  2290	                                ! STP pops both
+;	  2291	                                ! If a temp string, we must make a copy of it 
+;	  2292	                                ! because it will be popped/freed by the cxx
+;	  2293	                                ! instructions. 
+;	  2294	                                ! Both rely on the instruction giving the
+;	  2295	                                ! "type" in operand A, and opnd b = 1 for
+;	  2296	                                ! selectall, 0 for select (offset to stkp)
+;	  2297	[opr_pst]:	begin
+;	  2298			opav = .pcstak[.stkp-.instr[cod_opb],frm_wrd];
+;	  2299			if .instr[cod_opa] eql opn_tmp_str then
+;	  2300			    opav = pcecst(.opav);
+;	  2301			stkp = .stkp + 1;
+;	  2302			pcstak[.stkp,frm_wrd] = .opav
+;	  2303			end;
+;	  2304	[opr_stp]:	begin
+;	  2305	                                ! Pop "select flag" if selectall
+;	  2306	                stkp = .stkp - .instr[cod_opb];
+;	  2307			opav = .pcstak[.stkp,frm_wrd];  ! get select target
+;	  2308			stkp = .stkp - 1;       ! pop select target
+;	  2309			if .instr[cod_opa] eql opn_tmp_str then pcefst(.opav)
+;	  2310			end;
+;	  2311	                                ! Implement "real" push/pop
+;	  2312	[opr_psh]:      begin
+;	  2313	                stkp = .stkp+1;
+;	  2314	                opav = .instr[cod_opa];
+;	  2315	                if .opav eql opn_tmp_str or .opav eql opn_tmp_int then
+;	  2316	                   error ('PCL Bug: opr_psh in PCEXCT');
+;	  2317	                pcstak[.stkp,frm_wrd] = .opav;
+;	  2318	                end;
+;	  2319	[opr_pop]:      begin
+;	  2320	                stkp = .stkp - 1;
+;	  2321	                end;
+;	  2322	                                ! [fun45]-
+;	  2323	
+;	  2324	[OPR_PMT,OPR_PMN]:
+;	  2325			DPRMPT()
+;	  2326		    TES
+;	  2327		END);
+;	  2328	!+
+;	  2329	! Execution is finished, at least for now.  The termination codes are:
+;	  2330	!    positive: DoCommand
+;	  2331	!    -1: Exit after cleanup
+;	  2332	!    -2: Exit but don't kill the program fork
+;	  2333	!    -3: Exit to the program
+;	  2334	! If the termination code is -2 or -3 then we make the invoked program
+;	  2335	! be the current fork (by setting FORK to its fork handle).
+;	  2336	!-
+;	  2337	    IF .PCCURC[ECB_PAR] NEQ 0
+;	  2338	    THEN
+;	  2339		BEGIN
+;	  2340		IF PCIPRS(CFM_FLDDB,0) LSS 0 THEN PCMPER(0);
+;	  2341		PCCURC[ECB_PAR] = 0
+;	  2342		END;
+;	  2343	    IF .HALTCD LSS 0
+;	  2344	    THEN
+;	  2345		BEGIN
+;	  2346	        IF .HALTCD EQL -2 OR .HALTCD EQL -3
+;	  2347	        THEN
+;	  2348		    BEGIN
+;	  2349		    FORK = .ECB[ECB_CFK];
+;	  2350		    PCFORK = -2;
+;	  2351		    PCRNFK = -2;
+;	  2352		    CLRINV(.FORK);		! Fork is no longer INVOKE'd
+;	  2353		    END;
+;	  2354		PCICLP((IF .HALTCD EQL -1 THEN -1 ELSE 0));
+;	  2355		CLNVAR();
+;	  2356		STKP = .ECB[ECB_STK] - 1
+;	  2357		END
+;	  2358	    ELSE
+;	  2359		BEGIN
+;	  2360		ECB[ECB_PRC] = .CURGST;
+;	  2361		ECB[ECB_PC] = .PC;
+;	  2362		ECB[ECB_FP] = .FP;
+;	  2363		ECB[ECB_SP] = .STKP
+;	  2364		END;
+;	  2365	    .HALTCD
+;	  2366	    END;
+
+
+P.ABI:	BYTE	(7)"P","C"," ","o","u"		; PC ou
+	BYTE	(7)"t"," ","o","f"," "		; t of
+	BYTE	(7)"b","o","u","n","d"		; bound
+	BYTE	(7)"s",000,000,000,000		; s
+P.ABJ:	BYTE	(7)"J","u","m","p"," "		; Jump
+	BYTE	(7)"t","o"," ","n","o"		; to no
+	BYTE	(7)"n","-","i","n","s"		; n-ins
+	BYTE	(7)"t","r","u","c","t"		; truct
+	BYTE	(7)"i","o","n",000,000		; ion
+P.ABK:	BYTE	(7)"I","l","l","e","g"		; Illeg
+	BYTE	(7)"a","l"," ","o","p"		; al op
+	BYTE	(7)"e","r","a","t","i"		; erati
+	BYTE	(7)"o","n"," ","c","o"		; on co
+	BYTE	(7)"d","e",000,000,000		; de
+P.ABL:	BYTE	(7)"P","C","L"," ","B"		; PCL B
+	BYTE	(7)"u","g",":"," ","o"		; ug: o
+	BYTE	(7)"p","r","_","p","s"		; pr_ps
+	BYTE	(7)"h"," ","i","n"," "		; h in
+	BYTE	(7)"P","C","E","X","C"		; PCEXC
+	BYTE	(7)"T",000,000,000,000		; T
+
+
+U.28:
+PCEXCT::PUSH	SP,AC10				; SP,AC10
+	PUSH	SP,AC11				; SP,AC11
+	PUSH	SP,AC12				; SP,AC12
+	PUSH	SP,AC13				; SP,AC13
+	PUSH	SP,AC14				; SP,AC14
+	ADJSP	SP,2				; SP,2
+	MOVE	AC14,PCCURC			; ECB,PCCURC
+	MOVEM	AC1,U.44			; XCTPTR,CMPTR
+	HRRZ	AC1,6(AC14)			; AC1,6(ECB)
+	JUMPE	AC1,L.175			; AC1,L.175
+	PUSHJ	SP,U.15				; SP,PUTDCL
+	JRST	L.270				; L.270
+L.175:	HLRZ	AC1,0(AC14)			; AC1,0(ECB)
+	MOVEM	AC1,U.37			; AC1,CURGST
+	PUSHJ	SP,U.6				; SP,SETCTX
+	HRRZ	AC1,2(AC14)			; AC1,2(ECB)
+	MOVEM	AC1,U.32			; AC1,PC
+	HRRZ	AC1,3(AC14)			; AC1,3(ECB)
+	MOVEM	AC1,U.34			; AC1,STKP
+	HLRZ	AC1,2(AC14)			; AC1,2(ECB)
+	MOVEM	AC1,U.33			; AC1,FP
+	SKIPE	U.33				; FP
+	JRST	L.178				; L.178
+	HLRZ	AC1,3(AC14)			; PTR,3(ECB)
+	MOVEM	AC1,U.33			; PTR,FP
+	ADD	AC1,C.55			; PTR,[PCSTAK+2]
+	MOVE	AC2,U.37			; GST,CURGST
+	LDB	AC3,C.47			; I,[POINT 8,0(GST),17]  <18,8>
+	JRST	L.177				; L.177
+L.176:	SETZM	0(AC1)				; 0(PTR)
+	ADDI	AC1,1				; PTR,1
+L.177:	SOJGE	AC3,L.176			; I,L.176
+	LDB	AC1,C.33			; AC1,[POINT 4,0(AC2),9]  <26,4>
+	TRC	AC1,10				; AC1,10
+	SUBI	AC1,10				; AC1,10
+	CAMGE	AC1,C.37			; AC1,[-1]
+	JRST	L.179				; L.179
+	LDB	AC1,C.33			; AC1,[POINT 4,0(AC2),9]  <26,4>
+	TRC	AC1,10				; AC1,10
+	SUBI	AC1,10				; AC1,10
+	PUSHJ	SP,U.16				; SP,DOCARG
+	JRST	L.179				; L.179
+L.178:	HLRZ	AC1,6(AC14)			; AC1,6(ECB)
+	CAIE	AC1,-1				; AC1,-1
+	PUSHJ	SP,U.23				; SP,GETEOP
+L.179:	MOVE	AC1,U.32			; AC1,PC
+	JUMPL	AC1,L.260			; AC1,L.260
+	CAMG	AC1,U.39			; AC1,CURCDL
+	JRST	L.180				; L.180
+	MOVEI	AC1,P.ABI			; AC1,P.ABI
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.180:	MOVE	AC2,U.38			; AC2,CURCOD
+	MOVE	AC1,U.32			; AC1,PC
+	ADD	AC2,AC1				; AC2,AC1
+	MOVE	AC1,0(AC2)			; AC1,0(AC2)
+	MOVEM	AC1,U.35			; AC1,INSTR
+	MOVE	AC1,U.38			; AC1,CURCOD
+	MOVE	AC2,U.32			; AC2,PC
+	ADD	AC1,AC2				; AC1,AC2
+	MOVE	AC2,1(AC1)			; AC2,1(AC1)
+	MOVEM	AC2,U.35+1			; AC2,INSTR+1
+	LDB	AC1,C.48			; AC1,[POINT 3,INSTR,2]  <33,3>
+	CAIN	AC1,5				; AC1,5
+	JRST	L.181				; L.181
+	MOVEI	AC1,P.ABJ			; AC1,P.ABJ
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.181:	LDB	AC10,C.44			; OPR,[POINT 6,INSTR,17]  <18,6>
+	JUMPL	AC10,L.182			; OPR,L.182
+	CAIG	AC10,57				; OPR,57
+	JRST	L.183				; L.183
+L.182:	MOVEI	AC1,P.ABK			; AC1,P.ABK
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.183:	AOS	U.32				; PC
+	CAIGE	AC10,32				; OPR,32
+	AOS	U.32				; PC
+	JUMPL	AC10,L.190			; OPR,L.190
+	CAILE	AC10,3				; OPR,3
+	JRST	L.190				; L.190
+	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,-1(SP)			; AC1,OPCV
+	HLRZ	AC1,U.35+1			; AC1,INSTR+1
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,0(SP)			; AC1,OPBV
+	JRST	L.184(AC10)			; L.184(OPR)
+L.184:	JRST	L.185				; L.185
+	JRST	L.186				; L.186
+	JRST	L.187				; L.187
+	JRST	L.188				; L.188
+L.185:	MOVE	AC12,0(SP)			; OPAV,OPBV
+	ADD	AC12,-1(SP)			; OPAV,OPCV
+	JRST	L.189				; L.189
+L.186:	MOVE	AC12,0(SP)			; OPAV,OPBV
+	SUB	AC12,-1(SP)			; OPAV,OPCV
+	JRST	L.189				; L.189
+L.187:	MOVE	AC12,0(SP)			; OPAV,OPBV
+	IMUL	AC12,-1(SP)			; OPAV,OPCV
+	JRST	L.189				; L.189
+L.188:	MOVE	AC1,0(SP)			; AC1,OPBV
+	IDIV	AC1,-1(SP)			; AC1,OPCV
+	MOVE	AC12,AC1			; OPAV,AC1
+L.189:	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVE	AC2,AC12			; AC2,OPAV
+	JRST	L.195				; L.195
+L.190:	CAIE	AC10,4				; OPR,4
+	JRST	L.194				; L.194
+	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,-1(SP)			; AC1,OPCV
+	HLRZ	AC1,U.35+1			; AC1,INSTR+1
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,0(SP)			; AC1,OPBV
+	HLRZ	AC11,0(SP)			; AC11,OPBV
+	HLRZ	AC1,-1(SP)			; AC1,OPCV
+	ADD	AC11,AC1			; AC11,AC1
+	MOVE	AC1,AC11			; AC1,AC11
+	PUSHJ	SP,PCEAST			; SP,PCEAST
+	MOVE	AC12,AC1			; OPAV,AC1
+	HRRZ	AC2,0(SP)			; HLF,OPBV
+	HRLI	AC2,-337100			; HLF,-337100
+	HRRZ	AC3,-1(SP)			; HLF,OPCV
+	HRLI	AC3,-337100			; HLF,-337100
+	ADDI	AC11,1				; AC11,1
+	MOVEI	AC5,0(AC12)			; HLF,0(OPAV)
+	HRLI	AC5,-337100			; HLF,-337100
+	HLRZ	AC1,0(SP)			; AC1,OPBV
+	MOVE	AC4,AC11			; AC4,AC11
+	CAML	AC4,AC1				; AC4,AC1
+	MOVE	AC4,AC1				; AC4,AC1
+	SUB	AC11,AC4			; AC11,AC4
+	EXTEND	AC1,C.22			; AC1,[MOVSLJ ]
+	JFCL					; 
+	JUMPLE	AC11,L.191			; AC11,L.191
+	HLRZ	AC1,-1(SP)			; AC1,OPCV
+	MOVE	AC2,AC3				; AC2,HLF
+	MOVE	AC4,AC11			; AC4,AC11
+	EXTEND	AC1,C.3				; AC1,C.3
+	JFCL					; 
+L.191:	HLRZ	AC1,U.35+1			; AC1,INSTR+1
+	CAIE	AC1,-100000			; AC1,-100000
+	JRST	L.192				; L.192
+	MOVE	AC1,0(SP)			; AC1,OPBV
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.192:	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	CAIE	AC1,-100000			; AC1,-100000
+	JRST	L.193				; L.193
+	MOVE	AC1,-1(SP)			; AC1,OPCV
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.193:	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVE	AC2,AC12			; AC2,OPAV
+	JRST	L.198				; L.198
+L.194:	CAIE	AC10,5				; OPR,5
+	JRST	L.196				; L.196
+	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC2,AC1				; AC2,AC1
+	HRRZ	AC1,U.35			; AC1,INSTR
+L.195:	SETZ	AC3,				; AC3,
+	JRST	L.199				; L.199
+L.196:	CAIE	AC10,6				; OPR,6
+	JRST	L.200				; L.200
+	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,-1(SP)			; AC1,OPCV
+	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	CAIN	AC1,-100000			; AC1,-100000
+	JRST	L.197				; L.197
+	MOVE	AC1,-1(SP)			; AC1,OPCV
+	PUSHJ	SP,PCECST			; SP,PCECST
+	MOVEM	AC1,-1(SP)			; AC1,OPCV
+L.197:	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVE	AC2,-1(SP)			; AC2,OPCV
+L.198:	MOVEI	AC3,1				; AC3,1
+L.199:	PUSHJ	SP,PCESOP			; SP,PCESOP
+	JRST	L.179				; L.179
+L.200:	CAIL	AC10,7				; OPR,7
+	CAILE	AC10,14				; OPR,14
+	JRST	L.209				; L.209
+	HRRZ	AC12,U.35			; OPAV,INSTR
+	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,-1(SP)			; AC1,OPCV
+	HLRZ	AC1,U.35+1			; AC1,INSTR+1
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,0(SP)			; AC1,OPBV
+	MOVE	AC1,AC10			; AC1,OPR
+	SUBI	AC1,7				; AC1,7
+	JRST	L.201(AC1)			; L.201(AC1)
+L.201:	JRST	L.202				; L.202
+	JRST	L.203				; L.203
+	JRST	L.204				; L.204
+	JRST	L.205				; L.205
+	JRST	L.206				; L.206
+	JRST	L.207				; L.207
+L.202:	MOVE	AC1,0(SP)			; AC1,OPBV
+	CAMLE	AC1,-1(SP)			; AC1,OPCV
+	JRST	L.179				; L.179
+	JRST	L.208				; L.208
+L.203:	MOVE	AC1,0(SP)			; AC1,OPBV
+	CAML	AC1,-1(SP)			; AC1,OPCV
+	JRST	L.179				; L.179
+	JRST	L.208				; L.208
+L.204:	MOVE	AC1,0(SP)			; AC1,OPBV
+	CAME	AC1,-1(SP)			; AC1,OPCV
+	JRST	L.179				; L.179
+	JRST	L.208				; L.208
+L.205:	MOVE	AC1,0(SP)			; AC1,OPBV
+	CAMN	AC1,-1(SP)			; AC1,OPCV
+	JRST	L.179				; L.179
+	JRST	L.208				; L.208
+L.206:	MOVE	AC1,0(SP)			; AC1,OPBV
+	CAMGE	AC1,-1(SP)			; AC1,OPCV
+	JRST	L.179				; L.179
+	JRST	L.208				; L.208
+L.207:	MOVE	AC1,0(SP)			; AC1,OPBV
+	CAMG	AC1,-1(SP)			; AC1,OPCV
+	JRST	L.179				; L.179
+L.208:	MOVEM	AC12,U.32			; OPAV,PC
+	JRST	L.179				; L.179
+L.209:	CAIL	AC10,15				; OPR,15
+	CAILE	AC10,22				; OPR,22
+	JRST	L.220				; L.220
+	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,-1(SP)			; AC1,OPCV
+	HLRZ	AC11,-1(SP)			; OPCL,OPCV
+	HRRZ	AC1,-1(SP)			; HLF,OPCV
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC13,AC1			; OPCP,HLF
+	HLRZ	AC1,U.35+1			; AC1,INSTR+1
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVEM	AC1,0(SP)			; AC1,OPBV
+	HLRZ	AC1,0(SP)			; OPBL,OPBV
+	HRRZ	AC2,0(SP)			; HLF,OPBV
+	HRLI	AC2,-337100			; HLF,-337100
+	MOVE	AC3,AC10			; AC3,OPR
+	SUBI	AC3,15				; AC3,15
+	JRST	L.210(AC3)			; L.210(AC3)
+L.210:	JRST	L.211				; L.211
+	JRST	L.212				; L.212
+	JRST	L.213				; L.213
+	JRST	L.214				; L.214
+	JRST	L.215				; L.215
+	JRST	L.216				; L.216
+L.211:	MOVE	AC4,AC11			; AC4,OPCL
+	MOVE	AC5,AC13			; AC5,OPCP
+	EXTEND	AC1,C.49			; AC1,C.49
+	JRST	L.218				; L.218
+	JRST	L.217				; L.217
+L.212:	MOVE	AC4,AC11			; AC4,OPCL
+	MOVE	AC5,AC13			; AC5,OPCP
+	EXTEND	AC1,C.50			; AC1,C.50
+	JRST	L.218				; L.218
+	JRST	L.217				; L.217
+L.213:	MOVE	AC4,AC11			; AC4,OPCL
+	MOVE	AC5,AC13			; AC5,OPCP
+	EXTEND	AC1,C.51			; AC1,C.51
+	JRST	L.218				; L.218
+	JRST	L.217				; L.217
+L.214:	MOVE	AC4,AC11			; AC4,OPCL
+	MOVE	AC5,AC13			; AC5,OPCP
+	EXTEND	AC1,C.52			; AC1,C.52
+	JRST	L.218				; L.218
+	JRST	L.217				; L.217
+L.215:	MOVE	AC4,AC11			; AC4,OPCL
+	MOVE	AC5,AC13			; AC5,OPCP
+	EXTEND	AC1,C.53			; AC1,C.53
+	JRST	L.218				; L.218
+	JRST	L.217				; L.217
+L.216:	MOVE	AC4,AC11			; AC4,OPCL
+	MOVE	AC5,AC13			; AC5,OPCP
+	EXTEND	AC1,C.54			; AC1,C.54
+	JRST	L.218				; L.218
+L.217:	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVEM	AC1,U.32			; AC1,PC
+L.218:	HLRZ	AC1,U.35+1			; AC1,INSTR+1
+	CAIE	AC1,-100000			; AC1,-100000
+	JRST	L.219				; L.219
+	MOVE	AC1,0(SP)			; AC1,OPBV
+	PUSHJ	SP,PCEFST			; SP,PCEFST
+L.219:	HRRZ	AC1,U.35+1			; AC1,INSTR+1
+	CAIE	AC1,-100000			; AC1,-100000
+	JRST	L.179				; L.179
+	MOVE	AC1,-1(SP)			; AC1,OPCV
+	JRST	L.254				; L.254
+L.220:	MOVE	AC1,AC10			; AC1,OPR
+	SUBI	AC1,23				; AC1,23
+	JRST	L.221(AC1)			; L.221(AC1)
+L.221:	JRST	L.222				; L.222
+	JRST	L.230				; L.230
+	JRST	L.226				; L.226
+	JRST	L.224				; L.224
+	JRST	L.225				; L.225
+	JRST	L.250				; L.250
+	JRST	L.252				; L.252
+	JRST	L.228				; L.228
+	JRST	L.229				; L.229
+	JRST	L.231				; L.231
+	JRST	L.232				; L.232
+	JRST	L.233				; L.233
+	JRST	L.234				; L.234
+	JRST	L.235				; L.235
+	JRST	L.236				; L.236
+	JRST	L.237				; L.237
+	JRST	L.238				; L.238
+	JRST	L.245				; L.245
+	JRST	L.247				; L.247
+	JRST	L.179				; L.179
+	JRST	L.255				; L.255
+	JRST	L.258				; L.258
+	JRST	L.259				; L.259
+	JRST	L.259				; L.259
+	JRST	L.231				; L.231
+	JRST	L.240				; L.240
+	JRST	L.241				; L.241
+	JRST	L.242				; L.242
+	JRST	L.227				; L.227
+L.222:	HRRZ	AC1,U.35			; OPN,INSTR
+	LDB	AC2,C.21			; AC2,[POINT 2,AC1,19]  <16,2>
+	CAIE	AC2,1				; AC2,1
+	JRST	L.223				; L.223
+	PUSHJ	SP,U.27				; SP,CLIPRC
+	JRST	L.179				; L.179
+L.223:	PUSHJ	SP,U.9				; SP,CALPRC
+	JRST	L.179				; L.179
+L.224:	PUSHJ	SP,U.13				; SP,DOSBSS
+	JRST	L.179				; L.179
+L.225:	PUSHJ	SP,U.14				; SP,DOCMND
+	JRST	L.246				; L.246
+L.226:	PUSHJ	SP,U.17				; SP,DPARSE
+	JRST	L.179				; L.179
+L.227:	MOVE	AC1,U.34			; AC1,STKP
+	SKIPG	PCSTAK(AC1)			; PCSTAK(AC1)
+	JRST	L.179				; L.179
+L.228:	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVEM	AC1,U.32			; AC1,PC
+	JRST	L.179				; L.179
+L.229:	HLRZ	AC1,3(AC14)			; AC1,3(ECB)
+	CAMN	AC1,U.33			; AC1,FP
+	JRST	L.260				; L.260
+	PUSHJ	SP,U.10				; SP,RETPRC
+	JRST	L.179				; L.179
+L.230:	PUSHJ	SP,U.11				; SP,DOCASE
+	JRST	L.179				; L.179
+L.231:	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC12,AC1			; OPAV,AC1
+	CAIN	AC10,34				; OPR,34
+	TDZA	AC2,AC2				; AC2,AC2
+	MOVEI	AC2,1				; AC2,1
+	MOVE	AC1,AC12			; AC1,OPAV
+	PUSHJ	SP,PCIIVK			; SP,PCIIVK
+	JRST	L.253				; L.253
+L.232:	TDZA	AC1,AC1				; AC1,AC1
+L.233:	MOVEI	AC1,1				; AC1,1
+	PUSHJ	SP,U.24				; SP,DOTINP
+	JRST	L.179				; L.179
+L.234:	PUSHJ	SP,U.25				; SP,DOGTYO
+	JRST	L.179				; L.179
+L.235:	PUSHJ	SP,PCIKIF			; SP,PCIKIF
+	JRST	L.179				; L.179
+L.236:	SETZ	AC1,				; AC1,
+	JRST	L.239				; L.239
+L.237:	MOVEI	AC1,1				; AC1,1
+	JRST	L.239				; L.239
+L.238:	SETO	AC1,				; AC1,
+L.239:	MOVEI	AC2,1				; AC2,1
+	JRST	L.244				; L.244
+L.240:	SETZ	AC1,				; AC1,
+	JRST	L.243				; L.243
+L.241:	MOVEI	AC1,1				; AC1,1
+	JRST	L.243				; L.243
+L.242:	SETO	AC1,				; AC1,
+L.243:	SETZ	AC2,				; AC2,
+L.244:	PUSHJ	SP,U.26				; SP,DODPLY
+	JRST	L.179				; L.179
+L.245:	SETO	AC1,				; AC1,
+	HRRZ	AC2,U.35			; AC2,INSTR
+	SUB	AC1,AC2				; AC1,AC2
+L.246:	MOVE	AC13,AC1			; HALTCD,AC1
+	JRST	L.261				; L.261
+L.247:	HRRZ	AC1,U.35			; AC1,INSTR
+	MOVEI	AC2,1				; AC2,1
+	PUSHJ	SP,PCEGOP			; SP,PCEGOP
+	MOVE	AC12,AC1			; OPAV,AC1
+	JUMPE	AC12,L.249			; OPAV,L.249
+	MOVEI	AC1,0(AC12)			; HLF,0(OPAV)
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC12,AC1			; OPAV,HLF
+	HRRZ	AC1,CSBUFP			; HLF,CSBUFP
+	ADDI	AC1,1				; HLF,1
+	HRLI	AC1,-337100			; HLF,-337100
+	MOVE	AC2,AC1				; PTRO,HLF
+L.248:	ILDB	AC1,AC12			; CHR,OPAV
+	IDPB	AC1,AC2				; CHR,PTRO
+	JUMPN	AC1,L.248			; CHR,L.248
+	HRRZ	AC12,CSBUFP			; OPAV,CSBUFP
+	ADDI	AC12,1				; OPAV,1
+L.249:	MOVEI	AC1,1				; AC1,1
+	PUSHJ	SP,PCICLP			; SP,PCICLP
+	PUSHJ	SP,U.12				; SP,CLNVAR
+	MOVE	AC1,AC12			; AC1,OPAV
+	PUSHJ	SP,PCMXER			; SP,PCMXER
+	JRST	L.179				; L.179
+L.250:	MOVE	AC1,U.34			; AC1,STKP
+	HLRZ	AC2,U.35+1			; AC2,INSTR+1
+	SUB	AC1,AC2				; AC1,AC2
+	MOVE	AC12,PCSTAK(AC1)		; OPAV,PCSTAK(AC1)
+	HRRZ	AC1,U.35			; AC1,INSTR
+	CAIE	AC1,-100000			; AC1,-100000
+	JRST	L.251				; L.251
+	MOVE	AC1,AC12			; AC1,OPAV
+	PUSHJ	SP,PCECST			; SP,PCECST
+	MOVE	AC12,AC1			; OPAV,AC1
+L.251:	AOS	U.34				; STKP
+	JRST	L.257				; L.257
+L.252:	MOVE	AC1,U.34			; AC1,STKP
+	HLRZ	AC2,U.35+1			; AC2,INSTR+1
+	SUB	AC1,AC2				; AC1,AC2
+	MOVEM	AC1,U.34			; AC1,STKP
+	MOVE	AC12,PCSTAK(AC1)		; OPAV,PCSTAK(AC1)
+	SOS	U.34				; STKP
+L.253:	HRRZ	AC1,U.35			; AC1,INSTR
+	CAIE	AC1,-100000			; AC1,-100000
+	JRST	L.179				; L.179
+	MOVE	AC1,AC12			; AC1,OPAV
+L.254:	PUSHJ	SP,PCEFST			; SP,PCEFST
+	JRST	L.179				; L.179
+L.255:	AOS	U.34				; STKP
+	HRRZ	AC12,U.35			; OPAV,INSTR
+	CAIN	AC12,-100000			; OPAV,-100000
+	JRST	L.256				; L.256
+	CAIE	AC12,-200000			; OPAV,-200000
+	JRST	L.257				; L.257
+L.256:	MOVEI	AC1,P.ABL			; AC1,P.ABL
+	PUSHJ	SP,PCEERR			; SP,PCEERR
+L.257:	MOVE	AC1,U.34			; AC1,STKP
+	MOVEM	AC12,PCSTAK(AC1)		; OPAV,PCSTAK(AC1)
+	JRST	L.179				; L.179
+L.258:	SOS	U.34				; STKP
+	JRST	L.179				; L.179
+L.259:	PUSHJ	SP,U.22				; SP,DPRMPT
+	JRST	L.179				; L.179
+L.260:	SETO	AC13,				; HALTCD,
+L.261:	MOVE	AC1,PCCURC			; AC1,PCCURC
+	LDB	AC2,C.38			; AC2,[POINT 1,12(AC1),5]  <30,1>
+	JUMPE	AC2,L.263			; AC2,L.263
+	MOVEI	AC1,U.29			; AC1,CFM_FLDDB
+	SETZ	AC2,				; AC2,
+	PUSHJ	SP,PCIPRS			; SP,PCIPRS
+	JUMPGE	AC1,L.262			; AC1,L.262
+	SETZ	AC1,				; AC1,
+	PUSHJ	SP,PCMPER			; SP,PCMPER
+L.262:	MOVE	AC1,PCCURC			; AC1,PCCURC
+	MOVSI	AC2,10000			; AC2,10000
+	ANDCAM	AC2,12(AC1)			; AC2,12(AC1)
+L.263:	MOVE	AC10,AC14			; AC10,ECB
+	ADDI	AC10,3				; AC10,3
+	JUMPGE	AC13,L.268			; HALTCD,L.268
+	CAMN	AC13,C.42			; HALTCD,[-2]
+	JRST	L.264				; L.264
+	CAME	AC13,C.56			; HALTCD,[-3]
+	JRST	L.265				; L.265
+L.264:	HLRZ	AC1,10(AC14)			; AC1,10(ECB)
+	MOVEM	AC1,FORK			; AC1,FORK
+	HRROI	AC1,-2				; AC1,-2
+	MOVEM	AC1,PCFORK			; AC1,PCFORK
+	HRROI	AC1,-2				; AC1,-2
+	MOVEM	AC1,PCRNFK			; AC1,PCRNFK
+	MOVE	AC1,FORK			; AC1,FORK
+	PUSHJ	SP,CLRINV			; SP,CLRINV
+L.265:	CAME	AC13,C.37			; HALTCD,[-1]
+	JRST	L.266				; L.266
+	SETO	AC1,				; AC1,
+	JRST	L.267				; L.267
+L.266:	SETZ	AC1,				; AC1,
+L.267:	PUSHJ	SP,PCICLP			; SP,PCICLP
+	PUSHJ	SP,U.12				; SP,CLNVAR
+	HLRZ	AC1,0(AC10)			; AC1,0(AC10)
+	SUBI	AC1,1				; AC1,1
+	MOVEM	AC1,U.34			; AC1,STKP
+	JRST	L.269				; L.269
+L.268:	MOVE	AC1,U.37			; AC1,CURGST
+	HRLM	AC1,0(AC14)			; AC1,0(ECB)
+	MOVE	AC1,U.32			; AC1,PC
+	HRRM	AC1,2(AC14)			; AC1,2(ECB)
+	MOVE	AC1,U.33			; AC1,FP
+	HRLM	AC1,2(AC14)			; AC1,2(ECB)
+	MOVE	AC1,U.34			; AC1,STKP
+	HRRM	AC1,0(AC10)			; AC1,0(AC10)
+L.269:	MOVE	AC1,AC13			; AC1,HALTCD
+L.270:	ADJSP	SP,-2				; SP,-2
+	POP	SP,AC14				; SP,AC14
+	POP	SP,AC13				; SP,AC13
+	POP	SP,AC12				; SP,AC12
+	POP	SP,AC11				; SP,AC11
+	POP	SP,AC10				; SP,AC10
+	POPJ	SP,				; SP,
+C.47:	POINT	8,0(AC2),17			; 8,0(GST),17
+C.48:	POINT	3,U.35,2			; 3,INSTR,2
+C.49:	CMPSLE					; 
+	EXP	0				; 0
+	EXP	0				; 0
+C.50:	CMPSL					; 
+	EXP	0				; 0
+	EXP	0				; 0
+C.51:	CMPSE					; 
+	EXP	0				; 0
+	EXP	0				; 0
+C.52:	CMPSN					; 
+	EXP	0				; 0
+	EXP	0				; 0
+C.53:	CMPSGE					; 
+	EXP	0				; 0
+	EXP	0				; 0
+C.54:	CMPSG					; 
+	EXP	0				; 0
+	EXP	0				; 0
+C.55:	EXP	PCSTAK+2			; PCSTAK+2
+C.56:	EXP	-3				; -3
+
+; Routine Size:  531 words
+
+
+;	  2367	END
+;	  2368	ELUDOM
+
+
+
+	END
+
+; Low  segment length:       0 words
+; High segment length:    2325 words
+
+
+
+
+;				LIBRARY STATISTICS
+;
+;					     -------- Symbols --------    Blocks
+;	File				     Total    Loaded   Percent      Read
+;
+;  PS:<PCL5.X-SOURCES>EXECPD.L36.1	       328       193        58         0
+;  PS:<SUBSYS>TENDEF.L36.2		        56         5         8         0
+;  PS:<SUBSYS>MONSYM.L36.5		      3861        34         0         0
+
+
+
+
+; Information:	0
+; Warnings:	3
+; Errors:	0
+
+; Compilation Complete
+
+	END
+

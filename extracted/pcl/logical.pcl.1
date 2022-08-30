@@ -1,0 +1,322 @@
+! <PCL>LOGICAL.PCL.15, 18-Jan-83 10:41:30, Edit by DEBAR
+
+
+!{+!==================================================================
+L LOGICAL:	Library to Hack logical name 
+
+This  library  contains   commands  to  define   logical  names   with
+recognition on directories,  copy logical names,  rename them,  prefix
+and suffix them with new definitions.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+
+
+
+!{+!==================================================================
+C DEFINE:	Define logical name with recognition.
+
+Substitute  command  for  @define,  allowing  command  recognition  on
+directories and devices.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+
+command define;
+begin
+   string text;
+   external string procedure
+      READ_LOGICAL_name;
+				! Parse the logical name
+   guide "Logical Name to Define";
+   text = "define ";
+   parse {
+      device (Help "Logical Name to Define", parseonly)  :
+         text = text + $atom + ": ";
+      token "*" (Help "* to undefine all") : {
+         text = text + "*" + $crlf;
+         goto define;
+         }
+      };
+   guide "as";
+   text = text + READ_LOGICAL_name;
+define:
+   docommand original text;
+   end;
+
+
+!{+!==================================================================
+C L-COPY:	Copy logical name into another one
+
+	@L-COPY old-name: new-name:
+
+Copies the old logical name into the  new one. If the old name is  not
+defined, the new one is undefined as well.
+
+Eg:
+	@l-copy sys: tsys:	!Copies sys: into tsys:
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+command l_copy;
+begin
+
+   external
+      procedure crdefine;
+
+   guide "copy logical name";
+   call crdefine (1);
+
+   end;
+
+
+!{+!==================================================================
+C L-RENAME:	Rename a logical name
+
+	@L-RENAME old-name: new-name:
+
+Renames the  old logical  name as  the new  one. If  the old  name  is
+undefined, the new one is undefined as well.
+
+Eg:
+	@l-rename tsys: sys:	!Renames tsys: as sys:
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+command l_rename;
+begin
+
+   external
+      procedure crdefine;
+
+   guide "rename logical name";
+   call crdefine (0);
+
+   end;
+
+
+!{+!==================================================================
+C L-PREFIX:	Make new logical name as prefix + old logical name
+
+	@L-PREFIX new-name: (as prefix) old-name:
+		(with) prefix-definition
+
+Defines  the   logical  name   new-name   as  the   concatenation   of
+prefix+old-name.The prefix text is given without the trailing ",".
+
+Eg
+	@l-prefix sys: sys: 5el:,5es: 
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+command l_prefix;
+
+begin
+
+   string
+      new, old, prf, defn;
+   external string procedure
+      READ_LOGICAL_name,
+      GET_LOGICAL_definition;
+
+	   ! Parse logical names and prefix;
+
+   guide "new logical name";
+   parse device (parseonly, help "logical name") : new=$atom;
+   guide "as prefix";
+   parse device (parseonly, help "logical name",
+		 default new) : old=$atom;
+   guide "with";
+   prf = READ_LOGICAL_name;
+
+	   ! Get logical name and define
+   if GET_LOGICAL_definition (old, defn) <> "" then
+      defn = "," + defn;
+   docommand original "define " + new + ": " + prf + defn;
+
+   end;
+
+
+!{+!==================================================================
+C L-SUFFIX:	Make new logical name as old name + suffix
+
+	@L-SUFFIX new-name: (as suffix) old-name:
+		(with) suffix-definition
+
+Defines the logical name new-name  as the concatenation of old-name  +
+suffix.  The suffix text is given without the leading ",".
+
+Eg
+	@l-suffix sys: (as suffix) sys: (with) ps:<limbo>
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+command l_suffix;
+
+begin
+
+   string
+      new, old, suf, defn;
+   external string procedure
+      READ_LOGICAL_name,
+      GET_LOGICAL_definition;
+
+	   ! Parse logical names and prefix;
+
+   guide "new logical name";
+   parse device (parseonly, help "logical name") : new=$atom;
+   guide "as suffix";
+   parse device (parseonly, help "logical name",
+		 default new) : old=$atom;
+   guide "with";
+   suf = READ_LOGICAL_name;
+
+	   ! Get logical name and do the definition
+   if GET_LOGICAL_definition (old, defn) <> "" then 
+      defn = defn + ",";
+   docommand original "define " + new + ": " + defn + suf;
+
+   end;
+
+
+!{+!==================================================================
+P CRDEFINE:	Procedure to define or copy logical names.
+
+	call CRDEFINE (code);
+
+Does a copy or rename of logical names.  Called by CDEFINE, RDEFINE.
+
+Arguments:
+code	=0 : copy
+	=1 : rename
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+procedure crdefine (integer code);
+
+begin
+   string
+      old, new, defn;
+   external
+      string procedure GET_LOGICAL_definition;
+				! Parse old, new names
+   parse device (parseonly, help "logical name")
+      : old = $atom;
+   guide "as new name";
+   parse device (parseonly, help "logical name")
+      : new = $atom;
+   parse eol;
+	   ! Get old definition And define the new name;
+   defn = GET_LOGICAL_definition(old,$nul);
+				! If both old and new are undefined do not
+   if defn + GET_LOGICAL_definition(new,$nul) <> "" then  
+      docommand original "define " + new + ": " + defn;
+	   ! If needed, delete the old one;
+   if code = 0 then
+      if defn <> "" then
+         docommand original "define " + old + ":";
+
+   end
+
+
+
+!{+!==================================================================
+P READ_LOGICAL_NAME:	String Procedure to get smartly a logical name
+
+Purpose:
+	Read a logical name definition from the controlling  terminal,
+allowing recognition on directory names.
+
+Usage:
+	string = read_logical_name;
+
+Output:
+	text read from the terminal. Null  if the user simply typed  a
+carriage return.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+string procedure read_logical_name;
+begin
+  string
+     text;
+
+  text = "";
+
+lp:
+      parse {
+	 device : text = text + $atom + ":";
+         directory : text = text + $atom;
+	 text : {
+            text = text + $atom;
+	    goto elp;
+            };
+	 eol: goto elp
+         };
+
+      parse {
+         token "," : text = text + ",";
+         eol : goto elp
+         };
+      goto lp;
+elp:
+
+  return text
+
+  end;
+
+
+!{+!==================================================================
+P GET_LOGICAL_DEFINITION:	Get definition of a logical name
+
+	string = GET_LOGICAL_DEFINITION (name,defn)
+
+Puts the definition of the logical name name in defn, and return it as
+well. Returns "" if not defined.
+
+Input:
+Name	String with logical name requested (without terminating colon)
+
+Output:
+defn	Text of definition. Null string if not defined.
+
+Returns:
+	Text of definition. Null string if not defined.
+
+Eg:
+	res_string = get_logical_definition ("sys",defn)
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+string procedure get_logical_definition (string name, defn);
+
+begin
+
+integer
+   fro, len;
+string
+   text;
+
+docommand original "inf log " + name + ":" to text;
+	! Now, extract the definition of old from full_def.;
+
+fro = $search (text, ">");
+if fro = 0 then 
+   return "";
+fro = fro + 2;
+len = $search (text, "", fro) - fro;
+text = text[fro : len];
+defn = text;
+return text;
+
+end;
+   

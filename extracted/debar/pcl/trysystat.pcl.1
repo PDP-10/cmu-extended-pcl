@@ -1,0 +1,30 @@
+command t;
+begin
+
+   integer
+      dummy,
+      i,
+      arg;
+
+   string
+      username;
+
+   external integer procedure
+      byt_ptr_a;
+
+   i = 0;
+   arg = $get_mem(8%30);
+   dummy = $get_mem(50);
+   while i <200 do {
+      i = i + 1;
+      if $jsys(8%507, i, $setfield(-8%30,arg,18,18), 0) eql 1 then {
+         if $jsys(8%41, byt_ptr_a(dummy),  $iget(arg,8%17)) eql 0 then {
+	    display "dirst failure" + $lasterror;
+	    display "job " + $string(i);
+	    display "usr " + $string($iget(arg,8%17),8);
+	    };
+	 username = $strfix(dummy);
+	 display username;
+         }
+      };
+   end;

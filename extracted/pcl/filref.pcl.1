@@ -1,0 +1,433 @@
+!{+!==================================================================
+C FILREF:	Review Files based on mean-usage per day and non-usage
+
+Usage:
+	@FILREF [/switch ...] list of files
+Shows the list  of files specified  with the mean  usage per day,  the
+period on which tthe average is computed, the number of days the  file
+has not been used, and the product of days-of-non-usage by file  size.
+Filref may sort the files according to several criterions, and  allows
+the user to Review the files  and selectively Delete or Archive  them.
+The output is shown on the terminal and is stored in a file.
+
+The FORMAT OF THE OUTPUT is:
+****************************
+
+   Ref / days Unref Pgs*Unref   File
+  -------------------------------------------------
+  0.00'[   1]    0       0  PS:<PCL.W>FILREF.OUT.14
+  0.00'[   1]    0       0  PS:<PCL.W>SHOW-FILE.PCL.1
+  0.00'[   1]    0       0  PS:<PCL.W>TOTO.DAT.1
+  1.00'[   1]    0       0  PS:<PCL.W>FILREF.PCL.9
+  1.66 [  17]    0       0  PS:<PCL.W>PARAGRAPH..1
+
+The various columns show:
+
+AVERAGE REFERENCES PER DAY:
+---------------------------
+	= (Number of Read  + Writes) / Days  since last write N.B.  If
+the period covered is  less than 5  days a Quote  sign is appended  to
+this column.
+
+DAYS SINCE LAST WRITE:
+----------------------
+	Number of days since the file  was last written by the  system
+(.fbwrt in FDB).
+	NB. If the file has been written to more than 20 times, FILREF
+assumes that the file is  continuously updated, and counts the  period
+since the creation date (.fbcre).
+
+NUMBER OF DAYS UNUSED:
+----------------------
+	Number of days that  went by since the  file was last read  or
+written by the user.
+	NB. If  this  is more  than  the  CUTOFF period  (30  days  by
+default) an asterisk is appended to this column.
+
+DAYS UNUSED * SIZE IN PAGES:
+----------------------------
+	This gives an idea of the relative importance of the non usage
+of this file.
+
+
+The various SWITCHES controlling the command are:
+*************************************************
+
+/OUTPUT: filename
+-----------------
+	Normally the list of files is written on file FILREF.OUT. This
+allows to change the output file name.
+
+
+/KEY: next-sorting-key
+----------------------
+	Determines on which column the sorting is to take place:
+ DAYS-UNREFERENCED	sort by number of days unused
+ NAME			sort by file-name
+ PAGE-DAYS		sort by (days-unused * file-size)
+ USAGE			sort by mean usage per day
+	By default the sorting  is done in  "Good-First" order on  the
+number of days the files have  been left unused: the files  referenced
+most recently are listed first. The secondary key being the file name.
+	More than  one  sorting key  may  be specified.  For  example:
+/KEY:DAYS  /KEY:NAME.  The  sort  is  done  first  on  the  first  key
+specified, than on the next one, and so on.
+
+
+/GOOD-FIRST /BAD-FIRST
+----------------------
+	Changes the order of sorting. It must be given before the keys
+are given.
+
+/REVIEW
+-------
+	Asks to  be given  the option  of Deleting,  or Archiving  the
+files listed. The user will be shown, in the sorting order  requested,
+the files with the usage data. He may answer by:
+ TYPE n lines	show n lines of the files (default = 24)
+ 		!! This does not change the read date of the file.
+ ARCHIVE	archive the file
+ DELETE		delete the file
+ KEEP		keep this file, and show the next.
+ <return>	is equivalent to keep.
+ FD		print a Full Directory of the current file
+ COMMAND text	passes "text" to the Exec for execution as a command
+		!! If the command aborts, the whole Filref is aborted !!
+ QUIT		abort the review process here
+	If review is asked the files Archived are flagged with an  "A"
+in the output listing, and the files Deleted with a "D".
+
+
+/CUTOFF: number-of-days
+-----------------------
+	Normally, the  Number  of  days  Unused  is  flagged  with  an
+asterisk when it is more than the  default of 30 days. This allows  to
+change the default of 30 days.
+
+/NOLIST
+-------
+	Turns off the display of the list on the screen.
+
+/NOSORT
+-------
+	List the  files  in  the  order in  which  they  appear  in  a
+directory listing, ignoring all keys and sorting order.
+
+Example:
+	@FILREF /BAD-FIRST /KEY:DAYS-UNREF /KEY:USAGE /REVIEW
+	   PS:<EXTRASYS>*.*,PS:<UNSUPPORTED>*.*,PS:<SUPERSYS>*.*
+
+Remarks:
+	This function  uses Dec's SORT  utility to sort the files.  If
+you do not have a copy of Sort, you will have to modify the command to
+use whatever local sort you have available.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+command filref;
+
+begin
+
+integer
+   cutoff,			! days to use for unreferenced marker
+   sort,			! 0=no sort, 1=sort
+   days, unref, nfiles,		! counters
+   OutFileId,AltFileId,		! input, output channels
+   TempFileId,
+   cnt, cnt_w,cnt_r,		! counts of references
+   size,			! size of file in pages
+   sys_wr,usr_wr, cre_wr, usr_rd, dat,	! dates
+   frocre,			! flag
+   dolist,			! 1 if listing desired (default)
+   review,			! 1 if review mode
+   tdat,			! temp date
+   i, t;			! temp integer
+
+string
+   ts,				! temp string
+   keys,			! keys for sorting (/key:fr,to,direction...)
+   srtdir1,srtdir2,		! direction for sorting
+   ref_per_day, rec, trec,
+   filnam,
+   out_file;			! output file
+
+external procedure
+   push_exec;
+
+external string procedure
+   flt_div,
+   add_str;
+
+				! SET DEFAULTS
+cutoff = 30;			! set default cutoff date
+out_file = "filref.out";		! default output file
+dolist = 1;			! listing produced
+review = 0;			! no review
+srtdir1 = "descend";		! Sort with /Good-first
+srtdir2 = "ascend";
+keys = $nul;			! will be needed later
+sort = 1;			! do sort the file
+				! PARSE COMMAND
+! PARSE THE COMMAND
+!==================
+
+guide "Review Files";
+prse:
+parse begin
+   switch			! START PARSING SWITCHES
+      (words ("cutoff"::1, "output"::3, "nolist":4,
+              "key"::5, "review":6,
+              "good_first":7, "bad_first":8, "nosort":9),
+              help "List of Files, or switch", stdhelp,
+	      default "dsk:"
+              ) 
+      : begin
+      case $value from 1 to 9 of begin
+	 1 :  parse (number (help "days unreferenced",default "30") :
+		  cutoff = $value);
+         3 :			! /OUTPUT: output file
+              parse (file (output, default "filref.out") : out_file = $files);
+         4 :  dolist = 0;	! /NOLIST
+         5 :  begin		! /KEY:{usage/days-unreferenced}
+              parse
+	         keyword 
+		    (help "Next field for sorting",
+		    stdhelp,
+		    words ("usage":1, "days_unreferenced":2,
+		           "page_days":3, "name":4)) : 
+                    case $value from 1 to 4 of begin
+                       1: keys = keys + "/key:1,6," + srtdir1;
+	               2: keys = keys + "/key:15,4," + srtdir2;
+		       3: keys = keys + "/key:21,6," + srtdir2;
+		       4: keys = keys + "/key:29,51,ascending"
+		       end;
+		       
+               end;
+         6 : review = 1;	! /REVIEW
+         7 : begin		! /GOOD-FIRST
+                if keys neq $nul then abort "/GOOD given after /KEY";
+ 	        srtdir1 = "descend";
+		srtdir2 = "ascend"
+		end;
+
+	 8 : begin		! /BAD-FIRST
+                if keys neq $nul then abort "/BAD given after /KEY";
+	        srtdir1 = "ascend";
+		srtdir2 = "descend"
+		end;
+	 9 : sort = 0;		! No sorting
+         end;		! case $value....
+      goto prse
+      end;			! END OR SWITCHES PARSING
+
+   eol : Abort "Needs File Specs"; 
+				! PARSE FILE SPECS AS "OTHERWISE" FIELD
+   otherwise: 
+      parse filelist (default_dev "dsk", default_nam "*",
+                      default_ext "*", default_gen *);
+
+   end;			! END OF BIG PARSE
+
+				! GET OUTPUT FILE
+OutFileId = $open (out_file, $output);
+
+display noreturn " Scanning Files";
+
+nfiles = 0;
+do begin			! LOOP ON ALL FILES
+   nfiles = nfiles - 1;		! =================
+   if nfiles leq 0 then begin
+      display noreturn ".";	! Show that we are alive
+      nfiles = 25
+      end;
+				! ignore archive/offline file
+   t = $fileinfo_i($parse,$fbctl);
+   if $getfield (t,24,1) + $getfield (t,22,1) gtr 0 then
+      begin
+      display $filel + " is archived or offline";
+      goto next
+      end;
+
+   sys_wr = $fileinfo_i ($parse,$fbcre);	! system write date
+   usr_wr = $fileinfo_i ($parse,$fbwrt);	! last user write
+   cre_wr = $fileinfo_i ($parse,$fbcrv);	! creation date
+   usr_rd = $fileinfo_i ($parse,$fbref);	! last user read
+   size = $getfield ( $fileinfo_i($parse,$fbbyv),0,18);	! # pages
+
+				! Count total number of read+write
+   cnt_w = $getfield($fileinfo_i($parse,$fbcnt),18,18) - 1;
+   cnt_r = $getfield($fileinfo_i($parse,$fbcnt),0,18);
+   cnt = cnt_w + cnt_r;
+
+				! Determine original date used for
+				! mean usage per day (dat) 
+				! - if number of writes < 20
+				!   assume the file is from the system
+				! write date 
+				! - else assume references from the
+				! creation date. 
+   frocre=0;
+   dat = sys_wr;
+   if cnt_w > 20 then begin
+      frocre=1;
+      dat = cre_wr
+      end;
+
+				! count period covered for mean usage per day
+   days = $getfield($curtad,18,18) - $getfield(dat,18,18) + 1;
+
+				! count references per day
+   ref_per_day = flt_div (cnt,days,2);
+
+				! count number of days unreferenced.
+				! count from latest system write or
+				! user read/write to the file
+   dat = sys_wr;
+   if usr_wr > dat then dat = usr_wr;
+   if usr_rd > dat then dat = usr_rd;
+
+   unref = $getfield($curtad,18,18) - $getfield(dat,18,18);
+
+				! BUILD RECORD FOR CURRENT FILE
+
+				! Mean references per day
+   ts = " [";			! prepare short period marker
+   if days < 5 then ts = "'[";
+   rec = add_str($nul,ref_per_day,6,"R"," ") + ts;
+				! put out period
+   ts = "] ";
+   if frocre eql 1 then ts = "]'";
+   rec = add_str (rec, $string(days), 4, "R", " ") + "] ";
+				! Days unreferenced
+   ts = "  ";
+   if unref > cutoff then ts = "+ ";
+   rec = add_str(rec,$string(unref),4,"R"," ") + ts;
+				! Days*Size
+   rec = add_str (rec, $string(unref*size), 6, "R", " ") + "  " + $filel;
+				! WRITE RECORD FOR CURRENT FILE
+   call $write (OutFileId,rec);
+next:
+   end				! END OF LOOP ON ALL FILES
+   until $nextfile = 0;		! ========================
+
+call $close(OutFileId);
+				! SORT FILE
+if sort neq 0 then {
+   display "
+    Sorting " + out_file;
+   invoke  "sys:sort.exe";
+   if keys eql $nul then keys = "/key:15,4," + srtdir2 +
+                                "/key:29,51,ascending";
+   typein "sort /rec:80" + keys + "/ascii " + out_file + " " + out_file;
+   typein "exit"
+   };
+				! REVIEW FILES
+if review eql 1 then begin
+   OutFileId = $open (out_file,$input);
+   AltFileId = $open (out_file,$output);
+   ts = "  ";		! prefix for output record
+lprev:
+      rec = $read (OutFileId);
+      if $eof (OutFileId) eql -1 then
+         goto ndrev;
+      if review gtr 0 then begin
+         ts = "  ";		! prefix for output record
+lprev1:
+	 prompt rec + " > ";	! REVIEW
+	 filnam = rec[29:$length(rec)-28];
+	 t = 0;		! T=action required; default "keep"
+	 parse begin
+	    keyword (words ("archive":1, "delete":2, "keep":0, "quit":3,
+	                    "type":4, "command":5, "fd":6, "push":7),
+                     default "keep") : begin
+				! Act on commands that need re-prompting
+	       select $value of begin
+	       4: begin
+		  parse number (default "22",
+				 help "Number of lines to show") : i = $value;
+		  guide "lines";
+		  parse eol;
+		  if $searchraised(filnam,out_file) eql 0 then
+		     tdat = $fileinfo_i (filnam, $fbref);	! read date
+		  tempfileid = $open (filnam, $input);
+		  if tempfileid leq 0 then {
+		     display "  -- not available for display --  ";
+		     goto lprev1
+		     };
+		  docommand original "blank";
+		  while i gtr 0 do {
+		     trec = $read(tempfileid);
+		     display trec;
+		     i = i - 1
+		     };
+		  call $close (tempfileid);
+		  call $fileset (filnam, $fbref,-1,tdat)
+		  end;
+	       5: begin		! Command
+	          parse text (help "Command to execute");
+		  parse eol;
+		  docommand original "blank";
+		  display "->" + $atom;
+		  docommand original $atom
+		  end;
+	       6: begin		! Fdirectory
+	          guide "Full directory for this file";
+		  parse eol;
+		  docommand original "blank";
+	          docommand "fd " + filnam + ",
+head
+
+
+"
+		  end;
+	       7: call push_exec;
+	       otherwise: goto lprev2;
+	       end;
+	       goto lprev1;
+				! Act on commands that end the prompting.
+lprev2:
+	       t = $value
+	       end;
+	    eol;
+	    otherwise : {
+	       display "Invalid option";
+	       goto lprev1
+	       }
+	    end;
+         parse (eol);
+	 case t from 0 to 3 of begin
+	    0: $nul = $nul;
+	    1: begin
+		  docommand "archive " + filnam;
+		  ts = "A "
+		  end;
+	    2: begin
+		  docommand "delete " + filnam;
+		  ts = "D "
+		  end;
+	    3: review = 0;	! Abort reviewing from here
+	    end
+
+         end;			! if review gtr 0 ...
+
+				! copy to new output file
+      call $write (AltFileId, ts + rec);
+
+      goto lprev;		! Loop on all lines
+   ndrev:
+
+   call $close (OutFileId);
+   call $close (AltFileId)
+
+   end;				! If review eql 1 ...
+
+				! LIST FILE
+if dolist neq 0 then begin
+   display "   Ref / days Unref Pgs*Unref   File
+  -------------------------------------------------";
+   docommand original "type " + out_file
+   end
+
+end;				! END FILREF COMMAND.
+

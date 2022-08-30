@@ -1,0 +1,31 @@
+command change_environment;
+begin
+
+string fl, source, env;
+integer log;
+
+guide "PCL Environments to try to re-compile";
+parse (filelist (default "dsk:*.env"));
+parse eol;
+
+log = $open ("change-environment.log",$output);
+invoke  "ps:<5-0.pcl.local>exec.exe";
+do begin
+   fl = $file_dev($parse) + ":<" + $File_dir($parse)
+            + ">" + $file_nam($parse);
+   source = fl + ".PCL";
+   env    = fl + ".ENV";
+   if $isfile (source) eql 1 then begin
+      display "Converting " + source;
+      typein "decl /noconfirm pcl " + source;
+      typein "preserve environment " + env;
+      typein "undeclare all";
+      cleartypeout;
+      end
+   else begin
+      display "?          Can Not Convert " + env;
+      call $write (log, "?          Can Not Convert " + env);
+      end
+   end
+until $nextfile eql 0;
+end;

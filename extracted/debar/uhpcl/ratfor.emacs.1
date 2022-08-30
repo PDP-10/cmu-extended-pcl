@@ -1,0 +1,1070 @@
+!* PS:<BEEBE>RATFOR.EMACS.83 15-Oct-82 11:32:53, Edit by BEEBE!
+!* PS:<BEEBE>RATFOR.EMACS.82 29-Nov-81 20:42:12, Edit by BEEBE!
+!* PS:<BEEBE>RATFOR.EMACS.74  2-Nov-81 21:36:46, Edit by BEEBE!
+!* PS:<BEEBE>RATFOR.EMACS.73 31-Oct-81 16:52:54, Edit by BEEBE!
+!* PS:<BEEBE>RATFOR.EMACS.67 30-Oct-81 19:35:18, Edit by BEEBE!
+!* PS:<BEEBE>RATFOR.EMACS.64 25-Oct-81 20:02:19, Edit by BEEBE!
+!* PS:<BEEBE>RATFOR.EMACS.59 24-Oct-81 20:52:44, Edit by BEEBE!
+!* PS:<BEEBE>RATFOR.EMACS.20 23-Oct-81 10:24:21, Edit by BEEBE!
+!* PS:<BEEBE>RATFOR.EMACS.5 20-Oct-81 21:45:44, Edit by BEEBE!
+!* -*- TECO -*- !
+!* These macros for supporting Ratfor supplement the functions!
+!* available in the underlying FORTRAN mode.!
+
+!* --Nelson H.F. Beebe, Department of Physics, College of Science!
+!*                      Computer, University of Utah, Salt Lake City, !
+!*                      UT 84112 !
+!*                      Tel: (801) 581-5254!
+
+
+!~Filename~:! ! Ratfor Editing macros !
+Ratfor
+
+
+
+!Ratfor Mode:! !S Set up for Ratfor editing.
+Ratfor Mode includes all of  the features of FORTRAN mode,  supplemented
+(or sometimes replaced) by the following commands.
+
+C-M-D      DEFINE()
+C-M-F      FOR ... 
+C-M-E      ELSE () ...
+C-M-J      IF ()  ... ELSE ...
+C-M-K      CHARACTER type declaration
+C-M-R      REPEAT ...
+C-M-S      SUBROUTINE () ... END 
+C-M-T      FUNCTION () ... END 
+C-M-U      REPEAT ... UNTIL ()
+C-M-W      WHILE () ... 
+C-X-{      Ratfor Compound Statement
+M-@        Ratfor Date Edit (insert comment with current date)       
+
+In the  case of  control  constructs, indentation  is  automatically
+adjusted so that a  linefeed will move to  the correct level  inside
+the construct.  Mark is  set following the last  line inserted by  a
+command, so that if you wish to undo an insertion, you can  position
+to the beginning of the first inserted line (usually with C-A), then
+wipe it out with  C-W.  If you do  so, the current statement  column
+will then be indented one level too many, and must be manually reset
+to the correct value with Tab or C-X-..
+
+Some additional functions which may be useful are:
+
+M-X Convert FORTRAN Comments to Ratfor Comments
+
+
+M-X Paginate Ratfor          Insert page marks at beginning of
+                             buffer and after each END PROGRAM
+                             statement. 
+
+M-X Unpaginate Ratfor        Remove page marks.!
+
+!* If we are already in RATFOR Mode, exit immediately.!
+
+@F=MODE/RATFOR/"E  'W
+
+!* Initialize the FORTRAN environment first, then make our local changes.!
+
+M(M.M &_Init_Buffer_Locals)W
+
+M(M.M FORTRAN_Mode)W
+
+!* First put the FORTRAN functions on keys.  I don't like how this!
+!* is done, but I have not yet figured out how to retain FORTRAN!
+!* Mode's key definitions when I start a new mode.!
+
+M.M ^R_FORTRAN_Backward_SentenceM.Q..AW
+
+M.M ^R_FORTRAN_Backward_TabM.Q...HW
+
+M.M ^R_FORTRAN_BLOCKDATAM.Q...BW
+
+M.M ^R_FORTRAN_Change_DateM.Q..!W
+
+M.M ^R_FORTRAN_COMMONM.Q.../W
+
+M.M ^R_FORTRAN_COMPLEXM.Q...XW
+
+M.M ^R_FORTRAN_Continuation_Line_NextM.Q..JW
+
+M.M ^R_FORTRAN_Copy_Parenthesized_ExpressionM.Q..)W
+
+M.M ^R_FORTRAN_CONTINUEM.Q...UW
+
+M.M ^R_FORTRAN_DATAM.Q...AW
+
+M.M ^R_FORTRAN_Date_EditM.Q..@W
+
+M.M ^R_FORTRAN_DOUBLEPRECISIONM.Q...DW
+
+M.M ^R_FORTRAN_Eliminate_CommentM.Q...;W
+
+M.M ^R_FORTRAN_Eliminate_Multiple_SpacesM.Q.._W
+
+M.M ^R_FORTRAN_Fill_RegionM.Q..G
+
+M.M ^R_FORTRAN_Fill_Tab_Field_with_SpacesM.Q..IW
+
+M(M.M Make_Local_Q-reg).X()W
+M.M ^R_FORTRAN_Find_Floating-point_NumberU:.X()W
+
+M.M ^R_FORTRAN_Find_DateM.Q..&W
+
+M.M ^R_FORTRAN_Find_Unmatched_ParenthesisM.Q..(W
+
+M.M ^R_FORTRAN_FORMATM.Q...OW
+
+M.M ^R_FORTRAN_Forward_ItemM.Q../W
+
+M.M ^R_FORTRAN_Forward_SentenceM.Q..EW
+
+M.M ^R_FORTRAN_FUNCTIONM.Q...FW
+
+M.M ^R_FORTRAN_GOTOM.Q...TW
+
+M.M ^R_FORTRAN_Hollerith_TextM.Q.."W
+
+M.M ^R_FORTRAN_Hollerith_Text_and_LengthM.Q..`W
+
+M.M ^R_FORTRAN_IFM.Q...JW
+
+M.M ^R_FORTRAN_IMPLICITM.Q...MW
+
+M.M ^R_FORTRAN_IndentM.QIW
+
+M.M ^R_FORTRAN_INTEGERM.Q...IW
+
+M.M ^R_FORTRAN_LOGICALM.Q...LW
+
+M(M.M Make_Local_Q-reg).X(M)W
+M.M ^R_FORTRAN_Mark_Indented_RegionU:.X(M)W
+
+M.M ^R_FORTRAN_Mark_SentenceM.Q..SW
+
+M.M ^R_FORTRAN_Matching_ParenthesisM.Q..{
+
+M.M ^R_FORTRAN_Merge_Continuation_with_PreviousM.Q..^W
+
+M.M ^R_FORTRAN_NAMELISTM.Q...NW
+
+M.M ^R_FORTRAN_NewlineM.Q
+W
+
+M.M ^R_FORTRAN_Operator_PadM.Q..*W
+
+M.M ^R_FORTRAN_Quoted_to_Hollerith_TextM.Q..'W
+
+M.M ^R_FORTRAN_READM.Q...QW
+
+M.M ^R_FORTRAN_REALM.Q...RW
+
+M.M ^R_FORTRAN_Right-adjust_LabelM.Q..#W
+
+M(M.M Make_Local_Q-reg).X(9)W
+M.M ^R_FORTRAN_Rigidly_IndentU:.X(9)W
+
+M(M.M Make_Local_Q-reg).X(.)W
+M.M ^R_FORTRAN_Set_Statement_ColumnU:.X(.)W
+
+M.M ^R_FORTRAN_Show_ColumnsM.Q..=W
+
+M.M ^R_FORTRAN_SUBROUTINEM.Q...SW
+
+M.M ^R_FORTRAN_WRITEM.Q...WW
+
+M(M.M Make_Local_Q-reg).X(C)
+M.M Check_PFORT_Character_SetU:.X(C)
+
+M(M.M Make_Local_Q-reg).X(
+)W
+M.M &_Generate_Indented_Continued_FORTRAN_StatementU:.X(
+)W
+
+!* Now put the Ratfor functions on keys, perhaps replacing some!
+!* of the above! 
+
+1,(M.M ^R_Ratfor_CHARACTER)M.Q...KW
+
+M(M.M Make_Local_Q-reg).X({)W
+M.M ^R_Ratfor_Compound_StatementU:.X({)W
+
+M.M ^R_Ratfor_Date_EditM.Q..@W
+
+M.M ^R_Ratfor_DEFINEM.Q...DW
+
+M.M ^R_Ratfor_FORM.Q...FW
+
+M.M ^R_Ratfor_REPEAT_..._UNTIL_()M.Q...UW
+
+M.M ^R_Ratfor_REPEATM.Q...RW
+
+M.M ^R_Ratfor_WHILEM.Q...WW
+
+M.M ^R_Ratfor_FUNCTIONM.Q...TW
+
+M.M ^R_Ratfor_IF_()_..._ELSE_...M.Q...JW
+
+1,(M.M ^R_Ratfor_ELSE_IF_()_...)M.Q...EW
+
+M.M ^R_Ratfor_SUBROUTINEM.Q...SW
+
+!* Use the standard comment commands; RATFOR has the same syntax.!  
+
+M.M ^R_Indent_for_CommentM.Q..;W
+
+M.M ^R_Down_Comment_LineM.Q..NW
+
+M.M ^R_Up_Comment_LineM.Q..PW
+
+!* Define our local variables, as well as some modifications of FORTRAN's!
+
+0M.C Ratfor_Abstract_Format*_0_=_no-op;_non-0=insert_abstract_header_and_date_in_SUBROUTINE/FUNCTION_Insertion
+
+M.L Ratfor_Abstract_Format
+
+1M.C Ratfor_Identify_Closing_Brace*_0=no-op;_non-0=Put_statement_type_in_comment_following_closing_brace
+
+M.L Ratfor_Identify_Closing_Brace
+
+:I*STDDEFM.C Ratfor_DEFINE_File*_Name_of_standard_DEFINE_file_for_include_statement_(extension_must_be_.RAT,_so_do_not_include_one)
+
+:I*_M.L FORTRAN_Column_6	    !* Ratfor has blank continuation!
+				    !* character; continuation is!
+				    !* signalled by a terminal comma on!
+				    !* statement line!
+
+M.L Ratfor_DEFINE_File		    !* Make this variable local!
+
+1M.L Auto_Fill_Mode
+
+72M.L Fill_Column
+
+:I*#_____M.L FORTRAN_Comment_Prefix
+
+:I*#_M.L Comment_Start
+
+:I*#_M.L Comment_Begin
+
+:I*/5+1*5M.L Comment_Rounding	    !* Make this use the same!
+				    !* values as the FORTRAN!
+				    !* Block Indentation!  
+
+!* Finally, set the mode line. !
+
+Q.0,1M(M.M &_Set_Mode_Line)RatforW
+
+
+
+!Convert FORTRAN Comments to Ratfor Comments:! !S Convert FORTRAN
+comments to Ratfor comments by replacing column 1 by a number sign.
+M-X Undo will undo this command.!
+
+:I*Convert_FORTRAN_Comments_to_Ratfor_Comments_inM(M.M &_Save_Region_and_Query)F"E'
+
+.[0				    !* Save Q0 and current point.!
+
+BJ				    !* Start at beginning of buffer!
+
+13I 10I	BJ			    !* Insert a dummy CRLF and go!
+				    !* back to beginning.!
+
+<				    !* LOOP over buffer!
+
+:S
+C
+c ;			    !* Search for a comment line,!
+				    !* exiting if none found.!
+
+-1D I#'			    !* THEN replace by number sign!
+
+:C				    !* Advance one character!
+
+>				    !* END LOOP over buffer!
+
+BJ 2D				    !* Delete the initial CRLF we!
+				    !* inserted at the start!
+
+Q0J				    !* Move back to entry point!
+				    !* (approximately) !
+
+B,Z 				    !* Return to caller, indicating!
+				    !* possibly whole buffer!
+				    !* modified.!
+
+!Paginate Ratfor:! !S Remove existing page marks, then insert page
+marks at beginning of buffer and after every END statement
+(including the last).  The command M-X Sort Pages in the SORT
+Library may be used to sort the routines into almost alphabetical
+order (ordered BLOCK DATA, FUNCTIONs PROGRAMs SUBROUTINEs).  Page
+marks consist of the sequence FF CR LF at the end of a line, so that
+the FF will not be visible when the page editing commands (C-X P,
+C-X C-P, C-X C-[ and C-X C-]) are used to concentrate editing on a
+single page at a time.  The function M-X Unpaginate Ratfor may be
+used to remove page marks installed by this function.!
+
+.[0[9				    !* Save Q-registers and current!
+				    !* point in Q0!  
+
+!* PAGE library function use temporarily suppressed.  ^R Join Next!
+!* Page gets a NIB error and fails to do anything.!
+
+!*M.A PAGE^R_Insert_PagemarkU9!   !* Save the Insert Pagemark!
+				    !* function in Q9.  It is!
+				    !* normally not loaded.!
+
+@:I9/12I 13I 10I/		    !* Function to insert a FF CR LF!
+				    !* at end-of-line!
+
+1M.L Page_Flush_CRLF		    !* Indicate page delimiter is!
+				    !* CRLF FF CRLF!
+
+M(M.M Unpaginate_Ratfor)	    !* Remove any existing pagemarks.!
+
+W				    !* Flush current value.!
+
+BJ				    !* Go to beginning of buffer.!
+
+M9				    !* Insert leading pagemark!
+
+<				    !* LOOP over all lines in buffer.!
+
+@F_	R		    !* Position to first character!
+				    !* which is not a blank or tab.!
+
+.-Z"E 0;'			    !* IF end-of-buffer THEN exit!
+				    !* loop.! 
+
+.,.+3F~END"E			    !* IF text is "END" (ignoring!
+				    !* letter case) ! 
+
+	.+3J			    !* THEN Position to character!
+				    !* following "END"!
+
+	@F_	R	    !* Position to first character!
+				    !* which is not a blank or tab.!
+
+	.,.+7F~PROGRAM"E	    !* IF next word is PROGRAM!
+
+		1L @M9'		    !* THEN we have a valid END!
+				    !* statement, so insert a!
+				    !* pagemark after the CRLF.! 
+
+		.+3-Z"G 0;'	    !* IF we are at end-of-buffer, exit!
+				    !* loop.! 
+
+		'		    !* END IF (next word is PROGRAM)!
+
+	'			    !* END IF (text is "END")!
+
+1L				    !* Move to beginning of next!
+				    !* line.!
+
+>				    !* END LOOP (over lines)!
+
+W				    !* Flush value.!
+
+Q0J				    !* Return to where we started!
+				    !* from (approximately, since we!
+				    !* inserted text in the buffer).!
+
+				    !* Return to caller.!
+
+!Sort Ratfor Routines:! !S Sort Ratfor routines alphabetically in the
+buffer.  This function  works by invoking  the command M-X  Paginate
+Ratfor, then searches the page for BLOCK DATA, PROGRAM, SUBROUTINE,
+and FUNCTION keywords,  and if  one is  found, the  routine name  is
+extracted and stored in a comment line at the beginning of the page.
+A private version of  the Sort Pages command  from the SORT  library
+which suppresses  the Save  for Undo  is then  invoked to  sort  the
+routines.  The leading comment lines  inserted in the previous  step
+are then deleted and finally, the function M-X Unpaginate Ratfor is
+invoked to remove the  page marks.  The  comment lines inserted  are
+intentionally prefixed with leading  control characters (5 ^Q's)  to
+make them unique.  You can undo the effect of this command with  M-X
+Undo.!
+
+:I*Sort_Ratfor_Routines_inM(M.M &_Save_Region_and_Query)F"E'
+
+0[1[2[3[4			    !* Save Q-registers!
+
+WM(M.M Paginate_Ratfor)W
+
+BJ				    !* Move to beginning of buffer!
+
+:I3C			    !* Special comment line to be!
+				    !* inserted at start of each page.!
+
+<				    !* LOOP over all pages in the buffer!
+
+.+3-Z"G 			    !* Exit loop at end-of-buffer.  ^R!
+				    !* Next Page positions point after!
+	!ZJ!			    !* the FF and before the following!
+	!G3 I	13I 10I!    !* CRLF, so we allow for that here.!
+	0;'			    !* We insert an identifying comment!
+				    !* line on the last empty page which!
+				    !* will keep it there as the last page.!
+
+
+
+1L				    !* Move to beginning of first line!
+				    !* following page mark.!
+
+.U0				    !* Save location of start of first!
+				    !* line.! 
+
+1:SSUBROUTINEPROGRAMFUNCTIONBLOCKDATABLOCK_DATA"L
+				    !* IF we found a keyword!
+
+	.U1			    !* THEN remember where we are!
+
+	FKC			    !* Back up to beginning of matching!
+				    !* string! 
+
+	.,.+5F~BLOCK"E		    !* IF we found BLOCK DATA!
+		Q0J		    !* THEN go back to start of buffer!
+
+		G3 IBLOCK_DATA 13I 10I'
+				    !* and insert identifying comment!
+				    !* line.! 
+
+	"#			    !* ELSE (not BLOCK DATA)!
+
+		Q1J		    !* Return to end of match!
+
+		@F_	R  !* Skip forward to first non-blank,!
+				    !* non-tab! 
+
+		.U1		    !* Save position!
+
+		@:F(_
+	R  
+				    !* Skip forward to next left!
+				    !* parenthesis, blank, CR, LF, FF!
+				    !* or tab.!  
+
+		Q1,.X4		    !* Save routine name in Q4!
+
+		Q0J		    !* Return to start of page!
+
+		G3 G4 13I 10I	    !* Insert identifying comment!
+
+	''			    !* END IF (BLOCK DATA)!
+
+"#				    !* ELSE (did not find keyword)!
+
+	Q0J			    !* Return to start of page!
+
+	G3 13I 10I		    !* Insert empty identifying comment!
+				    !* line! 
+
+'				    !* END IF!
+
+1M(M.M ^R_Next_Page)W		    !* Advance to next page!
+
+>				    !* END LOOP (over buffer pages)!
+
+M(M.M ^R_Mark_Whole_Buffer)W	    !* Indicate the region to be sorted!
+
+M(M.M &_Sort_FORTRAN_Pages)	    !* Sort the pages with our private!
+				    !* version of the SORT library Sort!
+				    !* Page function which does not do a!
+				    !* Save for Undo internally.!
+
+ZJ				    !* Goto end of buffer!
+
+-1,0A-12"E 13I 10I'		    !* If last character is FF, insert!
+				    !* CR LF to make a proper pagemark;!
+				    !* Sort screws this up.!
+
+BJ				    !* Goto beginning of buffer!
+
+<				    !* LOOP over all pages!
+
+.-Z+3"G 0;'			    !* Exit if at end-of-buffer!
+
+1L				    !* Go to beginning of first line.!
+
+.,.+6F=3"E 1K'		    !* Kill matching comment line!
+
+1M(M.M ^R_Next_Page)W		    !* Advance to next page!
+
+>				    !* END LOOP (over buffer pages)!
+
+
+WM(M.M Unpaginate_Ratfor)W
+
+				    !* Return to caller!
+
+!Unpaginate Ratfor:! !S Remove pagemarks from Ratfor file.!
+
+M(M.M Unpaginate_FORTRAN)W
+
+				    !* Restore registers and return to!
+				    !* caller. !
+
+!^R Ratfor CHARACTER:! !^R Insert a CHARACTER type declaration statement.
+Invoked by ^R Ratfor CHARACTER!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______CHARACTER________ 
+
+.U0				    !* Save continue point.!
+
+WM(M.M ^R_CRLF)W
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+
+!^R Ratfor Compound Statement:! !^R Insert compound statement braces  at
+current point, and move  the indentation in one  level.  If an  explicit
+argument is  given, the  cursor  is left  following the  closing  brace;
+otherwise it is restored to following the opening brace.  
+Invoked by ^R Ratfor Compound Statement!
+
+.[0[1[2				    !* Save Q-registers and current!
+.[3[4[5				    !* point.!
+
+QFORTRAN_Statement_Column-1U1
+
+I{				    !* Opening brace!
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+QFORTRAN_Block_Indentation<I_>	    !* Position to NEXT!
+				    !* indentation level, following!
+				    !* Kernighan and Plauger's!
+				    !* conventions in Software Tools.!  
+
+I}				    !* Closing brace!
+
+.U2				    !* Save position!
+
+FS S HPOS-1U1			    !* Save column position.!
+
+QRatfor_Identify_Closing_Brace"N  !* IF comment wanted!
+
+	1,FClosing_comment:__[5  !* THEN save optional string!
+				    !* argument in Q5! 
+
+	FQ5"G			    !* IF we had a string argument!
+
+		I_#_ G5	    !* THEN Insert it as a comment!
+
+		'		    !* END IF (we had a string argument)!
+
+	'			    !* END IF (comment wanted)!
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+.U4
+
+Q1+1UFORTRAN_Statement_Column	    !* Update current statement column.!
+
+FF"E			    !* THEN IF no explicit arg given!	
+
+	Q0+1J			    !* Put cursor back following point!
+	'			    !* at entry.! 
+
+"#				    !* ELSE explicit arg!
+	Q2J			    !* Put cursor following closing brace.!
+
+'				    !* END IF (no explicit arg)!
+
+Q3,Q4				    !* Bound changed region!
+
+				    !* Return to caller.!
+
+!^R Ratfor Date Edit:! !^R Insert comment line with current date.!
+
+0L				    !* Move to start of current line.!
+
+.[0				    !* Save Q-registers!
+
+WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of line.!
+
+GFORTRAN_Comment_Prefix
+
+I(				    !* Insert #    (NN-MON-YY)!
+
+0,(FSDATE)FSFDCONV
+
+-9D				    !* Kill time field.!
+
+I)
+
+-3M(M.M ^R_Uppercase_Word)	    !* Convert date to uppercase!
+
+0L 7C (-1,1A-32)"E 1D I0 -1C' 10C  !* Change leading blank in date!
+				    !* to 0 and position following!
+				    !* date field for end-of-line!
+				    !* insertion. !
+
+WM(M.M ^R_CRLF)W
+
+Q0,.				    !* Bound changed region!
+
+				    !* Return to caller.!
+
+!^R Ratfor DEFINE:! !^R Insert DEFINE statement.
+Invoked by ^R Ratfor DEFINE.!
+
+.[0[1[2				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+Idefine() .-1U1
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+.U2
+
+Q1J				    !* Move back to start location.!
+
+Q0,Q2				    !* Bound changed region!
+
+				    !* Restore Q-registers and return to !
+				    !* caller. !
+
+!^R Ratfor ELSE IF () ...:! !^R Insert ELSE IF () ... Statement.
+The current indentation level is assumed to be inside an IF statement. 
+Invoked by ^R Ratfor ELSE IF () ...!
+ 
+[0[1[2				    !* Save Q-registers!
+.[3[4
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+Ielse_if_()_ .-2U2
+
+WM(M.M ^R_Ratfor_Compound_Statement)end_else_if
+
+QFORTRAN_Statement_Column+QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+.U4
+
+Q2J				    !* Move back to start location.!
+
+Q3,Q4				    !* Bound changed region!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R Ratfor FOR:! !^R Insert FOR statement.
+Invoked by ^R Ratfor FOR!
+
+[0[1[2				    !* Save Q-registers!
+.[3[4
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+Ifor_()_ .-2U2
+
+WM(M.M ^R_Ratfor_Compound_Statement)end_for
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+.U4
+
+Q2J				    !* Move back to start location.!
+
+Q3,Q4				    !* Bound changed region!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R Ratfor FUNCTION:! !^R Insert FUNCTION () ... END Statements.
+Invoked by ^R Ratfor FUNCTION!
+
+[0[1[2				    !* Save Q-registers!
+.[3[4[5
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+.U5				    !* Remember starting point!
+
+1,M(M.M &_Read_Line)Enter_function_TYPE_(C,D,R,I,L)_and_end_with_CR:_F"E'[0
+				    !* Read a line into Q0. The!
+				    !* funny business with F"E etc!
+				    !* is simply a dummy conditional!
+				    !* which extracts the string!
+				    !* argument returned by the!
+				    !* subroutine to get it into Q0.!
+				    !* I found this usage in the!
+				    !* Send Mail command in!
+				    !* <EMACS>TMUCS.EMACS. !
+
+FQ0:"G '			    !* Exit immediately if the!
+				    !* string has no characters in!
+				    !* it.  The user may have!
+				    !* reconsidered and simply typed!
+				    !* a CR in response to the prompt.!
+
+!Decode!
+@F~0/C/"E I______COMPLEX_'
+"# @F~0/D/"E I______DOUBLE_PRECISION_'
+"# @F~0/I/"E I______INTEGER_'
+"# @F~0/L/"E I______LOGICAL_'
+"# @F~0/R/"E I______REAL_'
+"# 1,M(M.M &_Read_Line)You_must_type_one_of_(C,D,I,L,R):_F"E'[0
+	FQ0:"G ' ODecode'''''
+
+1,M(M.M &_Read_Line)Enter_function_NAME_and_end_with_CR:_F"E'[0
+
+				    !* Read a line into Q0. The!
+				    !* funny business with F"E etc!
+				    !* is simply a dummy conditional!
+				    !* which extracts the string!
+				    !* argument returned by the!
+				    !* subroutine to get it into Q0.!
+				    !* I found this usage in the!
+				    !* Send Mail command in!
+				    !* <EMACS>TMUCS.EMACS. !
+
+FQ0:"G '			    !* Exit immediately if the!
+				    !* string has no characters in!
+				    !* it.  The user may have!
+				    !* reconsidered and simply typed!
+				    !* a CR in response to the prompt.!
+
+IFUNCTION__ G0 I_()
+
+WM(M.M ^R_CRLF)W		    !* Start a new line.!
+
+QRatfor_Abstract_Format"N	    !* IF abstract format requested!
+
+     GFORTRAN_Comment_Prefix
+
+     I()			    !* THEN insert header and date!
+				    !* comment lines.!
+
+     WM(M.M ^R_CRLF)W 
+
+     1M(M.M ^R_Ratfor_Date_Edit)
+
+     '				    !* END IF!
+
+I______return
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+I______end_#_
+
+.U4
+
+G0				    !* Insert NAME into the buffer.!
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q5J				    !* Position to start of line!
+
+I#_
+
+G0				    !* Insert NAME into the buffer.!
+
+I_--_				    !* Form # NAME -- line!
+
+.U2				    !* Save for return here!
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+FQRatfor_DEFINE_File"G	    !* IF we have a DEFINE file!
+	
+	Iinclude_		    !* THEN insert include statement!
+
+	GRatfor_DEFINE_FileW
+
+	WM(M.M ^R_CRLF)W	    !* Go to start of a new line!
+
+	'			    !* END IF!
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to insert routine name.!
+
+Q3,Q4
+				    !* Restore Q-registers and return to !
+				    !* caller.!
+
+!^R Ratfor IF () ... ELSE ...:! !^R Insert IF () ... ELSE ... Statement.
+Invoked by ^R Ratfor IF () ... ELSE ...!
+ 
+[0[1[2				    !* Save Q-registers!
+.[3[4
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+Iif_()_ .-2U2
+
+1M(M.M ^R_Ratfor_Compound_Statement)
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+1UFORTRAN_Statement_Column	    !* Reset statement column to line up!
+				    !* with if part.!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+Ielse_
+
+WM(M.M ^R_Ratfor_Compound_Statement)end_if
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+.U4
+
+Q2J				    !* Move back to start location.!
+
+Q3,Q4				    !* Bound changed region!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R Ratfor REPEAT ... UNTIL ():! !^R Insert REPEAT ... UNTIL () 
+Statement.
+Invoked by ^R Ratfor REPEAT ... UNTIL ()!
+
+[0[1[2				    !* Save Q-registers!
+.[3[4
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+Irepeat_ 
+
+1M(M.M ^R_Ratfor_Compound_Statement)
+
+I_until_() .-1U2
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+.U4
+
+Q2J				    !* Move back to start location.!
+
+Q3,Q4				    !* Bound changed region!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R Ratfor REPEAT:! !^R Insert REPEAT statement.
+Invoked by ^R Ratfor REPEAT!
+
+[0[1[2				    !* Save Q-registers!
+.[3[4
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+Irepeat_ 
+
+WM(M.M ^R_Ratfor_Compound_Statement)end_repeat
+
+WM(M.M ^R_FORTRAN_Newline)	    !* Position on line following!
+				    !* opening brace.!
+.U2
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+.U4
+
+Q2J				    !* Move back to start location.!
+
+Q3,Q4				    !* Bound changed region!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R Ratfor SUBROUTINE:! !^R Insert SUBROUTINE () ... END Statements.
+Invoked by ^R Ratfor SUBROUTINE!
+
+[0[1[2				    !* Save Q-registers!
+.[3[4
+
+1,M(M.M &_Read_Line)Enter_subroutine_NAME_and_end_with_CR:_F"E'[0
+
+				    !* Read a line into Q0. The!
+				    !* funny business with F"E etc!
+				    !* is simply a dummy conditional!
+				    !* which extracts the string!
+				    !* argument returned by the!
+				    !* subroutine to get it into Q0.!
+				    !* I found this usage in the!
+				    !* Send Mail command in!
+				    !* <EMACS>TMUCS.EMACS. !
+
+FQ0:"G '			    !* Exit immediately if the!
+				    !* string has no characters in!
+				    !* it.  The user may have!
+				    !* reconsidered and simply typed!
+				    !* a CR in response to the prompt.!
+
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+I#_
+
+G0				    !* Insert NAME into the buffer.!
+
+I_--_				    !* Form # NAME -- line!
+
+.U2				    !* Save for return here!
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+FQRatfor_DEFINE_File"G	    !* IF we have a DEFINE file!
+	
+	Iinclude_		    !* THEN insert include statement!
+
+	GRatfor_DEFINE_FileW
+
+	WM(M.M ^R_CRLF)W	    !* Go to start of a new line!
+
+	'			    !* END IF!
+
+I______subroutine__
+
+G0				    !* Insert NAME into the buffer.!
+
+I_()
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+QRatfor_Abstract_Format"N	    !* IF abstract format requested!
+
+     GFORTRAN_Comment_Prefix
+
+     I()			    !* THEN insert header and date!
+				    !* comment lines.!
+
+     WM(M.M ^R_CRLF)W 
+
+     1M(M.M ^R_Ratfor_Date_Edit)
+
+     '				    !* END IF!
+
+I______return
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+I______end_#_
+
+G0				    !* Insert NAME into the buffer.!
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+.U4
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to insert routine name.!
+
+Q3,Q4				    !* Bound changed region!
+
+				    !* Restore Q-registers and return to !
+				    !* caller.!
+
+!^R Ratfor WHILE:! !^R Insert WHILE () ... statement.
+Invoked by  ^R Ratfor WHILE!
+
+[0[1[2				    !* Save Q-registers!
+.[3[4
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+Iwhile_()_ .-2U2
+
+WM(M.M ^R_Ratfor_Compound_Statement)end_while
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+.U4
+
+Q2J				    !* Move back to start location.!
+
+Q3,Q4				    !* Bound changed region!
+
+				    !* Return to caller!
+
+  

@@ -1,0 +1,231 @@
+
+			24-Nov-82 02:47:05
+
+BATCON Version	104A(4165)-2			GLXLIB Version	1(544)
+
+	    Job PCLEXE Req #329 for PA0B in Stream 0
+
+	OUTPUT:	 Nolog				TIME-LIMIT: 0:10:00
+	UNIQUE:	 No				BATCH-LOG:  Supersede
+	RESTART: No				ASSISTANCE: Yes
+						SEQUENCE:   706
+
+	Input from => PK:<PA0B>PCLEXEC.CTL.5
+	Output to  => PK:<PA0B>PCLEXEC.LOG
+
+
+
+02:47:06 USER	 TOPS-20 Command processor 5(721)-2
+02:47:06 MONTR	 Job 24 on TTY150 24-Nov-82 02:47:06
+02:47:06 MONTR	[X9700 backlogged many hours.]
+02:47:07 MONTR	@
+02:47:07 MONTR	[PK Mounted]
+02:47:07 MONTR	
+02:47:07 MONTR	[CONNECTED TO PK:<PA0B>]
+		;
+		; PCLEXEC.CTL - A control file which demonstrates the procedure used
+		;		to build the PCL Exec's included in the distribution
+		;		from the files included on the tape.
+		;
+		
+		;Define where to find the files:
+		;
+02:47:08 MONTR	@define EXEC: DSK:
+02:47:08 MONTR	@
+		
+		;Compile the configuration-dependent files.  This step should be skipped
+		;at sites that don't have Exec sources:
+		;
+02:47:08 MONTR	@Compile Execf3+Execca.Mac Execc3.Rel		;PCL only
+02:47:11 USER	MACRO:	EXECCA
+02:47:38 USER	
+02:47:38 USER	EXIT
+02:47:38 MONTR	@@Compile Execf2+Execca.Mac Execc2.Rel		;PCL and multi-forking
+02:47:40 USER	MACRO:	EXECCA
+02:48:08 USER	
+02:48:08 USER	EXIT
+02:48:08 MONTR	@
+		
+		;Compile the PCL modules.  This step should be skipped if it is desired
+		;to use the PCL REL files off of the distribution tape or doesn't have
+		;Bliss-36:
+		;
+02:48:08 MONTR	@Bliss Execpd.B36 /Library
+02:48:10 USER	
+02:48:10 USER	; File:		PK:<PA0B>EXECPD.B36.2
+02:48:20 USER	; Run Time:	   00:02.9
+02:48:20 USER	; Elapsed Time:	   00:09.4
+02:48:20 USER	; Memory Used:	10 pages
+02:48:20 USER	; Library Precompilation Complete
+02:48:20 MONTR	@@Bliss Execpc.B36 /List /NoHeader /Format:Assembly /Format:NoBinary -
+02:48:20 MONTR	@		  /Format:NoCommentary
+02:48:22 USER	
+02:48:23 USER	; File:		PK:<PA0B>EXECPC.B36.5
+02:48:26 USER	;	  0119	LIBRARY 'BLI:MONSYM';
+02:48:26 USER	% WARN#050	........1  L1:0119
+02:48:26 USER	; Name already declared in this block:  $CHLFD
+02:48:26 USER	% WARN#050	........1  L1:0119
+02:48:26 USER	; Name already declared in this block:  $CHCRT
+02:48:27 USER	% WARN#050	........1  L1:0119
+02:48:27 USER	; Name already declared in this block:  $CHFFD
+02:51:32 USER	; Information:	0
+02:51:32 USER	; Warnings:	3
+02:51:32 USER	; Errors:	0
+02:51:33 USER	; Compilation Complete
+02:51:33 MONTR	@@Bliss Execpi.B36 /List /NoHeader /Format:Assembly /Format:NoBinary -
+02:51:33 MONTR	@		  /Format:NoCommentary
+02:51:34 USER	
+02:51:35 USER	; File:		PK:<PA0B>EXECPI.B36.6
+02:51:38 USER	;	  0160	LIBRARY 'BLI:MONSYM';
+02:51:38 USER	% WARN#050	........1  L1:0160
+02:51:39 USER	; Name already declared in this block:  $CHLFD
+02:51:39 USER	% WARN#050	........1  L1:0160
+02:51:39 USER	; Name already declared in this block:  $CHCRT
+02:51:40 USER	% WARN#050	........1  L1:0160
+02:51:40 USER	; Name already declared in this block:  $CHFFD
+02:53:53 USER	; Information:	0
+02:53:53 USER	; Warnings:	3
+02:53:53 USER	; Errors:	0
+02:53:53 USER	; Compilation Complete
+02:53:54 MONTR	@@Bliss Execpx.B36 /List /NoHeader /Format:Assembly /Format:NoBinary -
+02:53:54 MONTR	@		  /Format:NoCommentary
+02:53:56 USER	
+02:53:58 USER	; File:		PK:<PA0B>EXECPX.B36.5
+02:54:02 USER	;	  0123	LIBRARY 'BLI:MONSYM';
+02:54:02 USER	% WARN#050	........1  L1:0123
+02:54:02 USER	; Name already declared in this block:  $CHLFD
+02:54:03 USER	% WARN#050	........1  L1:0123
+02:54:03 USER	; Name already declared in this block:  $CHCRT
+02:54:04 USER	% WARN#050	........1  L1:0123
+02:54:04 USER	; Name already declared in this block:  $CHFFD
+02:54:07 USER	; INFO#192
+02:54:07 USER	; Multiple declaration of name in assembly source:  FP
+02:55:39 USER	; Information:	1
+02:55:39 USER	; Warnings:	3
+02:55:39 USER	; Errors:	0
+02:55:40 USER	; Compilation Complete
+02:55:40 MONTR	@@Bliss Execpu.B36 /List /NoHeader /Format:Assembly /Format:NoBinary -
+02:55:40 MONTR	@		  /Format:NoCommentary
+02:55:42 USER	
+02:55:42 USER	; File:		PK:<PA0B>EXECPU.B36.3
+02:55:47 USER	;	  0079	LIBRARY 'BLI:MONSYM';
+02:55:47 USER	% WARN#050	........1  L1:0079
+02:55:47 USER	; Name already declared in this block:  $CHLFD
+02:55:47 USER	% WARN#050	........1  L1:0079
+02:55:47 USER	; Name already declared in this block:  $CHCRT
+02:55:48 USER	% WARN#050	........1  L1:0079
+02:55:48 USER	; Name already declared in this block:  $CHFFD
+02:56:51 USER	; Information:	0
+02:56:51 USER	; Warnings:	3
+02:56:51 USER	; Errors:	0
+02:56:51 USER	; Compilation Complete
+02:56:52 MONTR	@@Compile Execpm.Mac
+02:56:54 USER	MACRO:	EXECPM
+02:57:31 USER	
+02:57:31 USER	EXIT
+02:57:32 MONTR	@@Compile Execps.Mac
+02:57:33 USER	MACRO:	EXECPS
+02:57:41 USER	
+02:57:41 USER	EXIT
+02:57:41 MONTR	@
+		
+		;Build an Exec with PCL but without multi-forking:
+		;
+02:57:41 MONTR	@Execute @Loexec3.Cmd
+02:57:42 USER	LINK:	Loading
+02:57:43 USER	[LNKLMN	Loading module EXECDE from file DSK:EXECGL.REL]
+02:57:44 USER	[LNKLMN	Loading module EXECPR from file DSK:EXECPR.REL]
+02:57:44 USER	[LNKLMN	Loading module EXECVR from file DSK:EXECVR.REL]
+02:57:44 USER	[LNKLMN	Loading module EXEC0 from file DSK:EXEC0.REL]
+02:57:45 USER	[LNKLMN	Loading module EXECCA from file DSK:EXECC3.REL]
+02:57:45 USER	[LNKLMN	Loading module EXEC1 from file DSK:EXEC1.REL]
+02:57:46 USER	[LNKLMN	Loading module EXECSE from file DSK:EXECSE.REL]
+02:57:46 USER	[LNKLMN	Loading module EXECMT from file DSK:EXECMT.REL]
+02:57:46 USER	[LNKLMN	Loading module EXECP from file DSK:EXECP.REL]
+02:57:47 USER	[LNKLMN	Loading module EXECIN from file DSK:EXECIN.REL]
+02:57:48 USER	[LNKLMN	Loading module EXEC2 from file DSK:EXEC2.REL]
+02:57:48 USER	[LNKLMN	Loading module EXEC3 from file DSK:EXEC3.REL]
+02:57:49 USER	[LNKLMN	Loading module EXEC4 from file DSK:EXEC4.REL]
+02:57:50 USER	[LNKLMN	Loading module EXECED from file DSK:EXECED.REL]
+02:57:50 USER	[LNKLMN	Loading module EXECCS from file DSK:EXECCS.REL]
+02:57:50 USER	[LNKLMN	Loading module EXECQU from file DSK:EXECQU.REL]
+02:57:52 USER	[LNKLMN	Loading module EXECSU from file DSK:EXECSU.REL]
+02:57:53 USER	[LNKLMN	Loading module EXECPM from file DSK:EXECPM.REL]
+02:57:54 USER	[LNKLMN	Loading module EXECPS from file DSK:EXECPS.REL]
+02:57:54 USER	[LNKLMN	Loading module EXECPI from file DSK:EXECPI.REL]
+02:57:55 USER	[LNKLMN	Loading module EXECPC from file DSK:EXECPC.REL]
+02:57:56 USER	[LNKLMN	Loading module EXECPX from file DSK:EXECPX.REL]
+02:57:56 USER	[LNKLMN	Loading module EXECPU from file DSK:EXECPU.REL]
+02:57:57 USER	[LNKLMN	Loading module MACREL from file PS:MACREL.REL[4,3]]
+02:58:01 USER	[LNKXCT	EXECPR execution]
+02:58:01 USER	
+02:58:01 USER	Data seg: 6. Pages
+02:58:01 USER	          300. Words free
+02:58:01 USER	
+02:58:01 USER	Pure seg: 98.+29. Pages + symbols
+02:58:01 USER	          120. Words to next page boundary
+02:58:01 USER	
+02:58:01 USER	Save symbols? *Y
+02:58:01 USER	
+02:58:01 USER	Saving EXEC on file: EXEC.EXE.3 [OK]
+02:58:11 MONTR	@@Rename Exec.Exe.0 Exec-without-multi-forking.Exe
+02:58:11 MONTR	 EXEC.EXE.3 => EXEC-WITHOUT-MULTI-FORKING.EXE.3 [OK]
+02:58:12 MONTR	@
+		
+		;Build an Exec with PCL and multi-forking:
+		;
+02:58:12 MONTR	@Execute @Loexec2.Cmd
+02:58:15 USER	LINK:	Loading
+02:58:15 USER	[LNKLMN	Loading module EXECDE from file DSK:EXECGL.REL]
+02:58:15 USER	[LNKLMN	Loading module EXECPR from file DSK:EXECPR.REL]
+02:58:17 USER	[LNKLMN	Loading module EXECVR from file DSK:EXECVR.REL]
+02:58:17 USER	[LNKLMN	Loading module EXEC0 from file DSK:EXEC0.REL]
+02:58:18 USER	[LNKLMN	Loading module EXECCA from file DSK:EXECC2.REL]
+02:58:19 USER	[LNKLMN	Loading module EXEC1 from file DSK:EXEC1.REL]
+02:58:19 USER	[LNKLMN	Loading module EXECSE from file DSK:EXECSE.REL]
+02:58:20 USER	[LNKLMN	Loading module EXECMT from file DSK:EXECMT.REL]
+02:58:21 USER	[LNKLMN	Loading module EXECP from file DSK:EXECP.REL]
+02:58:22 USER	[LNKLMN	Loading module EXECIN from file DSK:EXECIN.REL]
+02:58:23 USER	[LNKLMN	Loading module EXEC2 from file DSK:EXEC2.REL]
+02:58:23 USER	[LNKLMN	Loading module EXEC3 from file DSK:EXEC3.REL]
+02:58:24 USER	[LNKLMN	Loading module EXEC4 from file DSK:EXEC4.REL]
+02:58:24 USER	[LNKLMN	Loading module EXECED from file DSK:EXECED.REL]
+02:58:25 USER	[LNKLMN	Loading module EXECCS from file DSK:EXECCS.REL]
+02:58:25 USER	[LNKLMN	Loading module EXECQU from file DSK:EXECQU.REL]
+02:58:27 USER	[LNKLMN	Loading module EXECSU from file DSK:EXECSU.REL]
+02:58:28 USER	[LNKLMN	Loading module EXECPM from file DSK:EXECPM.REL]
+02:58:29 USER	[LNKLMN	Loading module EXECPS from file DSK:EXECPS.REL]
+02:58:29 USER	[LNKLMN	Loading module EXECPI from file DSK:EXECPI.REL]
+02:58:30 USER	[LNKLMN	Loading module EXECPC from file DSK:EXECPC.REL]
+02:58:31 USER	[LNKLMN	Loading module EXECPX from file DSK:EXECPX.REL]
+02:58:32 USER	[LNKLMN	Loading module EXECPU from file DSK:EXECPU.REL]
+02:58:32 USER	[LNKLMN	Loading module MACREL from file PS:MACREL.REL[4,3]]
+02:58:36 USER	[LNKXCT	EXECPR execution]
+02:58:36 USER	
+02:58:36 USER	Data seg: 6. Pages
+02:58:36 USER	          300. Words free
+02:58:36 USER	
+02:58:36 USER	Pure seg: 98.+29. Pages + symbols
+02:58:37 USER	          120. Words to next page boundary
+02:58:37 USER	
+02:58:37 USER	Save symbols? *Y
+02:58:37 USER	
+02:58:37 USER	Saving EXEC on file: EXEC.EXE.3 [OK]
+02:58:49 MONTR	@
+		
+		;Delete the scratch file:
+		;
+02:58:49 MONTR	@Delete Pexec.Exe
+02:58:49 MONTR	 PEXEC.EXE.1 [OK]
+02:58:49 MONTR	 PEXEC.EXE.2 [OK]
+02:58:50 MONTR	@
+02:58:51 MONTR	Killed Job 24, User PA0B, Account R602, TTY 150, at 24-Nov-82 02:58:51
+02:58:51 MONTR	Disk usage 917 pages ($   0.00 per day)
+02:58:51 MONTR	CPU Time         0:04:29   $   4.48
+02:58:51 MONTR	Connect Time     0:11:45   $   0.08
+02:58:51 MONTR	Working Set          109   $   6.13
+02:58:51 MONTR	Total Charge               $  10.69
+02:58:51 MONTR	These charges were computed at prime time internal rates.
+02:58:51 MONTR	Charges for other resources are not included here.
+02:58:51 MONTR	
+   

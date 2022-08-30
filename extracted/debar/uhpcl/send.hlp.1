@@ -1,0 +1,31 @@
+ Command:
+         SEND
+ 
+Purpose:
+	To do the parsing for the "SEND.EXE" file in a convenient fashion.
+	The PCL just passes everything it parses to the executable program
+	through the rescan buffer.
+ 
+Usage:
+	SEND (to) <destination list> <text string or CRLF>
+   or	SEND /READ:<dérectory>
+ 
+	    The destination list is a list of line numbers, usernames,
+	and/or directories. They are seperated by comma's. A line number
+	sends to the specified terminal, if there is a job on it and if
+	it is a real terminal (not a PTY). The directory specification
+	appends a message to that directory's ACJ.MSG file. A username
+	sends the message to all of the user's jobs that are logged
+	in on "real" terminals. If he doesn't have any jobs, then the
+	message is appended to his directories ACJ.MSG .
+ 
+	    The /READ displays messages sent to a directory.
+ 
+	    If a null destination list is given (i.e. just a "send" and a
+	CRLF are typed), then the executable program parses it's own 
+	destinations.
+ 
+	    If a text string is typed in, then that is used as the message,
+	otherwise the executable program parses a multi-line message terminated
+	with a CNTRL/Z.
+ 

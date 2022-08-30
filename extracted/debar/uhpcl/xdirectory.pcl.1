@@ -1,0 +1,648 @@
+COMMAND XDIRECTORY; ! {Extended Directory}
+!------------------------------------------------------------------------
+! Purpose:
+!	Give a directory listing of files, optionally without  an
+!	extension or generation number, writing the listing  into
+!	a file for  possible later editing  into a command  file.
+!
+!	The   available   switches    will   frequently    permit
+!	construction of command files  without any editing  being
+!	necessary.  The file  names can be  surrounded by  prefix
+!	and suffix  strings, and  placed more  than once  in  the
+!	output.
+!
+!	The general form of the output file is
+!
+!	begintext
+!	prefixFILENAMEsuffix
+!	prefixFILENAMEsuffix
+!	...
+!	prefixFILENAMEsuffix
+!	endtext
+!	
+!	where trailing  and  leading blanks  must  be  explicitly
+!	entered in  the prefix  and suffix  strings if  they  are
+!	required around  the filename.   The begintext,  endtext,
+!	parameter, prefix, and suffix strings can be  dynamically
+!	edited by substituting text for special escape sequences,
+!	\\, \1, \2, \3, \4, \5, \D,  \F, \N, \P, \R, \T, and  \W.
+!	The case of  the letter  following the  backslash is  not
+!	significant;  \W  and  \w  are  equivalent.   The  escape
+!	sequences are as follows:
+!
+!	  Because the escape  character, backslash, may  rarely
+!	  be required in a command,  a double occurrence of  it
+!	  is reduced to a single one  which does not act as  an
+!	  escape on the following  letter.  Thus, "\\"  becomes
+!	  "\" in the output.
+!
+!	  Considering a file  name to  be made up  of the  five
+!	  fields, (1)  device,  (2) directory,  (3)  name,  (4)
+!	  extension, and (5) generation, the sequences \1,  \2,
+!	  \3, \4,  and \5  are  replaced by  the  corresponding
+!	  values for the current file name.  This allows  finer
+!	  control of the file name insertion than is  available
+!	  with the  \F sequence  described below.   These  five
+!	  strings contain NO punctuation; the actual file  name
+!	  string is therefore "\1:<\2>\3.\4.\5"
+!	  
+!	  The special sequence "\D"  (backslash D) is  replaced
+!	  by the current date in the form "dd-mon-yy"  wherever
+!	  it occurs in the prefix and suffix strings.
+!	
+!	  The special sequence "\F"  (backslash F) is  replaced
+!	  by the file  name.  This  can be used  to insert  the
+!	  file name more than once in the output.  The form the
+!	  file name takes depends  on the switches  /EXTENSION,
+!	  /NOEXTENSION, /GENERATION, and /NOGENERATION.
+!
+!	  The special sequence "\N"  (backslash N) can be  used
+!	  to represent a  line break in  the prefix and  suffix
+!	  strings,  since  DEC-20  command  language  does  not
+!	  permit  input  of  quoted  strings  containing   line
+!	  breaks.
+!
+!	  The special sequence "\R"  (backslash R) is  replaced
+!	  by the last read date and time of the current file.
+!
+!	  The special sequence "\P"  (backslash P) is  replaced
+!	  by a page mark (ASCII FF).
+!
+!	  The special sequence "\T"  (backslash T) is  replaced
+!	  by the current time  in the form "hh:mm:ss"  wherever
+!	  it occurs in the prefix and suffix strings.
+!	
+!	  The special sequence "\W"  (backslash W) is  replaced
+!	  by the last write date and time of the current  file.
+!	
+!	The created command  file can  be optionally  immediately
+!	executed  by  the  DO  processor  with  a  user-specified
+!	parameter list.
+!
+! Usage:
+! @XDIRECTORY	{/BEFORE:"date and time, week day, NOW, TODAY, or filename"}-
+!		{/BEGINTEXT:"text"}-
+!		{/DO         | /NODO}-
+!		{/DIRECTORY  | /NODIRECTORY}-
+!		{/ENDTEXT:"text"}-
+!		{/EXTENSION  | /NOEXTENSION}-
+!		{/FILE       | /NOFILE}-
+!		{/GENERATION | /NOGENERATION}-
+!		{/PARAMETERS:"text"}-
+!		{/PREFIX:"text"}-
+!		{/SINCE:"date and time, week day, NOW, TODAY, or filename"}-
+!		{/SUFFIX:"text"}-
+!		{/OUTPUT:"filename"}-
+!		{file specifications}
+!
+! Remarks:
+!	The defaults are:
+!	/BEFORE:NOW
+!	/BEGINTEXT:""
+!	/NODIRECTORY
+!	/NODO
+!	/ENDTEXT:""
+!	/EXTENSION
+!	/FILE
+!	/NOGENERATION
+!	/PARAMETERS:""
+!	/PREFIX:""
+!	/SINCE:first_day_and_time_of_clock
+!	/SUFFIX:""
+!	/OUTPUT:"DSK:XDIRECTORY.MIC;T" 
+!	*.*.0
+!	
+!	The /NODIRECTORY switch suppresses .DIRECTORY files  from
+!	processing, which is usually desirable.
+!
+!	The /BEFORE and SINCE switches can be used to select only
+!	those files last  written in a  specified time  interval.
+!	If a file name is specified,  the last write date of  the
+!	file is used.  An example is given below.
+!
+!	The    switch    /NOEXTENSION    automatically     forces
+!	/NOGENERATION,  since  this  would  otherwise  result  in
+!	syntactically invalid file names in the output file.
+!
+!	The default switches  result in  file names  of the  form
+!	"file.ext", which is  what is most  commonly required  in
+!	command files.   However, if  the files  are not  in  the
+!	connected  directory,  the  names  will  have  the   form
+!	"<directory>file.ext"  if   they  are   on  the   current
+!	structure, and "device:<directory>file.ext"  if they  are
+!	on another  structure.   The short  form  "file.ext"  can
+!	always be obtained from the escape sequence "\3.\4".
+!
+!	If the /DO switch is given, the command
+!
+!	@DO outputfile parameters
+!
+!	is executed, with the two fields taken from the values of
+!	the /OUTPUT  and  /PARAMETERS switches,  and  any  escape
+!	sequences in the parameters field have been  substituted.
+!	
+! Examples:
+!
+!	@XDIRECTORY	/PREFIX:"@directory"-
+!			/SUFFIX:",\N@since today\N@"-
+!			*.FOR
+!
+!	will produce a  XDIRECTORY.MIC file  containing lines  of
+!	the form
+!
+!	@directory FILE1.FOR,
+!	@since today
+!	@
+!	@directory FILE2.FOR,
+!	@since today
+!	@
+!	...etc...
+!
+!	which can then be executed by the command
+!	
+!	@DO FOO
+!
+!	An example with multiple file name substitution is
+!	
+!	@XDIRECTORY	/DO -
+!			/PREFIX:"@DETABF "-
+!			/SUFFIX:",\F\N@COMPILE\F\N"-
+!			*.for
+!
+!	This will  produce  and  execute  a  XDIRECTORY.MIC  file
+!	containing lines of the form
+!
+!	@DETABF file1.FOR,file1.FOR
+!	@COMPILE file1.FOR
+!
+!	@DETABF file2.FOR,file2.FOR
+!	@COMPILE file2.FOR
+!
+!	...etc...
+!
+!	An example with date and time switches is
+!
+!	@XDIREC	/DO -
+!	@	/SINCE:TODAY -
+!	@	/PREFIX:"@sf3 ",-
+!	@	/SUFFIX:"@COMPILE /OPT \3.FOR"
+!	@	*.sf3
+!	
+!	which  will  run  today's  modifications  to  .sf3  files
+!	through the SFTRAN3 preprocessor and then compile them.
+!
+!	Another example is
+!
+!	@XDIREC	/DO -
+!	@	/BEFORE:SFTRAN.INC -
+!	@	/PREFIX:"@sf3 /r ",-
+!	@	/SUFFIX:"@COMPILE /OPT \3.FOR"
+!	@	*.sf3
+!	
+!	which will reprocess all SFTRAN3 files written before the
+!	INCLUDE file was changed.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[30-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+INTEGER	before_time_and_date,
+	curtad,
+	day,
+	date_half,
+	delta,
+	directory,
+	dofile,
+	done,
+	extension,
+	file,
+	generation,
+	hour,
+	index,
+	minute,
+	month,	
+	month_day,
+	NO,
+	OutFileId,
+	process,
+	query,
+	QueryFileId,
+	since_time_and_date,
+	td_selection,
+	time_half,
+	week_day,
+	year,
+	YES;
+
+STRING	answer,
+	begin_text,
+	clock_start,
+	command_string,
+	current_string,
+	date_string,
+	end_text,
+	filename,
+	output_file,
+	parameters,
+	prefix,
+	secret_escape,
+	secret_separator,
+	suffix;
+
+curtad = $CURTAD;
+clock_start = $OUTPUTTAD(0);
+before_time_and_date = -1;
+since_time_and_date = -1;
+NO = 0; 
+YES = 1;
+
+secret_escape = "";		! For protecting \\ sequences.
+secret_separator = "";	! For separating parameter string from
+				! command string.  These must both be 2
+				! characters long; otherwise changes in
+				! the substring operations below are
+				! necessary.
+
+! Set default values for all parameters.
+
+begin_text = "";
+directory = NO;
+dofile = NO;
+end_text = "";
+extension = YES;
+file = YES;
+generation = NO;
+output_file = "DSK:XDIRECTORY.MIC;T";
+parameters = "";
+prefix = "";
+query = NO;
+suffix = "";
+
+GUIDE "of files";
+
+done = NO;
+WHILE done = NO DO 
+PARSE (
+SWITCH(HELP "file specifications, or",
+	WORDS(	OUTPUT::1,
+		PREFIX::2,
+		SUFFIX::3,
+		EXTENSION:4,
+		NOEXTENSION:5,
+		GENERATION:6,
+		NOGENERATION:7,
+		DO:8,
+		NODO:9,
+		PARAMETERS::10,
+		BEFORE::11,
+		SINCE::12,
+		FILE:13,
+		NOFILE:14,
+		DIRECTORY:15,
+		NODIRECTORY:16,
+		QUERY:17,
+		NOQUERY:18,
+		BEGINTEXT::19,
+		ENDTEXT::20),
+	STDHELP):
+	CASE $VALUE FROM 1 TO 20 OF BEGIN
+	[1]:PARSE (FILE (HELP "output file (default DSK:XDIRECTORY.MIC.-1)",
+			DEFAULT_DEV "DSK:",
+			DEFAULT_NAM "XDIRECTORY",
+			DEFAULT_EXT "MIC",
+			OUTPUT ) : output_file = $FILEL);
+	[2]:	PARSE (QUOTEDSTRING(
+			HELP "string which prefixes filename in output",
+			DEFAULT """""") : 
+			prefix = $ATOM);
+	[3]:	PARSE (QUOTEDSTRING(
+			HELP "string which suffixes filename in output",
+			DEFAULT """""") : 
+			suffix = $ATOM);
+	[4]:	BEGIN
+			GUIDE "included on file names";
+			extension = YES
+		END;
+	[5]:	BEGIN
+			GUIDE "or generation number included on file names";
+			extension = NO
+		END;
+	[6]:	BEGIN
+			GUIDE "number included on file names";
+			generation = YES
+		END;
+	[7]:	BEGIN
+			GUIDE "number included on file names";
+			generation = NO
+		END;
+	[8]:	BEGIN 
+			GUIDE "command file when done";
+			dofile = YES
+		END;
+	[9]:	BEGIN 
+			GUIDE "command file when done";
+			dofile = NO
+		END;
+	[10]:	PARSE (QUOTEDSTRING(
+			STDHELP,
+			HELP "string of parameters for DO processor",
+			DEFAULT """""") : 
+			parameters = $ATOM);
+
+	[11]:	before_time_and_date = 
+			GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+
+	[12]:	since_time_and_date = 
+			GENERAL_TIME_AND_DATE_PARSE(curtad,clock_start,0);
+
+	[13]:	BEGIN
+			GUIDE "spec between prefix and suffix";
+			file = YES
+		END;
+	[14]:	BEGIN
+			GUIDE "spec between prefix and suffix";
+			file = NO
+		END;
+	[15]:	BEGIN
+			GUIDE "files included";
+			directory = YES
+		END;
+	[16]:	BEGIN
+			GUIDE "files included";
+			directory = NO
+		END;
+	[17]:	BEGIN
+			GUIDE "user for acceptance";
+			query = YES
+		END;
+	[18]:	BEGIN
+			GUIDE "user for acceptance";
+			query = NO
+		END;
+	[19]:	PARSE (QUOTEDSTRING(
+			STDHELP,
+			HELP "text for beginning of DO file",
+			DEFAULT """""") : 
+			begin_text = $ATOM);
+
+	[20]:	PARSE (QUOTEDSTRING(
+			STDHELP,
+			HELP "text for end of DO file",
+			DEFAULT """""") : 
+			end_text = $ATOM)
+	END; !CASE
+
+OTHERWISE : done = YES);
+
+PARSE (
+FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	DEFAULT_GEN 0,
+	HELP "list of files (default DSK:*.*.0)") : NOP;
+);
+
+OutFileId = $Open (output_file,$Output);
+if query = YES THEN QueryFileId = $Open ("TTY:",$Input);
+!
+! Put the five strings into one to lessen the substitution work.
+!	
+if file = YES 
+THEN command_string = begin_text + secret_separator +
+		prefix + "\F" + suffix + secret_separator + 
+		parameters + secret_separator + end_text
+ELSE command_string = begin_text + secret_separator + 
+		prefix + suffix + secret_separator + 
+		parameters + secret_separator + end_text;
+
+!
+! Perform filename-independent escape substitutions outside of
+! file loop.
+!	
+index = $SEARCHRAISED(command_string,"\\");
+WHILE index > 0 DO
+	BEGIN
+	command_string = command_string[1:index-1] + secret_escape +
+		command_string[index+2:*];
+	index = $SEARCHRAISED(command_string,"\\")
+	END;
+
+index = $SEARCHRAISED(command_string,"\N");
+WHILE index > 0 DO 
+	BEGIN
+	command_string = command_string[1:index-1] + $CRLF + 
+		command_string[index+2:*];
+	index = $SEARCHRAISED(command_string,"\N")
+	END;
+
+index = $SEARCHRAISED(command_string,"\D");
+WHILE index > 0 DO 
+	BEGIN
+	command_string = command_string[1:index-1] + $Date + 
+		command_string[index+2:*];
+	index = $SEARCHRAISED(command_string,"\D")
+	END;
+
+index = $SEARCHRAISED(command_string,"\T");
+WHILE index > 0 DO 
+	BEGIN
+	command_string = command_string[1:index-1] + $Time + 
+		command_string[index+2:*];
+ 	index = $SEARCHRAISED(command_string,"\T")
+	END;
+
+index = $SEARCHRAISED(command_string,"\P");
+WHILE index > 0 DO 
+	BEGIN
+	command_string = command_string[1:index-1] + $CVITC(12) + 
+		command_string[index+2:*];
+ 	index = $SEARCHRAISED(command_string,"\P")
+	END;
+
+td_selection = YES;
+IF before_time_and_date = -1 THEN
+    BEGIN
+    IF since_time_and_date = -1 THEN td_selection = NO;
+    before_time_and_date = curtad
+    END;
+IF since_time_and_date = -1 THEN since_time_and_date = 0;
+
+IF td_selection = YES THEN 
+    BEGIN
+    DISPLAY NORETURN "Processing of files written ";
+    IF since_time_and_date > 0 THEN DISPLAY "SINCE " + 
+        $OUTPUTTAD(since_time_and_date) + " and ";
+    DISPLAY "BEFORE " + $OUTPUTTAD(before_time_and_date)
+    END;
+
+IF query = YES 
+THEN DISPLAY "Query mode: Respond" + $CRLF +
+"Y to accept" + $CRLF +
+"N to reject" + $CRLF +
+"G to accept and stop further queries" + $CRLF +
+"or" + $CRLF +
+"Q to quit";
+
+! Retrieve  the  begin_text   and  end_text   strings  now   that
+! file-independent substitutions have been done.   Command_string
+! contains concatenated strings
+! 
+! begin_text$$prefixsuffix$$parameters$$end_text 
+!
+! which must be separated into
+!
+! begin_text	prefixsuffix$$parameters	end_text
+!
+index =	$SEARCHRAISED(command_string,secret_separator);
+begin_text = command_string[1:index-1];
+command_string = command_string[index+2:*];
+
+index =	$SEARCHRAISED(command_string,secret_separator);
+parameters = command_string[index+2:*];
+command_string = command_string[1:index-1];
+
+index =	$SEARCHRAISED(parameters,secret_separator);
+end_text = parameters[index+2:*];
+parameters = parameters[1:index-1];
+command_string = command_string + parameters;
+
+IF begin_text <> "" THEN CALL $Write (OutFileId,begin_text);
+
+done = NO;
+DO BEGIN
+	IF query = YES
+	THEN BEGIN
+		DO	
+			BEGIN
+			DISPLAY NORETURN $FILEL + " Accept? (Y, N, G or Q) ";
+			answer = $Read(QueryFileId)
+			END
+		UNTIL $SEARCHRAISED("YNGQ",answer[1:1]) > 0;
+		IF $SEARCHRAISED(answer[1:1],"Y") = 1 THEN process = YES
+		ELSE IF $SEARCHRAISED(answer[1:1],"N") = 1 THEN process = NO
+		ELSE IF $SEARCHRAISED(answer[1:1],"G") = 1 THEN query = NO
+		ELSE	BEGIN
+			process = NO;
+			query = NO;
+			done = YES
+			END
+	END
+	ELSE process = YES;
+	IF directory = NO
+	THEN IF $File_Typ($Parse) = "DIRECTORY" 
+	THEN process = NO;
+  	IF $FileInfo_I(-1,$FBWRT) >= since_time_and_date 
+	THEN IF $FileInfo_I(-1,$FBWRT) < before_time_and_date
+	THEN IF process = YES THEN
+	BEGIN
+	IF extension = YES
+	THEN	IF generation = YES
+		THEN filename = $FILEN
+		ELSE filename = $FILES
+	ELSE	filename = $File_Nam($Parse);
+
+!
+!	Perform filename-dependent escape substitutions.
+!	
+	current_string = command_string;
+
+	index = $SEARCHRAISED(current_string,"\F");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			filename + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\F")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\1");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$File_Dev($Parse) + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\1")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\2");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$File_Dir($Parse) + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\2")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\3");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$File_Nam($Parse) + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\3")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\4");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$File_Typ($Parse) + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\4")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\5");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$STRING($Filev) + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\5")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\R");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$OutputTaD($FileInfo_I($Parse,$FBREF)) +
+			current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\R")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\W");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$OutputTaD($FileInfo_I($Parse,$FBWRT)) +
+			current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\W")
+		END;
+	
+	index = $SEARCHRAISED(current_string,secret_escape);
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + "\" +
+			current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,secret_escape)
+		END;
+	
+	index = $SEARCHRAISED(current_string,secret_separator);
+	CALL $Write (OutFileId,current_string[1:index-1])
+
+END;
+IF $Nextfile = 0 THEN done = YES
+END
+UNTIL done = YES;
+
+IF end_text <> "" THEN CALL $Write (OutFileId,end_text);
+
+CALL $Close (OutFileId);
+
+IF dofile = YES THEN 
+	DOCOMMAND ORIGINAL "DO " + output_file + " " + parameters
+
+END; !XDIRECTORY
+ 

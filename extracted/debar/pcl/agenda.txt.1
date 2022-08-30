@@ -1,0 +1,634 @@
+PCL Agenda
+
+*******************************************************************************
+  P C L    R O U T I N E S
+*******************************************************************************
+< > Log Display output to a file
+================================
+call logdisplay ("file");
+call ldisplay (....);
+call closelog;
+All output will go to the log as well as to the display.
+
+< > Smarter systat
+==================
+idea: Friday, 3 December 1982
+Improve systat by allowing things like selecting depending on the
+class:
+
+@systat /class:2 ...
+
+< > GIGI Slide Projection System
+================================
+idea: Friday, 3 December 1982
+Provide a Gigi command to show a single Gigi regis file, or use a tray
+of files a la Slide Projection System"
+
+< > Smart Build command
+=======================
+idea: 7:15pm  Saturday, 27 November 1982
+Would be nice to have a build command with my own preferred defaults,
+and the ability to remember previously set defaults:
+
+@bd /set:permanent:4000
+@bd /set:working:6000
+@bd <truc.machin>
+
+< > UPDATE DIRECTORIES
+======================
+Update one directory with the files of an other
+- possibilities : recursive call for subdirectories
+- wildcard selection of files to update OR directory
+  UPDATE (directory) us:<test> (with) FILES ps:<test>*.b36,ps:<test>*.l36
+  UPDATE (directory) us:<test> (with) DIRECTORY ps:<test>
+   !!! Unless we do subdirectories, the latter is equivalent to FILES *.*
+
+< > GENERAL RUNNING OF PROGRAMS WITH PARSE OF SEVERAL FIELDS
+============================================================
+R RELICS file with wild, directory with wild, etc
+does docommand "relics plus what parsed.
+
+< > AUTOmatic executor of commands
+==================================
+Something to deal with actions to happen on certain occurences:
+
+onmonday {docommand "set alert..."}
+onweekday {...}
+etc
+
+< > AGENDA
+==========
+agenda set (on) date/time message
+agenda [check]
+Sets a file with all necessary occurences (unsorted) with the form:
+date/time message
+Agenda check reads the file and prints actions to occur within a specified
+period of time:
+agenda check [today | laps of time from now]
+
+Agenda: set alert. Sets an alert for times 15 minutes before the
+agenda date/time for things to happen today. 
+
+< > SCREEN ROUTINES
+===================
+idea:   Thursday, 4 November 1982
+SC-SET-POS 	set cursor position  } position is taken/set in
+SC-GET-POS	read cursor position }   SC-HPOS, SC-VPOS
+SC-CEOL		clear to end of line
+SC-CEOS		clear to end of screen
+SC-HOME
+SC-INVERSE	start inverse video
+SC-NORMAL	start normal video
+
+eg	sc-vpos=0; sc-hpos=0; call sc-set-pos;
+
+When needed, use the $JSYS interface; eg: use sfpos/rfpos for
+setting/reading the cursor position.
+
+
+*******************************************************************************
+  P C L    E X T E N S I O N S
+*******************************************************************************
+< > The code in $FileSet is wrong when setting what does use arcf/sftad
+=======================================================================
+Idea: 5:31pm  Thursday, 20 January 1983
+It does not actually matter as both are non implemented.
+And I do not plan to implement them, let the user use the $Jsys
+interface, I have done it and it is real easy.
+
+< > Should The WORDS option always RAISE the words ?
+====================================================
+idea: 3:01pm  Thursday, 20 January 1983
+The unquoted form or Words does raise its input. The quoted form does
+not. Which is right ?/???////???
+
+< > Add $tab system constant
+============================
+idea: 12:57pm  Wednesday, 19 January 1983
+It is somehow unsafe to keep necessary tabs as such in pcl source files.
+	"hallo" + $tab;
+is better than
+	"hallo	"; where an invisible tab is lurking
+
+< > Implement the ARCF features in $FileSet
+===========================================
+idea: 12:45pm  Wednesday, 19 January 1983
+Necessary for certain commands like cancelling a migration request.
+
+< > Coerce integers to strings in catenation operation
+======================================================
+idea: Wednesday, 5 January 1983
+Allow string expression to be:
+   s [// s1 ....]
+   where s=string primary
+         s1 = string primary, or integer primary
+              If integer, will be coerced to string
+Eg:
+	display "Value is :" + $value;
+	mystr = "value = " + $value;
+
+< > Allow IRREPLEACABLE COMMANDS
+================================
+Would it be nice to have the ability to save an exec where some of the
+original (or pcl) commands are both irreplaceable and non readable ???
+Can't remember why exactly...
+
+< > Add $TermType, undocument $TType
+====================================
+idea: Friday, 3 December 1982
+$Termtype would be more regular than $ttype (still supported).
+
+< > Token in command arguments returns an integer when it should not
+====================================================================
+idea: Friday, 3 December 1982
+In cpprsi, the typtbl table is wrong for parsing a token.
+Also, I suspect that it goes wrong for the "special" parses like
+Filelist, etc.
+
+
+< > Add SELECTRAISED and SELECTALLRAISED
+========================================
+Idea: Sunday, 28 November 1982
+These would raise both the test expression AND the tag cases (if they
+are strings)
+
+< > EXtend $fileset for code to update the fdb on disk
+======================================================
+idea: Sunday, 28 November 1982
+Currently $FileSet does not immediately update the directory on the
+disk. The call
+     call $fileset (fil, -1,anything, anything)
+would update the directory on the disk.
+
+< > Allow procedures that return a value to be simply called
+============================================================
+idea: Sunday, 28 November 1982
+eg If $jsys returns a value, allow the reference:
+call $jsys1 (...)
+This would mean "throwing" the returned value. Note: this raises some
+questions as to compiling the code...
+
+< > Check invalid inputs to default, etc
+========================================
+idea: 12:59am  Thursday, 25 November 1982
+A number of commands may only accept primitive integer or strings as
+input. For example:
+	parse (keyword (default $connecteddirectory))
+is not acceptable, because not a really primitive string. Acceptable
+inputs are simple string/integer constant or variable. Anything else
+should be rejected (including system variables implemented by a
+function). Issue a warning in these cases.
+
+< > Implement a type field for the stack
+========================================
+idea: Wednesday, 24 November 1982
+When temp strings or integers are pushed on the stack, their type is
+lost. Try to implement a parallel stack:
+   stk_typ[.stkp] giving the type
+This would improve error checking in pcegop, and be generally useful.
+
+< > Extend input accepted by parse of date and time
+===================================================
+idea: 10:07pm  Thursday, 11 November 1982
+Would be nice to have much more flexible input for parsing date/time:
+     parse (date);
+Should use the same code as the exec for "set alert":
+     accepts - date/time,
+             - day of week + optional increment,
+             - could add "NOW"
+             - TODAY, YESTERDAY, TOMORROW
+I may use the code for the UDTR Jsys as found in execsu.
+That code allows for quite a number of things:
+  parsing with possibility of time, relative time in the future (+),
+  relative time in the past(-), etc.
+  Eg: /after:monday actually means first thing tuesday morning !!
+      /after:monday 10:00 should mean monday 10:00:01
+I could simply reuse the code for the uuo. Otherwise, replicate the
+code as a reasonnably clean routine for parsing within PCL itself.
+Probably neater this way, and would have more control on it.
+See "date_time.mac".
+
+< > True and False until we have Boolean variables
+==================================================
+idea: 12:44pm  Wednesday, 19 January 1983
+I have taken routines to return 1 if true, 0 if false. This is not
+always consistent. For instance $eof returns 0 when at eof. This
+should be improved.
+
+< > Necessary extensions
+========================
+idea: atemporal
+- logical conditions :
+   if expression   instruction
+   [else [if expression] instruction ...]
+
+  where expression may be log-prim {and|or} ... and such
+  like
+
+- boolean variables
+
+- vectors of integers
+
+- ?? reals
+
+< > CONSTANTS
+=============
+idea: late october 82
+Presently, integer constants are treated as system variables, which
+makes the index into the table in execps.mac larger than needed, and
+execution slower than needed. We could simply create in execps.mac a
+new type "CTN" for integer constants, and add checks in SCAN to return
+the integer value as if an integer constant had been returned.
+For this, it would be necessary to have the constants appear AFTER
+everything else so that the usual offsets in the table, which will be
+actually used in the instruction words, remain small.
+
+< > Make libraries of commands
+==============================
+idea: Thursday, 25 November 1982
+It would be very nice to:
+- have the commands grouped by the name of their original file as a library,
+- be able to UNDECLARE LIBRARY library-name,
+- be able to put in a library a command like _SETUP_library-name which is
+  run at load time when declaring the library,
+- have a command that declares (loads) a library if it is not yet there:
+  command _setup_filref;
+  docommand  "pclib pcl:utility.env";
+  n.b. pclload could check for file.env, else for file.pcl
+Each command could have somewhere a tag giving its library
+appartenance, or keep a library list, with pointers to the commands
+(do not forget to clear them if deleting an individual command...)
+
+Problem:
+  what do we do if two libraries are loaded with different names, but
+  containing some commond command names??
+  In Emacs, each library has its own commands, and the one loaded last
+  has priority. 
+  However, in PCL, commands are REDEFINED, and old copies are not
+  kept. Would that be possible in PCL, or should the redefined commands
+  "belong" to the second library loaded ...?
+
+< > Alternate environments
+==========================
+idea: Thursday, 25 November 1982
+It would be nice to be able to define alternative pcl environments (hereforth
+called pcl views), and to have the ability to switch from one to the other
+without having to undeclare all and declare again. This would give the
+following scenario:
+
+- starting from scratch:
+- @decl env cmd1
+- @decl env cmd2
+		The (default) view  "pcl" contains cmd1,cmd2
+- @decl view text
+		The view "text" contains nothing else than the standard
+		exec
+- @decl pcl cmd3
+		It now contains cmd3
+- @set view pcl
+		We come back to cmd1,cmd2
+- @set view (for pcl) text
+		And back to cmd3
+I should look up the command table layout. This should be possible using
+alternative alternate command blocks chained to the basic exec command block.
+I believe we could have:
+- basic exec commands, LESS the @deleted ones
+- deleted exec commands, for "original ..."
+- alternative command tables, each implementing a "view".
+At each point, standard command parsing would use:
+   the basic exec command table + ONE alternative command table.
+
+< > Add debug variable $genins (undocumented) displaying generated code
+=======================================================================
+idea: Friday, 12 November 1982
+If $genins > 0 then display all the instructions generated during
+compilation of pcl code. Would be useful for debugging.
+
+
+*******************************************************************************
+  P C L   P R O B L E M S
+*******************************************************************************
+< > MULTIPLE LABELS ARE NOT DETECTED
+====================================
+idea: 12:42pm  Wednesday, 19 January 1983
+Multiple occurences of the same label in a command or procedure are
+not detected. This may lead to lon troubleshooting matches with Pcl
+code.
+
+
+< > FIX CHECK OF PARSE DEFAULTS
+===============================
+idea: 1:58am  Saturday, 13 November 1982
+See comments on checking in restrictions chapter.
+
+
+
+*******************************************************************************
+  P C L   R E S T R I C T I O N S
+*******************************************************************************
+< > NO DOCOMMAND STATEMENT DURING PARSE
+=======================================
+The execution of a "docommand" while a parse is in progress (i.e. before
+a parse (eol) has been executed sends pcl wild: it either hangs, or
+uses the ordinary exec command table, etc.
+
+< > PARSE DEFAULTS MUST BE STRING PRIMARY
+=========================================
+MED 1:38am  Saturday, 13 November 1982
+
+All the defaults used in Parse statements must be either:
+
+  a string constant	  "mydefault"
+  or a string variable    str
+
+It is wrong to use more complex string expressions like:
+
+  a string expression	  str + ".dat"
+  a system procedure
+         or variable      $connecteddirectory
+  a string procedure      mystrproc
+
+This is caused by the fact that the latter expressions cause the
+generation of pcl pseudo- instructions which the parse execute routine
+does NOT execute. Hence, 2 consequences:
+  - the default is not properly set up,
+  - the instructions may be executed at some later time, resulting
+    in wasted storage.
+The solution is to use a temp string for building the default.
+As this is quite easy, this is defined as a restriction.
+
+*** Unfortunately, PCL does not detect the use of system variables
+    implemented as functions and system procedures in this context. This
+    is the really unfortunate part.
+    This may be cured by checking in cpprso, after scan(), that we
+    have either a variable not implemented by a proc or a constant;
+    the "string-iness" will be checked by cpprsm. See the code for
+    cpprsm for the tests needed.
+
+One general solution, albeit quite complex, would be to generate code like:
+         goto beta;
+  alpha: --code needed to compile the expression-- (see cpsexp)
+  beta:
+and to store the addresses [alpha+1,,beta] as the argument for the
+default. When the parse code needs the default, it should then call a
+"mini executer" to execute those instructions, grab the temp string
+created for itself, used it, and free it when the parse is complete.
+
+
+*******************************************************************************
+   P C L   Internals
+*******************************************************************************
+PCL VARIABLES: PCEGOP
+=====================
+PCEGOP returns integer/string variables.
+The variables may be either:
+ user variables : opn_cls filed = OPN_CLS_VAR
+    User variables are further:
+    local variables,      ste_cls = ste_cls_var
+    global variables,               ste_cls_gbl
+    user procedures                 ste_cls_fml
+ system variables : opn_cls = opn_cls_syn
+    !!! within opn_cls_syn, we have system variables: syn_cls = syn_cls_var
+                                and system procedures:           ?
+ constants : opn_cls = opn_cls_cns
+ temporaries : opn_cls = opn_cls_tmp
+
+Nb Temporaries are created when a routine is called with:
+   routine (12+13, "abc" + "cde")
+   The constant, and the string are put on the stack.
+
+Nb When temporaries are given as arguments to routines, they are not checked
+   for type compatibility. This happens because the argument list to the
+   system procedure points to temporaries living on the stack.
+
+
+*******************************************************************************
+<*> STRINGS NOT RELEASED [pcl bug]
+========================
+If a PCL command calls constantly a procedure which uses a lot of local
+strings, the Free space gets quickly exhausted. Why ?
+
+<*> System Variable $Xatom, returning the exact atom typed by the
+user. [extension]
+=======================================================================
+Would be necessary for instance when parsing
+   PARSE (FILE (WILD,...))
+   where $atom is set to the first file matching the parse    and $patom would be the complete spec, with wild card.
+   $patom should always be available.
+
+<*> PARSING PROBLEM WITH EOL [problem]
+============================
+The following parse loops without getting back to the user:
+   LOOP:
+   PARSE (FILE (WILD,...);
+          EOL: GOTO FINI);
+   GOTO LOOP;
+   FINI:
+The file filed is parsed ok, the carriage return is parsed, and the action
+it should prompt is never taken !!!
+
+<*> POLISH FILREF [pcl routines]
+=================
+med 6:45pm  Thursday, 4 November 1982
+Have filref use the codes $getfield, etc
+
+<*> $TERMLENGTH [extension]
+===============
+done: Monday, 8 November 1982
+idea:   Thursday, 4 November 1982
+Needed in several applications
+
+<*> JSYS Interface and related variables/routines [extension]
+=================================================
+idea:   Thursday, 4 November 1982
+done:   Wednesday, 10 November 1982
+PCL needs a jsys interface. In turn that means:
+ - ability to set registers,
+ - ability to put in a register a pointer to a string (constant or built),
+ - ability to set up blocks of storage for argument lists,
+ - ability to access registers after jsys
+ - ability to access blocks of storage set up by the jsys,
+ - ability to make a PCL string from an asciz string held in a storage
+   block set up by the jsys,
+ - access to the jfn corresponding to a channel,
+ - access to the directory number of a directory (provided by $directoryinfo_i)
+ - ability to test the jsys for success or error,
+ - ability to print the last error encountered.
+Suggested answers:
+ - $REG1, $REG2, $REG3, $REG4 : 4 read only variables
+      if $jsys (code,ac1,ac2) eql 1 ...
+      if $reg2 eql ...
+ - $GET-MEM(12) allocates a block of 12 locations and returns its address
+     !! the words allocated are zeroed !!
+ - $RET-MEM(adr,12) releases the block
+      $reg1 = $getmem(10)   !r1 points to a block of 10 words
+      jsys(code)
+ - $PUTMEM(adr,value [,repeat]) puts value in location adr, and repeats
+ - $VALMEM(adr) returns the value of storage address adr
+      result = $valmem(adr)
+ - $STRMEM(adr) returns a PCL string copied from the Asciz string found at
+      location adr
+ - $JFN(channel) returns the jfn associated with channel
+ - integer = $JSYS(code [,ac1[,ac2[,ac3[,ac4]]]]);
+   call $JSYS1 (...);
+      The ac's 1 to 4 are set up from the optional arguments,
+      the jsys is executed,
+      the ac's 1 to 4 are copied to $reg1..$reg4.
+   $jsys Returns 1 for success, and 0 for failure. $JSYS1 is called.
+ - $STRADR (string) returns the real address of a string,
+     integer = $stradr("abcd")
+     integer = $stradr(string-variable)
+     This will be useful:
+      $reg1 = gj%fou + gj%sht;
+      $reg2 = $setfield (8%440700,0,18, $stradr("ps:<debar>test.dat");
+
+   MIND: because temporary variables are created if an argument is not
+   a single atom (integer or string, variable or constant),
+      $reg1 = $stradr (filename + ".for")
+      $reg1 = $stradr ( $filel));
+   would both fail abysmally because the argument is on the stack,
+   and has to be released before exiting the routine.
+   The form
+      tstr = filename + ".for";
+      $reg1 = $stradr(tstr) 
+   MUST BE USED.
+
+   $stradr (string) should be coded as a call to pcegop with type string
+   asked for, and knowing that we will not have full guarantee that the
+   string is not a temporary. We could create a more extensive version of
+   pcegop, returning the type of variable. Probably not worth the effort.
+
+<*> Change order of arguments of $setfield [extension/change]
+==========================================
+idea: Wednesday, 10 November 1982
+done: Friday, 12 November 1982
+The arguments should be:
+   i = $setfield (field, word, pos, wid);
+This makes it more compatible with things like:
+   call $iput (value,location,...)
+
+<*> Allow inline comments [extension]
+=========================
+idea: Wednesday, 10 November 1982
+done: Friday, 12 November 1982
+Sometimes it would be very nice to have in-line comments:
+  call jsys1 (74 !{pbout}!, 7 !bell!);
+
+The syntax !{ ... }! easily allows multi-line comments, and is less
+likely of breaking existing programs than !...!.
+
+<*> Multiple tags in Case and Select statements, Add SelectAll
+==============================================================
+idea: Saturday, 13 November 1982
+done: 12:30am  Monday, 22 November 1982
+Allow:
+case i from 0 to 5 of begin
+ [0,1]:
+ [2,3]:
+ end;
+
+ditto for select.
+
+Add a Selectall which falls thru:
+selectall i of begin
+  [0,1]:
+  [2,3]:
+  [0,2]:
+  end;
+
+Also, allow tags of the form  :
+  m to n
+  "s1" to "s2"
+
+<*> Provide procedure $isfile (filename)
+========================================
+idea: Friday, 12 Novembre 1982
+dine: Wednesday, 24 November 1982
+$isfile checks if "filename" exists, with defaults:
+    dsk:filename.ext, highest generation
+REturns 1 if it does exist, 0 if not.
+eg:
+   if $isfile("connect.cmd") eql 1 then
+       docommand ("take connect.cmd");
+
+<*> Allow (words ("aaa":1,...)) form
+====================================
+idea: Friday, 12 November 1982
+done: Wednesday, 24 November 1982
+Nelson is right, we need this for parsing switches like 68-cobol,
+which is not a "normal" identifier.
+
+<*> Allow file name in fileinfo_i and fileinfo_s, file_dev, file_dir,file_nam
+================================================= file_typ, ADD file_gen
+idea: Wednesday, 10 November 1982                               ========
+done: Wednesday, 24 November 1982
+e.g. i = $fileinfo_i ("myfile" + ".pcl", 12);
+Needs code to allow a routine to receive either a string or an integer.
+This means that pcegop is extended to return an output argument
+(Does Bliss allow it to be optional ???).
+When we parse a string:
+   - get a jfn, say it is temporary (flag)
+   - do the job
+   - release the jfn
+n.b.
+One could do:
+     str = $file_dev ("ps:<debar.w>myfile.pcl");
+to get "ps".
+
+<*> Access to all parts of a file name
+======================================
+idea: early novembre
+done: Wednesday, 24 November 1982
+Similar to $fileL, file_dev(file), etc:
+$filepart(1),...
+for:
+   device directory name extension generation
+
+BUT:
+
+Could be provided differently by an extension of $fileinfo_s:
+    $fileinfo_s (file, filed-code [,format]);
+if the field-code < 0 then:
+    use format as JFNS format control.
+Desired effects:
+   device =	$fileinfo_s (file,-1, 8%100000000000)
+   directory =	                      8%010000000000)
+   name =                             8%001000000000)
+   extension =                        8%000100000000)
+   generation =                       8%000010000000)
+Could also possibly be achieved by something like:
+   str = $fileinfo_s (file, code [,format-bits),
+where code is one of:
+   $fdbdev, $fdbdir, $fdbnam, $fdbext, $fdbgen, $fdbfmt
+   $fdbfmt says that there is a third argument giving the format to
+use.
+
+<*> Have $string output Magnitude if radix neq 10
+=================================================
+idea: Wednesday, 24 November 1982
+done: Wednesday, 24 November 1982
+Will be the most generally useful option.
+
+<*> Give more explicit error message if environment is incompatible
+===================================================================
+idea: Wednesday, 24 November 1982
+done: 12:30am  Thursday, 25 November 1982
+
+The message should be like:
+"Your environment file is not compatible with this version of PCL.
+ Use @declare pcl-routines and then @Preserve to recompile it."
+
+
+<*> CD with connect.cmd, unconnect.cmd
+======================================
+New @CD (to) directory which:
+- takes unconnect.cmd in current directory
+- connects to the destination
+- takes connect.cmd there
+
+<*> RESET FILE READ/WRITE COUNTS
+================================
+Set the read/write counters to zero, and set the date last written to current
+time and date. Usage: for subsequent filref.
+
+  

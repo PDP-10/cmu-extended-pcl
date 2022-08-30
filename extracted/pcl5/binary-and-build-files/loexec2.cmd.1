@@ -1,0 +1,30 @@
+;<5.PCL>LOEXEC2.CMD.1, 23-Nov-82 00:37:51, Edit by PA0B
+;Created.  Do an EXECUTE @LOEXEC2.CMD to build an Exec with
+;both PCL and multi-forking.
+;
+%"SYMSEG:HIGH TTY:/LOG/LOGL:5, DSK:PEXEC/SAVE/SET:.HIGH.:124000"
+EXECGL.REL			;Universal symbols
+EXECPR.REL			;Global storage
+EXECVR.REL			;Version information
+EXEC0.REL			;Top-level command input, SYSTAT
+EXECC2.REL			;Configuration variants
+EXEC1.REL			;Miscellaneous commands
+EXECSE.REL			;SET commands and ^ESET commands
+EXECMT.REL			;Tape and disk mounting
+EXECP.REL			;Program commands (like RUN, DDT, CONTINUE)
+EXECIN.REL			;INFORMATION commands
+EXEC2.REL			;COPY, APPEND, TYPE
+EXEC3.REL			;DIRECTORY-class commands
+EXEC4.REL			;BUILD, ^ECREATE, INFO DIRECTORY
+EXECED.REL			;EDIT, CREATE commands
+EXECCS.REL			;COMPIL-class commands
+EXECQU.REL			;QUEUE-class commands
+EXECSU.REL			;Subroutines
+EXECPM.REL			;PCL Macro routines
+EXECPS.REL			;PCL Service routine table
+EXECPI.REL			;PCL Interface
+EXECPC.REL			;PCL Compiler
+EXECPX.REL			;PCL Executer
+EXECPU.REL			;PCL Utilities
+SYS:MACREL.REL
+ 

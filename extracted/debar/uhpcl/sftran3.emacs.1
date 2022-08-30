@@ -1,0 +1,1403 @@
+!* PS:<BEEBE>SFTRAN3.EMACS.172 15-Oct-82 11:26:08, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.171  5-Oct-82 20:24:30, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.169  4-Jul-82 09:00:07, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.167 26-Nov-81 12:09:35, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.157 25-Nov-81 19:19:23, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.155 12-Nov-81 10:50:58, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.154  3-Nov-81 13:40:08, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.152  1-Nov-81 10:33:42, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.151 31-Oct-81 16:50:48, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.138 30-Oct-81 19:17:47, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.135 25-Oct-81 09:58:46, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.132 24-Oct-81 21:08:56, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.113 23-Oct-81 14:50:46, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.112  8-Oct-81 18:31:37, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.109 20-Jul-81 08:46:32, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.107 25-Jun-81 18:44:25, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.105 16-Jun-81 18:58:18, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.103 13-Jun-81 20:18:55, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.88 12-Jun-81 17:53:58, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.76 10-Jun-81 13:10:27, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.73  6-Jun-81 17:10:49, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.67  5-Jun-81 16:44:08, Edit by BEEBE!
+!* PS:<BEEBE>SFTRAN3.EMACS.65  4-May-81 18:56:37, Edit by BEEBE!
+!* -*- TECO -*- !
+!* These macros for supporting SFTRAN3 supplement the functions!
+!* available in the underlying FORTRAN mode.!
+
+!* --Nelson H.F. Beebe, Department of Physics, College of Science!
+!*                      Computer, University of Utah, Salt Lake City, !
+!*                      UT 84112 !
+!*                      Tel: (801) 581-5254!
+
+
+!~Filename~:! ! SFTRAN3 Editing macros !
+SFTRAN3
+
+
+
+!SFTRAN3 Mode:! !C Set up for SFTRAN3 editing.
+SFTRAN3  Mode  includes   all  of  the   features  of  FORTRAN   mode,
+supplemented (or sometimes replaced) by the following commands.
+
+M-@        SFTRAN3 Date Edit (insert comment with current date)       
+C-M-B      DO BLOCK...END BLOCK
+C-M-E      ELSE IF () THEN
+C-M-F      DO FOR ... END FOR
+C-M-J      IF () THEN ... ELSE ... END IF
+C-M-K      DO CASE () ... END CASE
+C-M-L      CASE i (automatically generates i)
+C-M-O      DO FOREVER ... END FOREVER
+C-M-P      PROCEDURE () ... END PROCEDURE
+C-M-S      SUBROUTINE () ... END PROGRAM
+C-M-T      FUNCTION () ... END PROGRAM
+C-M-U      DO UNTIL () ... END UNTIL
+C-M-W      DO WHILE () ... END WHILE
+C-X-#      Renumber CASE Statement
+C-X-D      Increment CASE Number
+
+In the  case of  control  constructs, indentation  is  automatically
+adjusted so that a  linefeed will move to  the correct level  inside
+the construct.  Mark is  set following the last  line inserted by  a
+command, so that if you wish to undo an insertion, you can  position
+to the beginning of the first inserted line (usually with C-A), then
+wipe it out with  C-W.  If you do  so, the current statement  column
+will then be indented one level too many, and must be manually reset
+to the correct value with Tab or C-X-..
+
+Some additional functions which may be useful are:
+
+M-X Convert FORTRAN Comments to SFTRAN3 Comments
+                              Change comments C to C$ to preserve
+			      their indentation.
+
+M-X Paginate SFTRAN3          Insert page marks at beginning of
+                              marked region of buffer and after each
+			      END PROGRAM statement. 
+
+M-X Unpaginate SFTRAN3        Remove page marks.
+
+M-X Paginate PROCEDUREs       Insert page marks at beginning of
+                              marked region of buffer and after each
+			      END PROCEDURE statement (or after any
+			      comments which follow it).  
+
+M-X Unpaginate PROCEDUREs     Remove page marks.
+
+M-X Sort PROCEDUREs           Sort PROCEDUREs into alphabetical
+                              order in the marked region of the
+			      buffer. 
+
+M-X Sort SFTRAN3 Routines     Sort routines into alphabetical order.!
+
+!* If we are already in SFTRAN3 Mode, exit immediately.!
+
+@F=MODE/SFTRAN3/"E  'W
+
+M(M.M &_Init_Buffer_Locals)W
+
+!* Initialize the FORTRAN environment first, then make our local changes.!
+
+M(M.M FORTRAN_Mode)W
+
+!* Define some useful abbreviations for the FORTRAN dotted operators.!
+!* These have to come before any key assignments, because Word Abbrev!
+!* Mode uses some keys that we want ourselves.!
+!* The first step is to turn on Word Abbrev Mode and create a local!
+!* Q-register for the syntax table.!
+!* The second step is to remove <>=#|~ and bang from the variable WORDAB Ins!
+!* Chars so that they do not cause expansion of the abbreviation.  The!
+!* third step is to redefine their Word and LISP syntax to be letters,!
+!* because Word Abbrev Mode forbids break characters to have!
+!* abbreviations.  The last step is to use Make Word Abbrev to connect!
+!* abbreviations to their expansions for SFTRAN3 mode only.  Note that!
+!* it appears to be necessary to have the reversed order => and =<!
+!* instead of the usual <= and <=, because the latter expand immediately!
+!* after the first character.  Word Abbrev Mode apparently works on a!
+!* "first match" basis in its lookup, rather than on the minimum unique!
+!* abbreviation.  For the same reason, <> cannot be used, so # is in its!
+!* place.  Anyway, it is shorter and just as easy to remember.  Both!
+!* bang and vertical bar are defined as .OR. because they look too much!
+!* alike.!
+
+:I0@;$%^&*-_+[]()\:`"'{},./?
+_	
+
+!* Create local variables for Word Abbrev Mode if they do not exist yet.!
+
+-999FO..QWord_Abbrev_Mode+999"E 0M.L Word_Abbrev_Mode'
+-999FO..QWORDAB_Ins_Chars+999"E 0M.L WORDAB_Ins_Chars'
+
+QWord_Abbrev_Mode"E		    !* IF Word Abbrev Mode has not!
+				    !* been selected yet, then!
+				    !* define our abbreviations.!
+Q0UWORDAB_Ins_Chars
+
+1M(M.M Word_Abbrev_Mode)
+
+WM(M.M Make_Local_Q-Register)..DW :G..DU..D
+0M(M.M &_Alter_..D)&A<A>A|A~A=A#A!A
+1M(M.M &_Alter_..D)._&A<A>A|A~A=A#A!A
+
+1M(M.M Kill_All_Word_Abbrevs)
+1M(M.M Make_Word_Abbrev)&.AND.SFTRAN3
+1M(M.M Make_Word_Abbrev)|.OR.SFTRAN3
+1M(M.M Make_Word_Abbrev)!.OR.SFTRAN3
+1M(M.M Make_Word_Abbrev)<.LT.SFTRAN3
+1M(M.M Make_Word_Abbrev)>.GT.SFTRAN3
+1M(M.M Make_Word_Abbrev)#.NE.SFTRAN3
+1M(M.M Make_Word_Abbrev)=<.LE.SFTRAN3
+1M(M.M Make_Word_Abbrev)=>.GE.SFTRAN3
+1M(M.M Make_Word_Abbrev)==.EQ.SFTRAN3
+1M(M.M Make_Word_Abbrev)~.NOT.SFTRAN3
+1M(M.M Make_Word_Abbrev)FMTFORMAT_(SFTRAN3
+'
+
+!* First put the FORTRAN functions on keys.  I don't like how this!
+!* is done, but I have not yet figured out how to retain FORTRAN!
+!* Mode's key definitions when I start a new mode.!
+
+M(M.M &_Init_Buffer_Locals)W
+
+1,M.M ^R_FORTRAN_Backward_SentenceM.Q..AW
+
+1,M.M ^R_FORTRAN_Backward_TabM.Q...HW
+
+1,M.M ^R_FORTRAN_BLOCKDATAM.Q...BW
+
+1,M.M ^R_FORTRAN_CALLM.Q...KW
+
+1,M.M ^R_FORTRAN_CHARACTERM.Q...CW
+
+1,M.M ^R_FORTRAN_Change_DateM.Q..!W
+
+1,M.M ^R_FORTRAN_COMMONM.Q.../W
+
+1,M.M ^R_FORTRAN_COMPLEXM.Q...XW
+
+1,M.M ^R_FORTRAN_Continuation_Line_NextM.Q..JW
+
+1,M.M ^R_FORTRAN_Copy_Parenthesized_ExpressionM.Q..)W
+
+1,M.M ^R_FORTRAN_CONTINUEM.Q...UW
+
+1,M.M ^R_FORTRAN_DATAM.Q...AW
+
+1,M.M ^R_FORTRAN_Date_EditM.Q..@W
+
+1,M.M ^R_FORTRAN_DOUBLEPRECISIONM.Q...DW
+
+1,M.M ^R_FORTRAN_Eliminate_CommentM.Q...;W
+
+1,M.M ^R_FORTRAN_Eliminate_Multiple_SpacesM.Q.._W
+
+1,M.M ^R_FORTRAN_ENDM.Q...EW
+
+1,M.M ^R_FORTRAN_Fill_RegionM.Q..G
+
+1,M.M ^R_FORTRAN_Fill_Tab_Field_with_SpacesM.Q..IW
+
+1,M.M ^R_FORTRAN_Find_DateM.Q..&W
+
+1,M.M ^R_FORTRAN_Find_Unmatched_ParenthesisM.Q..(W
+
+1,M.M ^R_FORTRAN_FORMATM.Q...OW
+
+1,M.M ^R_FORTRAN_Forward_ItemM.Q../W
+
+1,M.M ^R_FORTRAN_Forward_SentenceM.Q..EW
+
+1,M.M ^R_FORTRAN_FUNCTIONM.Q...FW
+
+1,M.M ^R_FORTRAN_GOTOM.Q...GW
+
+1,M.M ^R_FORTRAN_Hollerith_TextM.Q.."W
+
+1,M.M ^R_FORTRAN_Hollerith_Text_and_LengthM.Q..`W
+
+1,M.M ^R_FORTRAN_IFM.Q...JW
+
+1,M.M ^R_FORTRAN_IMPLICITM.Q...MW
+
+1,M.M ^R_FORTRAN_IndentM.QIW
+
+1,M.M ^R_FORTRAN_INTEGERM.Q...IW
+
+1,M.M ^R_FORTRAN_LOGICALM.Q...LW
+
+1,M.M ^R_FORTRAN_Mark_SentenceM.Q..SW
+
+1,M.M ^R_FORTRAN_Merge_Continuation_with_PreviousM.Q..^W
+
+1,M.M ^R_FORTRAN_Move_to_Comment_FieldM.Q..;W
+
+1,M.M ^R_FORTRAN_Move_to_Next_Comment_FieldM.Q..NW
+
+1,M.M ^R_FORTRAN_Move_to_Previous_Comment_FieldM.Q..PW
+
+1,M.M^R_FORTRAN_Minus_ConstantM.Q...-
+
+1,M.M ^R_FORTRAN_NAMELISTM.Q...NW
+
+1,M.M ^R_FORTRAN_NewlineM.Q
+W
+
+1,M.M ^R_FORTRAN_Operator_PadM.Q..*W
+
+1,M.M^R_FORTRAN_ParameterM.Q...P
+
+1,M.M^R_FORTRAN_Plus_ConstantM.Q...+
+
+1,M.M ^R_FORTRAN_Quoted_to_Hollerith_TextM.Q..'W
+
+1,M.M ^R_FORTRAN_READM.Q...QW
+
+1,M.M ^R_FORTRAN_REALM.Q...RW
+
+1,M.M ^R_FORTRAN_Right-adjust_LabelM.Q..#W
+
+M(M.M Make_Local_Q-reg).X(	)W
+1,M.M ^R_FORTRAN_Rigidly_IndentU:.X(	)W
+
+M(M.M Make_Local_Q-reg).X(.)W
+1,M.M ^R_FORTRAN_Set_Statement_ColumnU:.X(.)W
+
+1,M.M ^R_FORTRAN_Show_ColumnsM.Q..=W
+
+1,M.M ^R_FORTRAN_Show_Declaration_ColumnsM.Q..+
+
+1,M.M ^R_FORTRAN_SUBROUTINEM.Q...SW
+
+1,M.M ^R_FORTRAN_WRITEM.Q...WW
+
+M(M.M Make_Local_Q-reg).X(
+)W
+1,M.M &_Generate_Indented_Continued_FORTRAN_StatementU:.X(
+)W
+
+!* Now put the SFTRAN3 functions on keys, perhaps replacing some!
+!* of the above! 
+
+1,M.M ^R_SFTRAN3_CASE_iM.Q...LW
+
+1,M.M ^R_SFTRAN3_Date_EditM.Q..@W
+
+1,M.M ^R_SFTRAN3_DO_BLOCKM.Q...BW
+
+1,M.M ^R_SFTRAN3_DO_CASE_()_..._END_CASEM.Q...KW
+
+1,M.M ^R_SFTRAN3_DO_FOREVER_..._END_FOREVERM.Q...OW
+
+1,M.M ^R_SFTRAN3_DO_FOR_..._END_FORM.Q...FW
+
+1,M.M ^R_SFTRAN3_DO_UNTIL_()_..._END_UNTILM.Q...UW
+
+1,M.M ^R_SFTRAN3_DO_WHILE_()_..._END_WHILEM.Q...WW
+
+1,M.M ^R_SFTRAN3_ELSE_IF_()_THENM.Q...EW
+
+1,M.M ^R_SFTRAN3_FUNCTIONM.Q...TW
+
+M(M.M Make_Local_Q-reg).X(D)W
+1,M.M ^R_SFTRAN3_Increment_CASE_NumberU:.X(D)W
+
+1,M.M ^R_SFTRAN3_IF_()_THEN_..._ELSE_..._END_IFM.Q...JW
+
+1,M.M ^R_SFTRAN3_PROCEDURE_()_..._END_PROCEDUREM.Q...PW
+
+M(M.M Make_Local_Q-reg).X(#)W
+1,M.M ^R_SFTRAN3_Renumber_CASE_StatementU:.X(#)W
+
+1,M.M ^R_SFTRAN3_SUBROUTINEM.Q...SW
+
+!* Define our local variables, as well as some modifications of FORTRAN's!
+
+1M.L Auto_Fill_Mode
+
+72M.L Fill_Column
+
+0M.C SFTRAN3_Abstract_Format*_0 = no-op; non-0=insert_abstract_header_and_date_in_SUBROUTINE/FUNCTION_Insertion
+
+:I*--M.C SFTRAN3_Inline_Comment_String*_1-_or_2-character_string
+
+:I*C$____M.L FORTRAN_Comment_Prefix
+
+M.L SFTRAN3_Abstract_Format
+
+M.L SFTRAN3_Inline_Comment_String
+
+M.L FORTRAN_Column_6		    !* Make this variable local!
+
+M.L FORTRAN_Comment_Prefix
+
+0M.L SFTRAN3_CASE_NumberW
+
+0M.L SFTRAN3_CASE_Statement_ColumnW
+
+!* Finally, set the mode line. !
+
+Q.0,1M(M.M &_Set_Mode_Line)SFTRAN3W
+
+
+
+!Convert FORTRAN Comments to SFTRAN3 Comments:! !C Convert FORTRAN
+comments to SFTRAN3 comments by replacing a blank or dash or
+end-of-line in column 2 by a dollar sign.  M-X Undo will undo this
+command. !
+
+:I*Convert_FORTRAN_Comments_to_SFTRAN3_Comments_inM(M.M &_Save_Region_and_Query)F"E'
+
+.[0				    !* Save Q0 and current point.!
+
+BJ				    !* Start at beginning of buffer!
+
+13I 10I	BJ			    !* Insert a dummy CRLF and go!
+				    !* back to beginning.!
+
+<				    !* LOOP over buffer!
+
+:S
+C
+c ;			    !* Search for a comment line,!
+				    !* exiting if none found.!
+
+(-1,1A-32)*(-1,1A--)"E	    !* If col. 2 = blank or dash!
+
+	1D I$'			    !* THEN replace by dollar!
+
+"# (-1,1A-13)"E			    !* ELSE IF col. 2 = CR!
+
+	I$'			    !* THEN insert a dollar!
+
+'				    !* END IF!
+
+:C				    !* Advance one character!
+
+>				    !* END LOOP over buffer!
+
+BJ 2D				    !* Delete the initial CRLF we!
+				    !* inserted at the start!
+
+Q0J				    !* Move back to entry point!
+				    !* (approximately) !
+
+B,Z 				    !* Return to caller, indicating!
+				    !* possibly whole buffer!
+				    !* modified.!
+
+
+!Paginate PROCEDUREs:! !C Remove existing page marks, then insert page
+marks after every END  PROCEDURE statement (or  if there are  comments
+following the END PROCEDURE, after them).  Changes are limited to  the
+region between point and mark.  Page marks consist of the sequence  FF
+CR LF at the end of  a line, so that the  FF will not be visible  when
+the page editing commands (C-X  P, C-X C-P, C-X  C-[ and C-X C-])  are
+used to concentrate editing on a single page at a time.  The  function
+M-X Unpaginate PROCEDUREs may be  used to remove page marks  installed
+by this function.!
+
+.[0[9				    !* Save Q-registers and current!
+				    !* point in Q0!  
+
+!* PAGE library function use temporarily suppressed.  ^R Join Next!
+!* Page gets a NIB error and fails to do anything.!
+
+!*M.A PAGE^R_Insert_PagemarkU9!   !* Save the Insert Pagemark!
+				    !* function in Q9.  It is!
+				    !* normally not loaded.!
+
+@:I9/12I 13I 10I/		    !* Function to insert a FF CR LF!
+				    !* at end-of-line!
+
+1M.L Page_Flush_CRLF		    !* Indicate page delimiter is!
+				    !* CRLF FF CRLF!
+
+M(M.M Unpaginate_PROCEDUREs)	    !* Remove any existing pagemarks.!
+
+W				    !* Flush current value.!
+
+BJ				    !* Go to beginning of buffer.!
+
+M9				    !* Insert leading pagemark!
+
+<				    !* LOOP over all lines in buffer.!
+
+@F_	R		    !* Position to first character!
+				    !* which is not a blank or tab.!
+
+.-Z"E 0;'			    !* IF end-of-buffer THEN exit!
+				    !* loop.! 
+
+.,.+3F~END"E			    !* IF text is "END" (ignoring!
+				    !* letter case) ! 
+
+	.+3J			    !* THEN Position to character!
+				    !* following "END"!
+
+	@F_	R	    !* Position to first character!
+				    !* which is not a blank or tab.!
+
+	.,.+9F~PROCEDURE"E	    !* IF next word is PROCEDURE!
+
+		<		    !* THEN LOOP flushing comment!
+				    !* lines! 
+
+		1L		    !* Move to start of next line.!
+
+		.-Z"E 0;'	    !* Exit loop if at end-of-buffer.!
+
+
+		(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"N 0;'
+				    !* IF line is not a comment,!
+				    !* exit loop!
+
+		>		    !* END LOOP (flushing comments)!
+
+		@M9		    !* Insert a pagemark after the!
+				    !* CRLF.!  
+
+		'		    !* END IF (next word is PROCEDURE)!
+
+	.+3-Z"G 0;'		    !* IF we are at end-of-buffer, exit!
+				    !* loop.! 
+
+'				    !* END IF (text is "END")!
+
+1L				    !* Move to beginning of next!
+				    !* line.!
+
+>				    !* END LOOP (over lines)!
+
+W				    !* Flush value.!
+
+Q0J				    !* Return to where we started!
+				    !* from (approximately, since we!
+				    !* inserted text in the buffer).!
+
+				    !* Return to caller.!
+
+
+!Paginate SFTRAN3:! !C Remove existing page marks, then insert page
+marks at beginning of buffer and after every END statement
+(including the last).  The command M-X Sort Pages in the SORT
+Library may be used to sort the routines into almost alphabetical
+order (ordered BLOCK DATA, FUNCTIONs PROGRAMs SUBROUTINEs).  Page
+marks consist of the sequence FF CR LF at the end of a line, so that
+the FF will not be visible when the page editing commands (C-X P,
+C-X C-P, C-X C-[ and C-X C-]) are used to concentrate editing on a
+single page at a time.  The function M-X Unpaginate SFTRAN3 may be
+used to remove page marks installed by this function.!
+
+.[0[9				    !* Save Q-registers and current!
+				    !* point in Q0!  
+
+!* PAGE library function use temporarily suppressed.  ^R Join Next!
+!* Page gets a NIB error and fails to do anything.!
+
+!*M.A PAGE^R_Insert_PagemarkU9!   !* Save the Insert Pagemark!
+				    !* function in Q9.  It is!
+				    !* normally not loaded.!
+
+@:I9/12I 13I 10I/		    !* Function to insert a FF CR LF!
+				    !* at end-of-line!
+
+1M.L Page_Flush_CRLF		    !* Indicate page delimiter is!
+				    !* CRLF FF CRLF!
+
+M(M.M Unpaginate_SFTRAN3)	    !* Remove any existing pagemarks.!
+
+W				    !* Flush current value.!
+
+BJ				    !* Go to beginning of buffer.!
+
+M9				    !* Insert leading pagemark!
+
+<				    !* LOOP over all lines in buffer.!
+
+@F_	R		    !* Position to first character!
+				    !* which is not a blank or tab.!
+
+.-Z"E 0;'			    !* IF end-of-buffer THEN exit!
+				    !* loop.! 
+
+.,.+3F~END"E			    !* IF text is "END" (ignoring!
+				    !* letter case) ! 
+
+	.+3J			    !* THEN Position to character!
+				    !* following "END"!
+
+	@F_	R	    !* Position to first character!
+				    !* which is not a blank or tab.!
+
+	.,.+7F~PROGRAM"E	    !* IF next word is PROGRAM!
+
+		1L @M9'		    !* THEN we have a valid END!
+				    !* statement, so insert a!
+				    !* pagemark after the CRLF.! 
+
+		.+3-Z"G 0;'	    !* IF we are at end-of-buffer, exit!
+				    !* loop.! 
+
+		'		    !* END IF (next word is PROGRAM)!
+
+	'			    !* END IF (text is "END")!
+
+1L				    !* Move to beginning of next!
+				    !* line.!
+
+>				    !* END LOOP (over lines)!
+
+W				    !* Flush value.!
+
+Q0J				    !* Return to where we started!
+				    !* from (approximately, since we!
+				    !* inserted text in the buffer).!
+
+				    !* Return to caller.!
+
+
+!Sort PROCEDUREs:! !C Sort PROCEDUREs into alphabetical order.   The
+PROCEDUREs in  the buffer  region between  point and  mark are  sorted
+alphabetically.  Mark  should be  set  at the  beginning of  the  line
+containing the first PROCEDURE statement,  and point should be at  the
+beginning of the line following  the last END PROCEDURE statement,  or
+after any comments which  follow it it  they are to  be kept with  the
+last PROCEDURE.  Page  marks are inserted  around each PROCEDURE,  the
+SORT library function Sort Pages is invoked to sort them, and then the
+page marks are removed.!
+
+:,.F [0F[VB			    !* Put B at start of!
+				    !* region, point at end.!
+
+Q0J				    !* Go to the end of the region.!
+
+FS Z-.F[VZ			    !* Set Z at end of region!
+
+M(M.M Paginate_PROCEDURES)W
+
+ZJ				    !* Go to end of expanded region so!
+				    !* that SORT PAGES will work on!
+				    !* entire region B..Z!
+
+M(M.A SORTSort_Pages)W
+
+ZJ				    !* Go to end of expanded region so!
+				    !* that Unpaginate PROCEDUREs will!
+				    !* work on the entire region B..Z!
+
+M(M.M Unpaginate_PROCEDUREs)W
+
+				    !* Return to caller!
+
+
+!Sort SFTRAN3 Routines:! !C Sort SFTRAN3 routines alphabetically in the
+buffer region between point and mark.  This function works by invoking
+the command M-X  Paginate SFTRAN3,  then searches the  page for  BLOCK
+DATA, PROGRAM, SUBROUTINE, and FUNCTION keywords, and if one is found,
+the routine name  is extracted  and stored in  a comment  line at  the
+beginning of the page.   A private version of  the Sort Pages  command
+from the  SORT library  which suppresses  the Save  for Undo  is  then
+invoked to sort the routines.   The leading comment lines inserted  in
+the previous  step are  then  deleted and  finally, the  function  M-X
+Unpaginate SFTRAN3 is invoked to  remove the page marks.  The  comment
+lines  inserted  are  intentionally  prefixed  with  leading   control
+characters (5 ^Q's) to make them  unique.  You can undo the effect  of
+this command with M-X Undo.!
+
+:I*Sort_SFTRAN3_Routines_inM(M.M &_Save_Region_and_Query)F"E'
+
+0[1[2[3[4			    !* Save Q-registers!
+
+:,.F [0F[VB			    !* Put B at start of!
+				    !* region, point at end.!
+
+Q0J				    !* Go to the end of the region.!
+
+FS Z-.F[VZ			    !* Set Z at end of region!
+
+WM(M.M Paginate_SFTRAN3)W
+
+ZJ				    !* Move to end of paginated region.!
+
+:,.F [0F[VB			    !* Put B at start of!
+				    !* region, point at end.!
+
+Q0J				    !* Go to the end of the region.!
+
+FS Z-.F[VZ			    !* Set Z at end of region!
+
+BJ				    !* Move to beginning of buffer!
+
+:I3C			    !* Special comment line to be!
+				    !* inserted at start of each page.!
+
+<				    !* LOOP over all pages in the buffer!
+
+.+3-Z"G 			    !* Exit loop at end-of-buffer.  ^R!
+				    !* Next Page positions point after!
+	!ZJ!			    !* the FF and before the following!
+	!G3 I	13I 10I!    !* CRLF, so we allow for that here.!
+	0;'			    !* We insert an identifying comment!
+				    !* line on the last empty page which!
+				    !* will keep it there as the last page.!
+
+
+
+1L				    !* Move to beginning of first line!
+				    !* following page mark.!
+
+.U0				    !* Save location of start of first!
+				    !* line.! 
+
+1:SSUBROUTINEPROGRAMFUNCTIONBLOCKDATABLOCK_DATA"L
+				    !* IF we found a keyword!
+
+	.U1			    !* THEN remember where we are!
+
+	FKC			    !* Back up to beginning of matching!
+				    !* string! 
+
+	.,.+5F~BLOCK"E		    !* IF we found BLOCK DATA!
+		Q0J		    !* THEN go back to start of buffer!
+
+		G3 IBLOCK_DATA 13I 10I'
+				    !* and insert identifying comment!
+				    !* line.! 
+
+	"#			    !* ELSE (not BLOCK DATA)!
+
+		Q1J		    !* Return to end of match!
+
+		@F_	R  !* Skip forward to first non-blank,!
+				    !* non-tab! 
+
+		.U1		    !* Save position!
+
+		@:F(_
+	R  
+				    !* Skip forward to next left!
+				    !* parenthesis, blank, CR, LF, FF!
+				    !* or tab.!  
+
+		Q1,.X4		    !* Save routine name in Q4!
+
+		Q0J		    !* Return to start of page!
+
+		G3 G4 13I 10I	    !* Insert identifying comment!
+
+	''			    !* END IF (BLOCK DATA)!
+
+"#				    !* ELSE (did not find keyword)!
+
+	Q0J			    !* Return to start of page!
+
+	G3 13I 10I		    !* Insert empty identifying comment!
+				    !* line! 
+
+'				    !* END IF!
+
+1M(M.M ^R_Next_Page)W		    !* Advance to next page!
+
+>				    !* END LOOP (over buffer pages)!
+
+ZJ				    !* Goto end of buffer!
+
+:,.F [0F[VB			    !* Put B at start of!
+				    !* region, point at end.!
+
+Q0J				    !* Go to the end of the region.!
+
+FS Z-.F[VZ			    !* Set Z at end of region!
+
+M(M.M &_Sort_FORTRAN_Pages)	    !* Sort the pages with our private!
+				    !* version of the SORT library Sort!
+				    !* Page function which does not do a!
+				    !* Save for Undo internally.!
+
+ZJ				    !* Goto end of buffer!
+
+-1,0A-12"E 13I 10I'		    !* If last character is FF, insert!
+				    !* CR LF to make a proper pagemark;!
+				    !* Sort screws this up.!
+
+BJ				    !* Goto beginning of buffer!
+
+<				    !* LOOP over all pages!
+
+.-Z+3"G 0;'			    !* Exit if at end-of-buffer!
+
+1L				    !* Go to beginning of first line.!
+
+.,.+6F=3"E 1K'		    !* Kill matching comment line!
+
+1M(M.M ^R_Next_Page)W		    !* Advance to next page!
+
+>				    !* END LOOP (over buffer pages)!
+
+ZJ				    !* Go to end of buffer!
+
+:,.F [0F[VB			    !* Put B at start of!
+				    !* region, point at end.!
+
+Q0J				    !* Go to the end of the region.!
+
+FS Z-.F[VZ			    !* Set Z at end of region!
+
+
+WM(M.M Unpaginate_SFTRAN3)W
+
+				    !* Return to caller!
+
+!Unpaginate PROCEDUREs:! !C Remove pagemarks from PROCEDUREs!
+
+M(M.M Unpaginate_FORTRAN)W
+
+				    !* Restore registers and return to!
+				    !* caller. !
+
+!Unpaginate SFTRAN3:! !C Remove pagemarks from SFTRAN3 file.!
+
+M(M.M Unpaginate_FORTRAN)W
+
+				    !* Restore registers and return to!
+				    !* caller. !
+
+!^R SFTRAN3 CASE i:! !^R Insert CASE i Statement (generating next i).
+Invoked by ^R SFTRAN3 CASE i!
+
+[0[1[2				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+QSFTRAN3_CASE_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+Q1+1+QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+				    !* Update current statement column.!
+
+ICASE_
+
+QSFTRAN3_CASE_Number+1USFTRAN3_CASE_Number
+				    !* Increment CASE number!
+
+QSFTRAN3_CASE_Number\		    !* and insert in buffer.!
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+QFORTRAN_Statement_Column-1<I_>  !* Position for next statement.!
+
+.U2				    !* Save current point!
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Return to current point!
+
+				    !* Restore Q-registers and return to !
+				    !* caller. !
+
+!^R SFTRAN3 Date Edit:! !^R Insert comment line with current date.!
+
+0L				    !* Move to start of current line.!
+
+WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of line.!
+
+GFORTRAN_Comment_Prefix
+
+I(				    !* Insert C$   (NN-MON-YY)!
+
+0,(FSDATE)FSFDCONV
+
+-9D				    !* Kill time field.!
+
+I)
+
+-3M(M.M ^R_Uppercase_Word)	    !* Convert date to uppercase!
+
+0L 7C (-1,1A-32)"E 1D I0 -1C' 10C  !* Change leading blank in date!
+				    !* to 0 and position following!
+				    !* date field for end-of-line!
+				    !* insertion. !
+
+WM(M.M ^R_CRLF)W
+
+				    !* Return to caller.!
+
+
+!^R SFTRAN3 DO BLOCK:! !^R Insert DO BLOCK ... END BLOCK Statement.
+Invoked by ^R SFTRAN3 DO BLOCK!
+
+[0[1[2				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+IDO_BLOCK 
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+QFORTRAN_Block_Indentation<I_> .U2 
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+1+QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+				    !* Update current statement column.!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+IEND_BLOCK 
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to start location.!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R SFTRAN3 DO CASE () ... END CASE:! !^R Insert DO CASE () ... END
+CASE.  Invoked by ^R SFTRAN3 DO CASE () ... END CASE!
+
+[0[1[2				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+QFORTRAN_Statement_ColumnUSFTRAN3_CASE_Statement_Column
+				    !* Save CASE statement indentation.!
+
+1USFTRAN3_CASE_Number		    !* Initialize case number counter.!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+IDO_CASE_() .-1U2
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+1+QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+				    !* Update current statement column.!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+ICASE_1
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+ICASE_OTHER
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+IEND_CASE
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to start location.!
+
+
+
+
+!^R SFTRAN3 DO FOR ... END FOR:! !^R Insert DO FOR ... END FOR
+Statement.  Invoked by ^R SFTRAN3 DO FOR ... END FOR!
+
+[0[1[2				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+IDO_FOR_ .U2
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+1+QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+				    !* Update current statement column.!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+IEND_FOR
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to start location.!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R SFTRAN3 DO FOREVER ... END FOREVER:! !^R Insert DO FOREVER ... END
+FOREVER Statement.  Invoked by ^R SFTRAN3 DO FOREVER ... END FOREVER!
+
+[0[1[2				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+IDO_FOREVER
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+QFORTRAN_Block_Indentation<I_> .U2
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+1+QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+				    !* Update current statement column.!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+IEND_FOREVER
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to start location.!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R SFTRAN3 DO UNTIL () ... END UNTIL:! !^R Insert DO UNTIL () ... END
+UNTIL Statement.  Invoked by ^R SFTRAN3 DO UNTIL () ... END UNTIL!
+
+[0[1[2				    !* Save Q-registers!
+
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+IDO_UNTIL_() .-1U2
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+1+QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+				    !* Update current statement column.!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+IEND_UNTIL
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to start location.!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R SFTRAN3 DO WHILE () ... END WHILE:! !^R Insert DO WHILE () ... END
+WHILE Statement.  Invoked by ^R SFTRAN3 DO WHILE () ... END WHILE!
+
+[0[1[2				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+IDO_WHILE_() .-1U2
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+1+QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+				    !* Update current statement column.!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+IEND_WHILE
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to start location.!
+
+
+
+!^R SFTRAN3 ELSE IF () THEN:! !^R Insert ELSE IF () THEN statement.
+The statement  is inserted  at  one indentation  level higher  than  the
+current one, on the premise that one is already inside an IF  statement.
+Invoked by ^R SFTRAN3 ELSE IF () THEN!
+
+[0[1[2				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-QFORTRAN_Block_Indentation-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level, less 1.!
+
+IELSE_IF_()_THEN .-6U2
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to start location.!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R SFTRAN3 FUNCTION () ... END PROGRAM:! !^R Insert FUNCTION () ...
+END PROGRAM Statements.  
+Invoked by ^R SFTRAN3 FUNCTION () ... END PROGRAM!
+
+[0				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+1,M(M.M &_Read_Line)Enter_function_TYPE_(C,D,R,I,L)_and_end_with_CR:_F"E'[0
+				    !* Read a line into Q0. The!
+				    !* funny business with F"E etc!
+				    !* is simply a dummy conditional!
+				    !* which extracts the string!
+				    !* argument returned by the!
+				    !* subroutine to get it into Q0.!
+				    !* I found this usage in the!
+				    !* Send Mail command in!
+				    !* <EMACS>TMUCS.EMACS. !
+
+FQ0:"G '			    !* Exit immediately if the!
+				    !* string has no characters in!
+				    !* it.  The user may have!
+				    !* reconsidered and simply typed!
+				    !* a CR in response to the prompt.!
+
+!Decode!
+@F~0/C/"E I______COMPLEX_'
+"# @F~0/D/"E I______DOUBLE_PRECISION_'
+"# @F~0/I/"E I______INTEGER_'
+"# @F~0/L/"E I______LOGICAL_'
+"# @F~0/R/"E I______REAL_'
+"# 1,M(M.M &_Read_Line)You_must_type_one_of_(C,D,I,L,R):_F"E'[0
+	FQ0:"G ' ODecode'''''
+
+1,M(M.M &_Read_Line)Enter_function_NAME_and_end_with_CR:_F"E'[0
+
+FQ0:"G '
+
+IFUNCTION__ G0 I_()  .-1U0
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+QSFTRAN3_Abstract_Format"N	    !* IF abstract format requested!
+
+     GFORTRAN_Comment_Prefix
+
+     I()			    !* THEN insert header and date!
+				    !* comment lines.!
+
+     WM(M.M ^R_CRLF)W 
+
+     1M(M.M ^R_SFTRAN3_Date_Edit)
+
+     '				    !* END IF!
+
+IINLINE( GSFTRAN3_Inline_Comment_String I)
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+I______RETURN
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+I______END_PROGRAM
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to insert routine name.!
+
+				    !* Restore Q-registers and return to !
+				    !* caller.!
+
+!^R SFTRAN3 IF () THEN ... ELSE ... END IF:! !^R Insert IF () THEN ... ELSE
+... END IF Statement.
+Invoked by ^R SFTRAN3 IF () THEN ... ELSE ... END IF!
+ 
+[0[1[2				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+QFORTRAN_Statement_Column-1U1
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+IIF_()_THEN .-6U2
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+1+QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+				    !* Update current statement column.!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+IELSE
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+
+IEND_IF
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to start location.!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R SFTRAN3 Increment CASE Number:! !^R Increment the next CASE index by
+1.  A positive argument will repeat the command for the next arg CASE  k
+statements.  A negative argument repeats  the command for the next  -arg
+CASE k statements, decrementing the case  number by 1.  A zero  argument
+causes an  immediate  exit.   This  command  is  useful  if  it  becomes
+necessary to insert a new CASE in the middle of a DO CASE ...  END  CASE
+statement.  Mark is set at the beginning of the search.  The command  is
+terminated at the  first word  CASE which is  not followed  by a  number
+greater than 0.  Invoked by ^R SFTRAN3 Increment Case!
+
+[0[1[2				    !* Save Q registers!
+
+WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at point!
+
+"N U1' "# '		    !* Get arg, exiting if = 0!
+
+Q1"L -Q1U1 -1U2' "# 1U2'	    !* Get abs(arg) in Q1, increment in!
+				    !* Q2.! 
+
+Q1<				    !* LOOP arg times!
+
+	S_CASE			    !* Find the next CASE k!
+
+	<1C -1,1A-32"N 0;'>	    !* Flush spaces.!
+
+	\U0			    !* Read CASE number from buffer.!
+
+	Q0:"G 0;'		    !* If number <= 0, exit loop.  This!
+				    !* happens if the next character is!
+				    !* not a digit (e.g. CASE OTHER or!
+				    !* END CASE encountered)!
+
+	1M(M.M ^R_Backward_Kill_Word)	    !* Delete the old number!
+
+	Q0+Q2\			    !* Insert old number +/- 1!
+
+>				    !* END LOOP!
+
+				    !* Restore Q-registers and return to!
+				    !* caller. !
+
+
+!^R SFTRAN3 PROCEDURE () ... END PROCEDURE:! !^R Insert PROCEDURE () ...
+END PROCEDURE Statement.  
+Invoked by ^R SFTRAN3 PROCEDURE () ... END PROCEDURE!
+
+[0[1[2				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+6U1				    !* Set procedure indentation - 1!
+				    !* in Q1.! 
+
+GFORTRAN_Comment_Prefix	    !* Insert a comment line!
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1<I_>				    !* Position to procedure!
+				    !* indentation level.!  
+
+IPROCEDURE_() .-1U2
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+Q1+1+QFORTRAN_Block_IndentationUFORTRAN_Statement_Column
+				    !* Update current statement column.!
+
+Q1<I_>				    !* Position to current!
+				    !* indentation level.!  
+IEND_PROCEDURE
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q2J				    !* Move back to start location.!
+
+				    !* Restore Q-registers and return to 
+				    !* caller. !
+
+!^R SFTRAN3 Renumber CASE Statement:! !^R With point inside a DO CASE
+... END CASE statement block, search backward to the DO CASE  statement,
+then  renumber  all  succeeding  CASE k  statements.   The processing is
+terminated at the  first word  CASE which is  not followed  by a  number
+greater than 0, so that it will normally terminate at the CASE OTHER  or
+END CASE  statement.   Mark is  set  at  the beginning  of  the  search.
+Invoked by ^R SFTRAN3 Renumber CASE Statement!
+
+[0[1				    !* Save Q registers!
+
+WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at point!
+
+-SDO_CASE			    !* Position to the DO CASE statement.!
+
+1L				    !* and drop down to next line!
+
+0U1				    !* Initial CASE number!
+
+<				    !* LOOP over CASE statement!
+
+	S_CASE_		    !* Find the next CASE k!
+
+	<-1,1A-32"N 0;' 1C>	    !* Flush spaces.!
+
+	\U0			    !* Read CASE number from buffer.!
+
+	Q0:"G 0;'		    !* If number <= 0, exit loop.  This!
+				    !* happens if the next character is!
+				    !* not a digit (e.g. CASE OTHER or!
+				    !* END CASE encountered)!
+
+	1M(M.M ^R_Backward_Kill_Word)	    !* Delete the old number!
+
+	%1\			    !* Increment previous CASE number!
+				    !* and insert in buffer.!
+
+>				    !* END LOOP!
+
+				    !* Restore Q-registers and return to!
+				    !* caller. !
+
+!^R SFTRAN3 SUBROUTINE () ... END PROGRAM:! !^R Insert SUBROUTINE () ...
+END PROGRAM Statements.  
+Invoked by ^R SFTRAN3 SUBROUTINE () ... END PROGRAM!
+
+[0				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+1,M(M.M &_Read_Line)Enter_subroutine_NAME_and_end_with_CR:_F"E'[0
+
+				    !* Read a line into Q0. The!
+				    !* funny business with F"E etc!
+				    !* is simply a dummy conditional!
+				    !* which extracts the string!
+				    !* argument returned by the!
+				    !* subroutine to get it into Q0.!
+				    !* I found this usage in the!
+				    !* Send Mail command in!
+				    !* <EMACS>TMUCS.EMACS. !
+
+FQ0:"G '			    !* Exit immediately if the!
+				    !* string has no characters in!
+				    !* it.  The user may have!
+				    !* reconsidered and simply typed!
+				    !* a CR in response to the prompt.!
+
+
+I______SUBROUTINE__ G0 I_()  .-1U0
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+QSFTRAN3_Abstract_Format"N	    !* IF abstract format requested!
+
+     GFORTRAN_Comment_Prefix
+
+     I()			    !* THEN insert header and date!
+				    !* comment lines.!
+
+     WM(M.M ^R_CRLF)W 
+
+     1M(M.M ^R_SFTRAN3_Date_Edit)
+
+     '				    !* END IF!
+
+IINLINE( GSFTRAN3_Inline_Comment_String I)
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+I______RETURN
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+I______END_PROGRAM
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+1L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to insert routine name.!
+
+				    !* Restore Q-registers and return to !
+				    !* caller.!
+ 

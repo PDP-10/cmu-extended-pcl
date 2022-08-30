@@ -1,0 +1,5594 @@
+COMMAND alert;
+!------------------------------------------------------------------------
+! Purpose:
+!	Set an alert which survives across login/logout.
+!
+! Usage:
+!	ALERT (me) date_and_time (message) ..text..
+!
+! Remarks:
+!	A SET ALERT command is issued and the command text is appended
+!	to a file ALERT.CMD on the user's login directory.  To ensure
+!	that the alerts are properly set, the LOGIN.CMD file must
+!	contain a command "TAKE ALERT.CMD".
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[01-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE 
+	delta_time,
+	general_time_and_date_parse;
+
+STRING	command_echo,
+	record,
+	temporary_file,
+	alert_file,
+	message;
+
+INTEGER FileId,
+	time_and_date;
+
+alert_file = "PS:<" + $USERNAME + ">ALERT.CMD";
+temporary_file  = "ps:<temp>" + $STRING($TERMNUMBER) + "-alert.tmp;t";
+
+GUIDE "me before";
+
+time_and_date = GENERAL_TIME_AND_DATE_PARSE($CURTAD,"TOMORROW",1);
+
+GUIDE "message text";
+
+PARSE (	TEXT (HELP "alert message text (1..80 characters)") : message = $ATOM);
+
+FileId = $Open (temporary_file,$Output);
+IF FileId = 0 THEN ABORT "Open FAILURE for file " + temporary_file;
+
+record = "SET ALERT " + $OUTPUTTAD(DELTA_TIME(time_and_date,0,-120*60))
+	+ " " + message;
+DOCOMMAND ORIGINAL record TO command_echo;
+CALL $Write (FileId,"! Internal time and date=" + 
+	$STRING(DELTA_TIME(time_and_date,0,-120*60)));
+CALL $Write (FileId,record);
+
+
+record = "SET ALERT " + $OUTPUTTAD(DELTA_TIME(time_and_date,0,-30*60))
+	+ " " + message;
+DOCOMMAND ORIGINAL record TO command_echo;
+CALL $Write (FileId,"! Internal time and date=" + 
+	$STRING(DELTA_TIME(time_and_date,0,-30*60)));
+CALL $Write (FileId,record);
+
+record = "SET ALERT " + $OUTPUTTAD(time_and_date) + " " + message;
+DOCOMMAND ORIGINAL record TO command_echo;
+CALL $Write (FileId,"! Internal time and date=" + $STRING(time_and_date));
+CALL $Write (FileId,record);
+
+CALL $Close (FileId);
+
+DOCOMMAND ORIGINAL "APPEND " + temporary_file + " " + alert_file
+	TO command_echo;
+
+DOCOMMAND ORIGINAL "DELETE " + temporary_file TO command_echo
+
+END; !ALERT
+COMMAND augment;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute the AUGMENT preprocessor, which supports non-standard
+!	arithmetic types in FORTRAN, and also provides a useful
+!	precision conversion facility.
+!
+! Usage:
+!	AUGMENT {switches} inputfile outputfile listingfile
+!
+! Remarks:
+!	
+!	The default  extensions  for  the three  files  are  ".AUG",
+!	".FOR", and ".LST".  The input file name will be assumed for
+!	the output and/or  listing files if  they are omitted.   The
+!	input file is copied to temporary file, and is therefore not
+!	subject to the restrictions  on file names normally  present
+!	with FORTRAN.  The temporary files created in the  connected
+!	directory are of the  form FORnn.DAT with nn  = 05, 06,  20,
+!	and 21. The switches are  supplied only if a conversion  run
+!	is desired:
+!	
+!
+!	
+!	/FROM:type
+!		  Conversion from  the  specified  arithmetic  type.
+!		  Type   may   be   INTEGER,   REAL,   COMPLEX,   or
+!		  DOUBLEPRECISION.
+!			    
+!	/TO:type
+!		  Conversion to the specified arithmetic type.  Type
+!		  may be INTEGER, REAL, COMPLEX, or DOUBLEPRECISION.
+!	
+!	/DBLCOMPLEX
+!		  Include system  definitions  of  double  precision
+!		  complex data type.
+!	
+!	/ENABLE:ALL or ENTER or OUTPUT or SOURCE or SUMMARY 
+!		  Insert *ENABLE keyword  command in AUGMENT  input.
+!		  /ENABLE:ENTER (default) forces each variable  into
+!		  the   symbol   table   as   it   is   encountered.
+!		  /ENABLE:SOURCE    (default)    makes    translated
+!		  statements be echoed as comments.  /ENABLE:SUMMARY
+!		  (default) requests that  the symbol table,  common
+!		  block table, and data type table be printed at the
+!		  end of each program unit.  /ENABLE:OUTPUT requests
+!		  that the translated program appear in the listing.
+!		  /ENABLE:ALL selects all of the other keywords.
+!	
+!	/DISABLE:ALL or ENTER or OUTPUT or SOURCE or SUMMARY
+!		  Turns  off  the   indicated  switch.   OUTPUT   is
+!		  disabled by default.
+!	
+!	/PRINT:ALL or COMMON or TYPE or SYMBOL
+!		  This  switch  may   be  given   more  than   once.
+!		  /PRINT:ALL selects COMMON, TYPE, and SYMBOL.
+!	
+!	It is permissible and useful to have the same type names for
+!	/FROM and /TO; in such a case, AUGMENT will insert  explicit
+!	type declarations for all  undeclared variables, and  remove
+!	all mixed-mode expressions, enhancing the portability of the
+!	code.
+!	
+!	The input file  is assumed  to be a  standard FORTRAN  file,
+!	with no other AUGMENT commands embedded in it.
+!	
+!	If the switches  are omitted,  then it is  assumed that  the
+!	input file contains all necessary AUGMENT commands.
+!	
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[20-Nov-81]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL STRING PROCEDURE
+	filenode,
+	filedevice,
+	filedirectory,
+	filename,
+	systemlog;
+
+INTEGER done,
+	InFileId,
+	OutFileId;
+
+STRING	dblcomplex,
+	from_type,
+	to_type,
+	print_command,
+	enable_command,
+	disable_command,
+	file_name,
+	input_file,
+	listing_file,
+	new_source_file,
+	record;
+
+! Initialize commands with extra trailing character which will be
+! stripped before output.
+
+print_command = "*PRINT ";
+enable_command = "*ENABLE ENTER, SOURCE, SUMMARY,";
+disable_command = "*DISABLE ";
+
+from_type = "";
+to_type = "";
+dblcomplex = "";
+done = 0;
+
+GUIDE "FORTRAN preprocessor";
+
+WHILE done = 0 DO PARSE(
+SWITCH	(HELP "optional switches",
+	STDHELP,
+	WORDS(
+	FROM::1,
+	TO::2,
+	DBLCOMPLEX:3,
+	ENABLE::4,
+	DISABLE::5,
+	PRINT::6)) : 
+	BEGIN
+	CASE $VALUE FROM 1 TO 6 OF BEGIN
+	[1]:	PARSE(KEYWORD(
+		WORDS(
+			INTEGER:1,
+			COMPLEX:2,
+			REAL:3,
+			DOUBLEPRECISION:4),
+		DEFAULT "REAL",
+		STDHELP,
+		HELP "arithmetic data type (default REAL)") : 
+		from_type = $ATOM);
+	[2]:	PARSE(KEYWORD(
+		WORDS(
+			INTEGER:1,
+			COMPLEX:2,
+			REAL:3,
+			DOUBLEPRECISION:4),
+		DEFAULT "DOUBLEPRECISION",
+		STDHELP,
+		HELP "arithmetic data type (default DOUBLEPRECISION)") : 
+		to_type = $ATOM);
+	[3]:	BEGIN
+		dblcomplex = $ATOM;
+		from_type = "";
+		to_type = ""
+		END;
+	[4]:	PARSE(KEYWORD(
+		WORDS(	ENTER:1,
+			OUTPUT:2,
+			SOURCE:3,
+			SUMMARY:4,
+			ALL:5)):IF $VALUE < 5 
+				THEN enable_command = enable_command +
+					" " + $ATOM + ","
+				ELSE enable_command = enable_command +
+					" ENTER, OUTPUT, SOURCE, SUMMARY,");
+	[5]:	PARSE(KEYWORD(
+		WORDS(	ENTER:1,
+			OUTPUT:2,
+			SOURCE:3,
+			SUMMARY:4,
+			ALL:5)):IF $VALUE < 5 
+				THEN disable_command = disable_command +
+					" " + $ATOM + ","
+				ELSE disable_command = disable_command +
+					" ENTER, OUTPUT, SOURCE, SUMMARY,");
+	[6]:	PARSE(KEYWORD(
+		WORDS(	ALL:1,
+			COMMON:2,
+			TYPE:3,
+			SYMBOL:4)) : print_command = print_command + 
+				" " + $ATOM + ",")
+	END
+	END;
+
+OTHERWISE : done = 1
+);
+
+PARSE(
+FILE (HELP "input file",
+	DEFAULT_DEV "DSK",
+	DEFAULT_EXT "AUG",
+	INPUT) : 
+	input_file = $FILEL);
+
+file_name = filename($FILEL);
+listing_file = filenode($FILEL) + filedevice($FILEL) + 
+	filedirectory($FILEL) + filename($FILEL) + ".LST";
+new_source_file =  filenode($FILEL) + filedevice($FILEL) + 
+	filedirectory($FILEL) + filename($FILEL) + ".FOR";
+
+PARSE(
+FILE (HELP "output source file",
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM file_name,
+	DEFAULT_EXT "FOR", 
+	OUTPUT) : new_source_file = $FILEL;
+
+EOL : NOP);
+
+PARSE(
+FILE (HELP "AUGMENT listing file",
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM file_name,
+	DEFAULT_EXT "LST", 
+	OUTPUT) : listing_file = $FILEL;
+EOL : NOP);
+
+record = systemlog("PS:<SUBSYS.UTAH>AUGMENT.USERS");
+
+IF dblcomplex <> "" 
+THEN	DOCOMMAND ORIGINAL "COPY SYS:AUGMENT-DBLCOMPLEX.DESCRIPTION FOR05.DAT"
+ELSE	BEGIN
+	OutFileId = $Open ("FOR05.DAT",$Output);
+	CALL $Close (OutFileId)
+	END;
+
+OutFileId = $Open ("FOR06.DAT",$Output);
+
+CALL $Write (OutFileId,"*BEGIN");
+
+! Strip trailing blank or comma from command strings.
+
+print_command = print_command[1:$LENGTH(print_command)-1];
+enable_command = enable_command[1:$LENGTH(enable_command)-1];
+disable_command = disable_command[1:$LENGTH(disable_command)-1];
+
+IF print_command <> "*PRINT" THEN CALL $Write (OutFileId,print_command);
+IF enable_command <> "*ENABLE" THEN CALL $Write (OutFileId,enable_command);
+IF disable_command <> "*DISABLE" THEN CALL $Write (OutFileId,disable_command);
+
+IF to_type <> "" THEN IF from_type <> "" 
+THEN 	CALL $Write("*CONVERT RESET," + from_type + " - " + to_type);
+
+InFileId = $Open (input_file,$Input);
+
+record = $Read (InFileId);
+WHILE $EOF = 0 DO BEGIN
+	CALL $Write (OutFileId,record);
+	record = $Read (InFileId)
+	END;
+
+CALL $Close (OutFileId);
+CALL $Close (InFileId);
+
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT FOR05.DAT";
+
+IF dblcomplex <> "" 
+THEN	DOCOMMAND ORIGINAL "APPEND SYS:AUGMENT-DBLCOMPLEX.BASIC FOR05.DAT";
+
+OutFileId = $Open ("FOR06.DAT",$Output);
+
+CALL $Write (OutFileId,"*END");
+
+CALL $Close (OutFileId);
+
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT FOR05.DAT";
+
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT";
+
+DOCOMMAND ORIGINAL "DEFINE 5: DSK";
+DOCOMMAND ORIGINAL "DEFINE 6: DSK";
+DOCOMMAND ORIGINAL "DEFINE 20: DSK";
+DOCOMMAND ORIGINAL "DEFINE 21: DSK";
+
+DOCOMMAND ORIGINAL "SYS:AUGMENT";
+
+DOCOMMAND ORIGINAL "RENAME FOR06.DAT " + filenode($FILEL) +
+	filedevice($FILEL) + filedirectory($FILEL) + filename($FILEL) +
+	".LST";
+
+DOCOMMAND ORIGINAL "RENAME FOR20.DAT " + new_source_file;
+
+DOCOMMAND ORIGINAL "DELETE FOR05.DAT";
+
+DOCOMMAND ORIGINAL "DELETE FOR21.DAT";
+
+DOCOMMAND ORIGINAL "DEFINE 5:";
+DOCOMMAND ORIGINAL "DEFINE 6:";
+DOCOMMAND ORIGINAL "DEFINE 20:";
+DOCOMMAND ORIGINAL "DEFINE 21:"
+
+END; !AUGMENT
+COMMAND CF;
+!------------------------------------------------------------------------
+! Purpose:
+!	Optionally preprocess and compile a list of files, providing
+!	a more powerful command than COMPILE/LOAD/EXECUTE.
+!
+! Usage:
+!	CF {switches} filelist
+!
+! Remarks:
+!	Switches may be any valid switches for COMPILE/LOAD/EXECUTE
+!	as well as for PASCAL, PFORT, and SFTRAN3.  The special 
+!	additional switches are as follows: 
+!
+!	/BEFORE:{date and time, or date (time 00:00:01), or time (of
+!	today), or TODAY (time 00:00:01), or NOW (current time and
+!	date)} selects files written before a specified time and
+!	date.  The default value is NOW.
+!
+!	/KEEP suppresses deletion of temporary source files created by
+!	a preprocessor.  
+!
+!	/NOCOMPILE suppresses invocation of the compiler after
+!	preprocessing, as well as suppressing deletion of any temporary
+!	source files created by a preprocessor.
+!
+!	/NOKEEP requests deletion of temporary source files created by
+!	a preprocessor.
+!
+!	/PASSGO requests invocation of PASSGO instead of PASCAL for
+!	files with extension ".PAS".
+!
+!	/PFORT invokes the PFORT Verifier for any file with
+!	extension ".FOR" before invoking the compiler.  If the file
+!	came from SFTRAN3, EMACS is used to remove line numbers
+!	before calling the PFORT Verifier.
+!
+!	/SINCE:{date and time, or date (time 00:00:01), or time (of
+!	today), or TODAY (time 00:00:01),} selects files written
+!	since a specified time and date.  The default value is the
+!	start of the clock (16-Nov-1858 17:00:00).
+!
+!	/TAG:filename restarts the CF command at the specified
+!	file in a wild-carded file list.
+!
+!	The /BEFORE and /SINCE switch defaults are such that, if
+!	they are not specified, all files will be included.
+!
+!	The filelist may include wild-card specifications, and at present
+!	may not contain embedded switches.  The default file extension is
+!	"*", with the intention that one can normally type "@CF FOO" or
+!	often, "@CF /SINCE:TODAY FOO", to compile all files named FOO.
+!	Files with certain prohibited extensions, such as ".EXE", ".REL",
+!	".LST", etc are skipped.
+!
+! Languages supported:
+!	All those known to COMPILE/LOAD/EXECUTE + PASCAL + PASSGO.
+!
+! Preprocessors supported:
+!	PFORT, RATFOR, SFTRAN3, UPDATE.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[01-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+STRING	algol_switches,
+	clock_start,
+	cobol_switches,
+	fail_switches,
+	file_device,
+	file_directory,
+	file_extension,
+	file_generation,
+	file_name,
+	fortran_switches,
+	general_switches,
+	keep,
+	no_compile,
+	pascal_switches,
+	passgo,
+	pfort,
+	pfort_switches,
+	ratfor_switches,
+	sail_switches,
+	sftran3_switches,
+	tag,
+	trace,
+	typeout;
+
+INTEGER before_time_and_date,
+	curtad,
+	done,
+	NO,
+	since_time_and_date,
+	YES;
+
+NO = 0;
+YES = 1;
+curtad = $CURTAD;
+
+algol_switches = "";
+before_time_and_date = curtad;
+clock_start = $OUTPUTTAD(0);
+cobol_switches = "";
+done = NO;
+fail_switches = "";
+fortran_switches = "";
+general_switches = "";
+keep = "/keep";
+no_compile = "";
+pascal_switches = "";
+passgo = "";
+pfort = "";
+pfort_switches = "";
+ratfor_switches = "";
+sail_switches = "";
+sftran3_switches = "";
+since_time_and_date = 0;
+tag = "";
+trace = "";
+
+GUIDE "files to compile";
+
+L1: PARSE(
+SWITCH(WORDS(
+! Don't worry that these are not in alphabetical order, PCL fixes that.
+
+! COMPILE/LOAD/EXECUTE switches
+
+	A68COBOL:2,
+	A74COBOL:2,
+	ALGOL:3,
+	BINARY:1,
+	COBOL:2,
+	COMPILE:1,
+	CREF:8,
+	DDT:1,
+	DEBUG:1,
+	FAIL:4,
+	FORTRAN:5,
+	LANGUAGE_SWITCHES::11,
+	LIBRARY:1,
+	LIST:1,
+	MACRO:1,
+	MAP:1,
+	NOBINARY:1,
+	NOCOMPILE:10,
+	NODEBUG:1,
+	NOLIBRARY:1,
+	NOLIST:1,
+	NOOPTIMIZE:1,
+	NOSEARCH:1,
+	NOSYMBOLS:1,
+	OPTIMIZE:1,
+	RELOCATABLE:1,
+	SAIL:7,
+	SEARCH:1,
+	SNOBOL:1,
+	SYMBOLS:1,
+
+! CF's own switches
+
+	BEFORE::17,
+	KEEP:12,
+	NOKEEP:12,
+	PASSGO:16,
+	PFORT:9,
+	SINCE::18,
+	TAG::19,
+	TRACE:13,
+
+! PFORT switches - note that some of these overlap with SFTRAN3
+
+	D:8,
+	R:8,
+
+! SFTRAN3 switches
+
+	C:8,
+	D:8,
+	H:8,
+	I:8,
+	L:8,
+	M:8,
+	N:8,
+	P:8,
+	R:8,
+	W:5,
+
+! PASCAL/PASSGO switches - there is some overlap with COMPILE/LOAD/EXECUTE
+! which is taken care of in the CASE statement below.
+
+	CARD:14,
+	NOCARD:14,
+	CHECK:14,
+	NOCHECK:14,
+	CODE:14,
+	NOCODE:14,
+	CODESIZE::15,
+	COMPILE:1,
+	NOCOMPILE:10,
+	CREF:1,
+	NOCREF:1,
+	DEBUG:1,
+	NODEBUG:1,
+	EXECUTE:14,
+	NOEXECUTE:14,
+	EXTERN:14,
+	NOEXTERN:14,
+	FILE::15,
+	FORTIO:14,
+	LINK:14,
+	NOLINK:14,
+	LIST:1,
+	NOLIST:1,
+	REGISTER::15,
+	RUNCORE::15),
+	HELP "list of files to be compiled, or switch",STDHELP):
+		BEGIN
+		CASE $VALUE FROM 1 TO 19 OF BEGIN
+
+			[1] : BEGIN
+				general_switches = general_switches +
+				 "/" + $ATOM;
+				SELECT $ATOM OF BEGIN
+				["DEBUG"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["NODEBUG"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["LIST"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["NOLIST"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["CREF"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["NOCREF"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["COMPILE"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				[OTHERWISE] : NOP
+				END
+				END;
+
+			[2] : cobol_switches = cobol_switches + "/" + $ATOM;
+
+			[3] : algol_switches = algol_switches + "/" + $ATOM;
+
+			[4] : fail_switches = fail_switches + "/" + $ATOM;
+
+			[5] : fortran_switches = fortran_switches +
+				 "/" + $ATOM;
+
+			[6] : ratfor_switches = ratfor_switches + "/" + $ATOM;
+
+			[7] : sail_switches = sail_switches + "/" + $ATOM;
+
+			[8] : BEGIN
+				sftran3_switches = sftran3_switches +
+				 "/" + $ATOM;
+				IF $ATOM = "D" THEN pfort_switches =
+					pfort_switches + "/" + $ATOM
+				ELSE IF $ATOM = "R" THEN pfort_switches =
+					pfort_switches + "/" + $ATOM
+				END;
+
+			[9] : pfort = pfort + "/" + $ATOM;
+
+			[10]: BEGIN
+				no_compile = no_compile + "/" + $ATOM;
+				pascal_switches = 
+					pascal_switches + "/" + $ATOM
+				END;
+
+			[11]: PARSE (QUOTEDSTRING : general_switches =
+				general_switches + "/LANGUAGE-SWITCHES:""" + 
+				$ATOM + """");
+
+			[12]: IF $ATOM = "KEEP" 
+				THEN keep = "/KEEP"
+				ELSE keep = "/NOKEEP";
+
+			[13]: trace = trace + "/" + $ATOM;
+
+			[14]: pascal_switches = pascal_switches + "/" + $ATOM;
+
+			[15]: BEGIN
+				pascal_switches = pascal_switches + "/"
+					 + $ATOM;
+				PARSE (NUMBER : pascal_switches = 
+					pascal_switches + $STRING($VALUE))
+				END;
+
+			[16] : passgo = passgo + "/" + $ATOM;
+
+			[17]: before_time_and_date =
+				GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+			[18]: since_time_and_date = 
+				GENERAL_TIME_AND_DATE_PARSE(curtad,
+				clock_start,0);
+			[19] : PARSE(FILE (HELP "file to restart at") : 
+				tag = $FILEL)
+
+		END; ! CASE
+		GOTO L1
+		END; ! SWITCH Parse
+
+
+EOL	:	ABORT "File specification expected";
+
+OTHERWISE:	BEGIN
+		PARSE(FILELIST (DEFAULT_EXT "*") : NOP);
+		done = 1
+		END
+
+); ! end of PARSE
+		
+IF done = 0 THEN PARSE(FILELIST : NOP);
+
+IF tag <> "" ! Skip through file list to desired starting file
+THEN WHILE tag <> $FILEL DO IF $Nextfile = 0 
+	THEN ABORT "/TAG:" + $FILEL + " not found in file list";
+
+DO ! Loop until each file processed
+	BEGIN
+	file_device = $File_Dev($Parse);
+	file_directory = $File_Dir($Parse);
+	file_name = $File_Nam($Parse);
+	file_extension = $File_Typ($Parse);
+	file_generation = "0";
+
+!------------------------------------------------------------------------
+
+	IF trace <> "" THEN BEGIN
+	DISPLAY "Filename=" + $FILEL + 
+		"	Last Write=" + $OUTPUTTAD ($FILEINFO_I(-1,12));
+	DISPLAY "Device=" + """" + file_device + """";
+	DISPLAY "Directory=" + """" + file_directory + """";
+	DISPLAY "Name=" + """" + file_name + """";
+	DISPLAY "Extension=" + """" + file_extension + """";
+	DISPLAY "Generation=" + """" + file_generation + """";
+	DISPLAY "No_compile=" + """" + No_compile + """";
+	DISPLAY "General_switches=" + """" + general_switches + """";
+	DISPLAY "Cobol_switches=" + """" + cobol_switches + """";
+	DISPLAY "Algol_switches=" + """" + algol_switches + """";
+	DISPLAY "Fail_switches=" + """" + fail_switches + """";
+	DISPLAY "Fortran_switches=" + """" + fortran_switches + """";
+	DISPLAY "Pascal_switches=" + """" + pascal_switches + """";
+	DISPLAY "Ratfor_switches=" + """" + ratfor_switches + """";
+	DISPLAY "Sail_switches=" + """" + sail_switches + """";
+	DISPLAY "Sftran3_switches=" + """" + sftran3_switches + """";
+	DISPLAY "Pfort_switches=" + """" + pfort_switches + """";
+	DISPLAY "Passgo=" + """" + passgo + """";
+	DISPLAY "Pfort=" + """" + pfort + """"
+	END;
+!------------------------------------------------------------------------
+
+	IF $FileInfo_I(-1,12) >= since_time_and_date 
+	THEN IF $FileInfo_I(-1,12) < before_time_and_date
+	THEN SELECT file_extension OF BEGIN
+	["ERR"]:	NOP;
+	["PFL"]:	NOP;
+	["SFL"]:	NOP;
+	["INC"]:	NOP;
+	["CMD"]:	NOP;
+	["REL"]:	NOP;
+	["DAT"]:	NOP;
+	["PCL"]:	NOP;
+	["EXE"]:	NOP;
+	["LST"]:	NOP;
+
+	!************************************************************
+
+	["SF3"]:	BEGIN
+			DISPLAY "SF3:	" + file_name;
+			DOCOMMAND "SYS:SF3 " + sftran3_switches +
+				 " " + file_name;
+			IF pfort <> ""
+			THEN BEGIN
+				DISPLAY "EMACS: " + file_name;
+				INVOKE "SYS:EMACS";
+				TYPEIN "" + file_name + ".FOR";
+				TYPEIN "XStrip";
+				TYPEIN "";
+				DISPLAY "PFORT:	" + file_name;
+				DOCOMMAND "SYS:PFORT " + 
+					pfort_switches + " " + 
+					file_name
+			END;
+			IF no_compile = "" THEN BEGIN
+DOCOMMAND ORIGINAL "!                                                                                ";
+				DOCOMMAND ORIGINAL "COMPILE "
+					+ general_switches
+					+ fortran_switches
+					+ " " + file_name + ".FOR";
+DOCOMMAND ORIGINAL "!                                                                                ";
+				IF keep = "/NOKEEP" THEN 
+				DOCOMMAND ORIGINAL "DELETE " +
+					file_name + ".FOR"
+				END
+			END;
+
+	!************************************************************
+
+	["RAT"]:	BEGIN
+			DISPLAY "RATFOR:	" + file_name;
+			INVOKE "SYS:RATFOR";
+			GETTYPEOUT typeout; 
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN file_name;
+			GETTYPEOUT typeout; 
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN file_name;
+			GETTYPEOUT typeout;
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN file_name;
+			GETTYPEOUT typeout; 
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN "";
+			IF pfort <> ""
+			THEN BEGIN
+				DISPLAY "PFORT:	" + file_name;
+				DOCOMMAND "SYS:PFORT " + pfort_switches
+				+ " " + file_name
+			END;
+			IF no_compile = "" THEN BEGIN
+DOCOMMAND ORIGINAL "!                                                                                ";
+				DOCOMMAND ORIGINAL "COMPILE "
+					+ general_switches
+					+ fortran_switches
+					+ " " + file_name + ".FOR";
+DOCOMMAND ORIGINAL "!                                                                                ";
+				IF keep = "/NOKEEP" THEN
+				DOCOMMAND ORIGINAL "DELETE " + file_name
+					 + ".FOR"
+				END
+			END;
+
+	!************************************************************
+
+	["PAS"]:	IF passgo <> "" THEN BEGIN
+				DISPLAY "PASSGO:	" + file_name;
+				INVOKE	"SYS:PASSGO";
+				GETTYPEOUT typeout; 
+				IF trace <> "" THEN DISPLAY NORETURN typeout;
+				TYPEIN file_name + ".LST" + pascal_switches;
+				GETTYPEOUT typeout; 
+				IF trace <> "" THEN DISPLAY NORETURN typeout;
+				TYPEIN file_name + ".PAS";
+				GETTYPEOUT typeout;
+				DISPLAY typeout;
+				END
+			ELSE BEGIN
+				DISPLAY "PASCAL:	" + file_name;
+				INVOKE "SYS:PASCAL";
+				GETTYPEOUT typeout; 
+				IF trace <> "" THEN DISPLAY NORETURN typeout;
+				TYPEIN file_name + ".REL" + pascal_switches;
+				GETTYPEOUT typeout; 
+				IF trace <> "" THEN DISPLAY NORETURN typeout;
+				TYPEIN file_name + ".LST";
+				GETTYPEOUT typeout; 
+				IF trace <> "" THEN DISPLAY NORETURN typeout;
+				TYPEIN file_name + ".PAS";
+				GETTYPEOUT typeout;
+				DISPLAY typeout;
+				END;
+
+	!************************************************************
+
+	["PGO"]:	BEGIN
+			DISPLAY "PASSGO:	" + file_name;
+			INVOKE	"SYS:PASSGO";
+			GETTYPEOUT typeout; 
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN file_name + ".LST" + pascal_switches;
+			GETTYPEOUT typeout; 
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN file_name + ".PGO";
+			GETTYPEOUT typeout;
+			DISPLAY typeout;
+			END;
+
+	!************************************************************
+
+	["UPD"]:	BEGIN
+			DISPLAY "UPDATE:	" + file_name;
+			DOCOMMAND "UTAH:UPDATE " + file_name;
+			IF pfort <> ""
+			THEN BEGIN
+				DISPLAY "PFORT:	" + file_name;
+				DOCOMMAND "SYS:PFORT " + pfort_switches
+				+ " " + file_name
+			END;
+			IF no_compile = "" THEN BEGIN
+DOCOMMAND ORIGINAL "!                                                                                ";
+				DOCOMMAND ORIGINAL "COMPILE "
+					+ general_switches
+					+ fortran_switches
+					+ " " + file_name + ".FOR";
+DOCOMMAND ORIGINAL "!                                                                                ";
+				IF keep = "/NOKEEP" THEN
+				DOCOMMAND ORIGINAL "DELETE " + file_name
+					 + ".FOR"
+				END;
+			END;
+
+	!************************************************************
+
+	[OTHERWISE]:	BEGIN
+			IF file_extension = "FOR" 
+			THEN IF pfort <> "" 
+			THEN BEGIN
+				DISPLAY "PFORT:	" + file_name;
+				DOCOMMAND "SYS:PFORT " +
+				pfort_switches + " " + file_name
+			END;
+			IF no_compile = "" 
+			THEN IF trace <> "" 
+			THEN DISPLAY "COMPILE " + $FILES + " " +
+				general_switches + 
+				cobol_switches + 
+				algol_switches + 
+				fail_switches + 
+				fortran_switches + 
+				sail_switches;
+DOCOMMAND ORIGINAL "!                                                                                ";
+			display " About to do COMPILE on " + $FILES;
+			IF no_compile = ""
+			THEN DOCOMMAND ORIGINAL "COMPILE " + $FILES + " " +
+				general_switches + 
+				cobol_switches + 
+				algol_switches + 
+				fail_switches + 
+				fortran_switches + 
+				sail_switches
+			END
+
+	!************************************************************
+
+	END ! SELECT
+END 
+UNTIL $NEXTFILE = 0;
+DISPLAY "
+[Done]"
+END; ! CF
+
+COMMAND DAVE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute DAVE - the University of Colorado FORTRAN data flow
+!	analysis utility.
+!
+! Usage:
+!	DAVE inputfile [listingfile]
+!
+! Remarks:
+!	The default extension for the inputfile is ".FOR", for the
+!	listingfile, ".LST".  The listing file contains FORTRAN
+!	carriage-control characters in column 1, and should 
+!	therefore be run through the FORPTX utility before 
+!	printing.  It is formatted to use no more than 80
+!	characters per line.
+!
+!	Until PCL is given the ability to test for the existence
+!	of arbitrary files, DAVE will receive its options from
+!	a file "LOCAL:DAVE.DEF" which contains the option SI=ON,
+!	forcing continuation even if there are missing routines.
+!	The user may provide alternate options in a file of the
+!	same name on the connected directory, provided the logical
+!	name LOCAL: is redefined to be DSK:,LOCAL:.
+!
+!	DAVE creates temporary files with the names FORnn.DAT in
+!	the connected directory, where nn = 01..13, as well as files
+!	named PAGEI.DAV, PAGEM.DAV, and ROLL.DAV; these are deleted
+!	at normal termination, but might be left if DAVE is aborted.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+EXTERNAL STRING PROCEDURE systemlog;
+INTEGER
+	InFileId,
+	OutFileId;
+
+STRING
+	command_echo,
+	default_device,
+	empty_file,
+	file_name,
+	input_file,
+	listing_file,
+	option_file,
+	record;
+
+empty_file = "PS:<TEMP>" + $STRING($TERMNUMBER) + "-DAVE.TMP;T";
+OutFileId = $Open (empty_file,$Output);
+CALL $Close (OutFileId);
+
+input_file = "";
+listing_file = "";
+option_file = "LOCAL:DAVE.DEF";
+
+GUIDE "FORTRAN data flow analysis";
+
+PARSE (
+FILE	(HELP "input FORTRAN source file",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_EXT "FOR") : input_file = $FILEL);
+
+file_name = $File_Nam($Parse);
+default_device = $File_Dev($Parse);
+
+PARSE (
+FILE	(HELP "listing file",
+	OUTPUT,
+	DEFAULT_DEV default_device,
+	DEFAULT_NAM file_name,
+	DEFAULT_EXT "LST") : listing_file = $FILEL;
+
+EOL	: NOP);
+
+IF listing_file = "" 
+THEN listing_file = $File_Dev($Parse) + ":<" + $File_Dir($Parse) + ">" +
+		$File_Nam($Parse) + "." + ".LST";
+!
+! Define logical names.
+!
+DOCOMMAND ORIGINAL "DEFINE	1:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	2:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	3:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	4:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	5:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	6:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	7:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	8:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	9:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	10:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	11:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	12:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	13:	DSK:" TO command_echo;
+!
+! Prepare option and input files, and delete any listing file.
+!
+DOCOMMAND ORIGINAL "COPY " + option_file + " FOR01.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "COPY " + input_file + " FOR05.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "DELETE " + listing_file TO command_echo;
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT" TO command_echo;
+!
+! Log the use of DAVE.
+!
+record = systemlog("PS:<SUBSYS.UTAH>DAVE.USERS");
+!
+! Strip line numbers from the input file.
+!
+INVOKE "SYS:EMACS";
+TYPEIN "FOR05.DAT";
+TYPEIN "XStrip";
+TYPEIN "";
+!
+! PHASE 0
+!
+DOCOMMAND ORIGINAL "SYS:DAVE-PHASE0" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND " + empty_file + " FOR06.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT " + listing_file TO command_echo;
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT" TO command_echo;
+!
+! PHASE 1
+!
+DOCOMMAND ORIGINAL "COPY SYS:DAVE-DATA-BASE.DAT FOR01.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "SYS:DAVE-PHASE1" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND " + empty_file + " FOR06.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT " + listing_file TO command_echo;
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT" TO command_echo;
+!
+! PHASE 2
+!
+DOCOMMAND ORIGINAL "SYS:DAVE-PHASE2" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND " + empty_file + " FOR06.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT " + listing_file TO command_echo;
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT" TO command_echo;
+!
+! PHASE 3
+!
+DOCOMMAND ORIGINAL "SYS:DAVE-PHASE3" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND " + empty_file + " FOR06.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT " + listing_file TO command_echo;
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT" TO command_echo;
+!
+! Reset logical names.
+!
+DOCOMMAND ORIGINAL "DEFINE	1:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	2:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	3:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	4:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	5:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	6:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	7:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	8:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	9:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	10:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	11:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	12:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	13:" TO command_echo;
+!
+! Format the listing file for printing.
+!
+!DOCOMMAND ORIGINAL "COPY " + listing_file + " FOR01.DAT" TO command_echo;
+!INVOKE "SYS:FORPTX";
+!TYPEIN "FOR01.DAT";
+!TYPEIN "FOR01.DAT";
+!DOCOMMAND ORIGINAL "RENAME FOR01.DAT " + listing_file TO command_echo;
+!
+! Delete all temporary files.
+!
+DOCOMMAND ORIGINAL "DELETE FOR0%.DAT," +
+	"FOR10.DAT,FOR11.DAT,FOR12.DAT,FOR13.DAT," + 
+	empty_file TO command_echo;
+
+END; !DAVE
+INTEGER PROCEDURE DELTA_TIME (INTEGER old_time_and_date,
+	delta_days, delta_seconds);
+!------------------------------------------------------------------------
+! Purpose:
+!	Add a positive or negative delta time in days and seconds
+!	to a  date  and time  field  in internal  system  format,
+!	returning the result  as the function  value in  internal
+!	system format.
+!
+! Usage:
+!	Insert in the declaration statement group the statement
+!
+!	EXTERNAL INTEGER PROCEDURE delta_time;
+!
+!	Then where a delta time must be computed, do for example,
+!
+!	new_date_and_time = DELTA_TIME(old_date_and_time,0,-120);
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[29-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER date_half,
+	time_half;
+
+date_half = old_time_and_date/262144;
+time_half = old_time_and_date - 262144*date_half;
+!
+! The time  half contains  the fraction  of a  day relative  to 2**18  =
+! 262144.  Thus, the increment to the time half is given by
+!
+! delta_half = ((2**18)*delta_seconds)/(24*60*60)
+!	     = ((2**18)*delta_seconds)/(2**3 * 3 * 4 * 15 * 4 * 15)
+!	     = ((2**18)*delta_seconds)/(2**7 * 3 * 15 * 15)
+!	     = ((2**11)*delta_seconds)/675
+!	     = (2048*delta_seconds)/675
+! 
+! The last result  avoids integer  overflow which would  occur with  the
+! first expression.
+! 
+return	(time_half + (2048*delta_seconds)/675) + 
+	(date_half + delta_days)*262144
+END;COMMAND DEMO;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute a <PLOT79> demonstration program.
+!
+! Usage:
+!	DEMO number [inputfile [library]]
+!
+! Remarks:
+!	The library defaults to PLT:PTXLIB if omitted.  If that
+!	library is specified, then the plot will automatically be
+!	printed on the Printronix 600.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[13-Oct-81]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER
+	done;
+
+STRING	
+	input_file,
+	library,
+	default_library,
+	demo;
+
+default_library = "PLT:PTXLIB";
+	
+library = default_library;
+
+done = 0;
+
+GUIDE "program number";
+
+PARSE (NUMBER (STDHELP) :
+	IF $VALUE < 1 
+	THEN demo = "DEM01"
+	ELSE IF $VALUE < 10
+	THEN demo = "DEM0" + $STRING($VALUE)
+	ELSE demo = "DEM" + $STRING($VALUE));
+
+PARSE (
+FILE (	HELP "input file",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM demo,
+	DEFAULT_EXT "DAT",
+	DEFAULT_GEN 0) : 
+		BEGIN
+		input_file = $FILES;
+		IF $SEARCHRAISED(input_file,"TTY") > 0 
+		THEN input_file = "TTY:"
+		END;
+EOL (	HELP "carriage return for TTY: and Printronix plot") : 
+		BEGIN
+		input_file = "TTY:";
+		done = 1
+		END
+);
+
+IF done = 0 
+THEN PARSE (
+FILE (	HELP "plot library [default 'PLT:PTXLIB']",
+	INPUT,
+	DEFAULT_DEV "PLT",
+	DEFAULT_NAM "PTXLIB",
+	DEFAULT_EXT "CMD",
+	DEFAULT_GEN 0)	:	library = $FILES;
+EOL (HELP "carriage return for Printronix plot") : done = 1
+);
+
+IF done = 0 THEN PARSE (EOL (STDHELP));
+
+DOCOMMAND ORIGINAL "DELETE M" + demo + ".*";
+INVOKE "SYS:EMACS";
+TYPEIN "M" + demo + ".FOR";
+TYPEIN "      CALL SYSDEC (5,6)";
+TYPEIN "      CALL " + demo + " (5,6)";
+TYPEIN "      STOP";
+TYPEIN "      END";
+TYPEIN "";
+KILLPROGRAM;
+DOCOMMAND ORIGINAL "LOAD M" + demo + ",PS:<BEEBE.PLOT80.DEMO>" + demo + "," + 
+	"@" + library;
+DOCOMMAND ORIGINAL "CSAVE " + demo;
+DOCOMMAND ORIGINAL "DSK:" + demo + " " + input_file + "," + demo + "," + demo;
+IF $SEARCHRAISED(library,"PTXLIB") > 0
+THEN	DOCOMMAND ORIGINAL "PRINT /DELETE " + demo + ".PLT";
+!DOCOMMAND ORIGINAL "DELETE " + demo + ".EXE," + 
+!	demo + ".REL," + 
+!	"M" + demo + ".*";
+!DOCOMMAND ORIGINAL "EXPUNGE"
+END; !DEMO
+COMMAND File_Access_Count;
+!------------------------------------------------------------------------
+!
+! Purpose:
+!	List read/write access counts of specified files.	
+!
+! Usage:
+!	FILE-ACCESS-COUNT [switches] filelist;
+!
+! Remarks:
+!	If the  file  specification  is  omitted,  then  DSK:*.EXE  is
+!	assumed.  The switches /LARGER:nnn and/or /SMALLER:nnn may  be
+!	given to select only files with average read counts larger  or
+!	smaller than nnn, where nnn is in units of 0.01 day.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	SalT Lake City, UT 84112.
+!
+! Date:
+!	[28-Aug-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER	average_per_day,
+	count,
+	days,
+	done,
+	do_sort,
+	larger,
+	lh_div,
+	no,
+	OutFileId,
+	reads,
+	smaller,
+	SortFileId,
+	writes,
+	yes;
+
+STRING	blanks,
+	filename,
+	output_file,
+	record,
+	s_average_per_day,
+	s_days,
+	s_reads,
+	sort_file_in,
+	sort_file_out;
+
+GUIDE "of files";
+
+no = 0;
+yes = 1;
+
+blanks = "                                        ";
+do_sort = no;
+done = no;
+larger = 0;
+lh_div = 262144; ! 2**18
+output_file = "TTY:";
+smaller = 34359738367; ! 2**35-1
+sort_file_in = "PS:<TEMP>" + $STRING($TERMNUMBER) + "-FILE-ACCESS.SORT-IN;T";
+sort_file_out = "PS:<TEMP>" + $STRING($TERMNUMBER) + "-FILE-ACCESS.SORT-OUT;T";
+
+
+WHILE done = no DO 
+	PARSE(
+	SWITCH (WORDS(LARGER::1,OUTPUT::2,SMALLER::3,SORT:4),STDHELP):
+		BEGIN
+		CASE $VALUE FROM 1 TO 4 OF BEGIN
+		[1] : PARSE (NUMBER (DEFAULT "0",
+			HELP "than average read count in hundredths of a day"
+			) : larger = $VALUE);
+		[2] : PARSE (FILE(
+			HELP "Output file",
+			OUTPUT,
+			DEFAULT_DEV "TTY:",
+			DEFAULT_NAM "FILE-ACCESS",
+		 	DEFAULT_EXT "LST") : output_file = $FILEL);
+		[3] : PARSE (NUMBER (DEFAULT "34359738367",!2**35-1
+			HELP "than average read count in hundredths of a day"
+			) : smaller = $VALUE);
+		[4] : do_sort = yes
+		END; ! CASE
+	END; ! SWITCH
+
+	EOL (HELP "file specifications") : ABORT "No files specified";
+
+	OTHERWISE : done = yes);
+
+PARSE (
+FILELIST (HELP "List of files",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "EXE") : NOP);
+
+OutFileId = $Open (output_file,$Output);
+SortFileId = $Open (sort_file_in,$Output);
+
+IF do_sort = yes 
+	THEN record =  "File Read Access Listing (Sorted by Reads/Day) "
+		+ $OUTPUTTAD($CURTAD)
+	ELSE record =  "File Read Access Listing (Sorted by Name) "
+		+ $OUTPUTTAD($CURTAD);
+CALL $Write (OutFileId,record);
+record =  "------------------------------------------------------------------";
+CALL $Write (OutFileId,record);
+record =  "File                                     | Reads | Age | Reads/Day";
+CALL $Write (OutFileId,record);
+record =  "------------------------------------------------------------------";
+CALL $Write (OutFileId,record);
+DO
+	BEGIN
+	count = $FileInfo_I($Parse,$FBCNT);
+	writes = count/lh_div;
+	reads = count - writes*lh_div;
+	days = 1 + $CURTAD/lh_div - $FileInfo_I($Parse,$FBCRV)/lh_div;
+	average_per_day = (100*reads)/days;
+	IF average_per_day <= smaller THEN
+	IF average_per_day >= larger THEN
+		BEGIN ! File has been selected for output
+		filename = $FILEN + blanks[1:40-$LENGTH($FILEN)];
+		s_days = $STRING(days);
+		s_days = blanks[1:6-$LENGTH(s_days)] + s_days;
+		s_reads = $STRING(reads);
+		s_reads = blanks[1:9-$LENGTH(s_reads)] + s_reads;
+		IF average_per_day < 10 
+			THEN	s_average_per_day = "0" + 
+					$STRING(average_per_day)
+			ELSE	s_average_per_day = $STRING(average_per_day);
+		s_average_per_day = 
+			s_average_per_day[1:$LENGTH(s_average_per_day)-2]
+			+ "." + 
+			s_average_per_day[$LENGTH(s_average_per_day)-1:2];
+		s_average_per_day = blanks[1:9-$LENGTH(s_average_per_day)] +
+			s_average_per_day;
+		record =  filename + s_reads + s_days + s_average_per_day;
+		IF do_sort = YES THEN CALL $Write (SortFileId,record)
+				 ELSE CALL $Write (OutFileId,record)
+		END
+	END
+UNTIL $Nextfile = 0;
+IF do_sort = yes THEN
+	BEGIN
+	CALL $Close (SortFileId);
+	INVOKE "SYS:SORT.EXE";
+	TYPEIN "SORT /RECORD:80 /KEY:57,8,FORMAT:F8.2,DESCENDING " + 
+		sort_file_in + " " + sort_file_out;
+	TYPEIN "EXIT";
+	CLEARTYPEOUT;
+	SortFileId = $Open(sort_file_out,$Input);
+	record = $Read(SortFileId);
+	WHILE $Eof(SortFileId) = 0 DO 
+		BEGIN
+		CALL $Write (OutFileId,record);
+		record = $Read(SortFileId)
+		END;
+	CALL $Close(SortFileId)
+	END;
+record = 
+"------------------------------------------------------------------";
+CALL $Write (OutFileId,record);
+CALL $Close (OutFileId);
+DOCOMMAND "DELETE " + sort_file_in + "," + sort_file_out TO record
+END; ! File_Access_Count
+STRING	file_indent_input_file;
+
+STRING	file_indent_output_file;
+
+INTEGER	file_indent_indentation;
+
+COMMAND file_indent;
+!------------------------------------------------------------------------
+! Purpose:
+!	Indent lines of a file;
+!
+! Usage:
+!	file_indent /INDENT:nn infile outfile
+!
+! Remarks:
+!	The switch may occur before,  between, or after the file  names.
+!	If the switch is omitted, a default indentation of 15 columns is
+!	assumed.  If the output file is omitted, a new generation of the
+!	input  file  is   assumed.   Arguments   are  remembered   (with
+!	generation numbers  removed)  so that  they  may be  omitted  on
+!	successive calls.  Indentation may be positive (right  shifting)
+!	or negative  (left shifting  with  deletion) or  zero  (straight
+!	copy).  Default file extensions are both ".LST".
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[29-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL STRING
+	file_indent_input_file,
+	file_indent_output_file;
+
+EXTERNAL INTEGER
+	file_indent_indentation;
+
+STRING
+	blanks,
+	default_indentation,
+	input_file,
+	output_file,
+	record;
+
+INTEGER
+	i,
+	indent,
+	InFileId,
+	OutFileId;
+
+default_indentation = "15";
+
+GUIDE "right or left";
+
+indent = $INTEGER(default_indentation);
+input_file = "";
+output_file = "";
+
+WHILE output_file = "" DO PARSE(
+
+SWITCH(WORDS(INDENT::1)) : PARSE(NUMBER (DEFAULT default_indentation) :
+	BEGIN
+	indent = $VALUE;
+	file_indent_indentation = indent ! replace previous value
+	END);
+
+EOL :	IF input_file = "" 
+	THEN BEGIN ! Supply previous values
+		input_file = file_indent_input_file;
+		output_file = file_indent_output_file;
+		indent = file_indent_indentation;
+		IF input_file = "" THEN ABORT "No saved arguments";
+		IF output_file = "" THEN ABORT "No saved arguments"
+		END
+	ELSE IF output_file = "" 
+	THEN output_file = input_file;
+
+FILE	(HELP "input file name",DEFAULT_EXT "LST",INPUT) : 
+	BEGIN
+	input_file = $FILEL;
+	file_indent_input_file = $FileS + ".0";
+	PARSE(
+
+	SWITCH(WORDS(INDENT::1)) : 
+		PARSE(NUMBER (DEFAULT default_indentation) : indent = $VALUE);
+
+	FILE	(HELP "output file name",DEFAULT_EXT "LST",OUTPUT) :
+		BEGIN
+		output_file = $FILEL;
+		file_indent_output_file = $FileS + ".-1";
+		file_indent_indentation = indent
+		END;
+
+	EOL	(HELP "carriage return if output file same as input file") :
+		BEGIN
+		output_file = input_file;
+		output_file = $FileS + ".-1";
+		file_indent_output_file = $FileS + ".-1";
+		file_indent_indentation = indent
+		END)
+	END);
+
+
+DISPLAY "Input file  = " + input_file;
+DISPLAY NORETURN  "Output file = " + output_file;
+DISPLAY " indented " + $STRING(indent) + " column(s)";
+
+InFileId = $Open (input_file,$Input);
+OutFileId = $Open (output_file,$Output);
+
+IF indent > 0 THEN
+	BEGIN
+	blanks = "";
+	i = 0;
+	WHILE i < indent DO 
+		BEGIN
+		i = i + 1;
+		blanks = " " + blanks
+		END
+	END;
+
+record = $Read (InFileId);
+WHILE $EOF(InFileId) = 0 DO
+	BEGIN
+	IF indent > 0
+	THEN record = blanks + record
+	ELSE IF indent < 0 THEN record = record[1-indent:*];
+	CALL $Write (OutFileId,record);
+	record = $Read (InFileId)
+	END;
+
+CALL $Close (InFileId);
+CALL $Close (OutFileId)
+
+END;
+COMMAND FINGER;
+!----------------------------------------------------------------------
+!Purpose:
+!	Finger is an alternate systat type display
+!Usage:
+!	FINGER -- displays users, names, and locations, with switches:
+!	  /Detached	  -- includes detached jobs
+!	  /Dial-in	  -- displays dial in jobs only
+!	  /Full-user-name -- shows the full user name
+!	  /Help		  -- displays the help information
+!	  /No-detached	  -- omits display of detached jobs
+!	  /No-operator	  -- omits display of operator jobs
+!	  /Operator	  -- includes operator jobs
+!	  /Terse	  -- gives a limited user display
+!	  /Verbose	  -- gives a long user display including plan
+!	  /Whois	  -- i've never understood this, but its something
+!		    OR
+!	<return>	  -- lists all users in systat like display
+!	User-name	  -- lists a particular user
+!	Personal-name	  -- try your name here
+!	
+!Remark:
+!	Finger combined with the exec SYSTAT command provides more
+!	information. Eventually the two commands should be merged.
+!----------------------------------------------------------------------
+!Author:
+!	Cedric Griss
+!Date:
+!	Oct-23-80
+!	Feb-15-82
+!----------------------------------------------------------------------
+BEGIN
+     STRING Intext;
+     LET Intext = "Finger:Finger ";
+     GUIDE "user";
+L0 : PARSE (EOL : GOTO L3;
+           USERNAME : GOTO L1;
+           SWITCH (WORDS (Detached:1,Dial_in:2,Full_User_Name:3,Help:4,
+			  No_Detached:5,No_Operator:6,Operator:7,Terse:8,
+			  Verbose:9,Whois:10)) : Intext=Intext+" /"+$ATOM;
+	   TEXT (Help "Personal Name (first or last)"): GOTO TXT);
+      GOTO L0;
+L1 :  Intext = Intext + " " + $ATOM;
+L2 :  PARSE (EOL : GOTO L3;
+             SWITCH (WORDS (Detached:1,Dial_in:2,Full_User_Name:3,Help:4,
+	 		    No_Detached:5,No_Operator:6,Operator:7,Terse:8,
+			    Verbose:9,Whois:10)) : Intext=Intext+" /"+$ATOM;
+             OTHERWISE : ABORT "Unrecognised switch");
+      GOTO L2;
+TXT:  Intext = Intext + " " + $ATOM;
+L3:   DOCOMMAND ORIGINAL Intext;
+      END;
+COMMAND FORASA;
+!------------------------------------------------------------------------
+! Purpose:
+!	Convert FORTRAN listing file to ASCII listing file.
+!
+! Usage:
+!	FORASA inputfile [outputfile]
+!
+! Remarks:
+!	If the outputfile is omitted, a new generation of the inputfile
+!	is created.  The processing is done by FORPTX on a temporary
+!	file, so that arbitrary file names can be supported by FORASA.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[21-Nov-80]
+!
+!------------------------------------------------------------------------
+BEGIN
+STRING
+	input_file,
+	output_file,
+	temporary_file;
+
+temporary_file = "SCR:ASA" + $STRING($TERMNUMBER) + ".LST";
+
+GUIDE "File for FORPTX processing";
+
+PARSE (FILE (DEFAULT_DEV "DSK",
+	DEFAULT_EXT "LST",
+	HELP "File to convert",
+	INPUT,
+	STDHELP) : input_file = $FILEL);
+
+output_file = $FILEL;
+
+PARSE (
+FILE	(DEFAULT_DEV "DSK",
+	DEFAULT_EXT "LST",
+	HELP "Output listing file (default = inputfile)",
+	OUTPUT,
+	STDHELP) : output_file = $FILEL;
+
+EOL : output_file = input_file);
+
+DOCOMMAND ORIGINAL "COPY " + input_file + " " + temporary_file;
+
+INVOKE "SYS:FORPTX";
+TYPEIN  temporary_file;
+TYPEIN  temporary_file;
+
+DOCOMMAND ORIGINAL "OPR:WAIT";
+
+DOCOMMAND ORIGINAL "COPY " + temporary_file + " " + output_file;
+
+DOCOMMAND ORIGINAL "DELETE " + temporary_file
+
+END; !FORASA
+COMMAND FORTLEX;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute FORTLEX, the FORTRAN lexical analyzer.
+!
+! Usage:
+!	FORTLEX inputfilename {,} {outputfilename}
+!
+! Remarks:
+!	The default extension on the input file is ".FOR" and on the
+!	output file, ".LST".  If the output file is omitted, the name
+!	of the input file is used.  Files FOR05.DAT and FOR06.DAT are
+!	created and deleted.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+STRING	infile,
+	outfile,
+	help_string,
+	default_device,
+	default_directory,
+	default_name;
+
+GUIDE "FORTRAN lexical analysis of";
+
+PARSE (FILE
+	(INPUT,
+	DEFAULT_EXT "FOR",
+	HELP "FORTRAN source file"
+	) : infile = $FILEL);
+
+default_device = $File_Dev($Parse) + ":";
+
+default_directory = "<" + $File_Dir($Parse) + ">";
+
+default_name = $File_Nam($Parse);
+
+help_string = "FORTLEX listing file {default = " + default_device + 
+		default_directory + default_name + ".LST}";
+
+PARSE (
+EOL	(HELP help_string) : outfile = default_device + default_directory 
+		+ default_name + ".LST";
+
+FILE	(OUTPUT,
+	DEFAULT_DEV default_device,
+	DEFAULT_DIR default_directory,
+	DEFAULT_NAM default_name,
+	DEFAULT_EXT "LST"
+	) : outfile = $FILEL
+); !end of PARSE
+
+DISPLAY "FORTRAN source file:  " + infile;
+DISPLAY "FORTLEX listing file: " + outfile;
+
+
+DOCOMMAND ORIGINAL "DEFINE 5: DSK:";
+DOCOMMAND ORIGINAL "DEFINE 6: DSK:";
+
+DOCOMMAND ORIGINAL "COPY " + infile + " FOR05.DAT";
+
+DOCOMMAND ORIGINAL "FLX:FORTLEX";
+
+DOCOMMAND ORIGINAL "DELETE FOR05.DAT";
+DOCOMMAND ORIGINAL "RENAME FOR06.DAT " + outfile
+
+END; !FORTLEX
+INTEGER PROCEDURE GENERAL_TIME_AND_DATE_PARSE (
+	INTEGER current_time_and_date;
+	STRING default_time_and_date;
+	INTEGER future_week_day);
+!------------------------------------------------------------------------
+! Purpose:
+!	Parse a general  date/time value.  The input  may be
+!	
+!	* any valid  DEC-20  date  and  time  string,  or
+!	
+!	* YESTERDAY or time 00:00:01), or
+!	
+!	* TODAY (time 00:00:01), or
+!	
+!	* TOMORROW (time 00:00:01), or
+!	
+!	* a week day (MONDAY .. SUNDAY), or
+!	
+!	* an input  file  specification,  which causes the file's
+!	  last write date and time to be used.
+!	
+!	YESTERDAY, TODAY,  TOMORROW,  and MONDAY  ..  SUNDAY  may
+!	optionally be followed by a  time string hh:mm:ss if  the
+!	default 00:00:01 is not wanted.
+!	
+!	The       first       INTEGER       argument       value,
+!	'current_time_and_date', should be  the current date  and
+!	time in internal system format.   It is passed this  way,
+!	rather than  determined  internally  by  a  reference  to
+!	$CURTAD, so  that if  more than  one date/time  parse  is
+!	performed   by   the   caller,   the   same   value   for
+!	'current_time_and_date' can be used.
+!
+!	The       second       STRING       argument       value,
+!	'default_date_and_time', should contain the default value
+!	to be used for the parse  if the user types an ESCape  to 
+!	use it.
+!
+!	The  third  INTEGER  argument,  'future_week_day',  is  0
+!	(FALSE) if  a past  day is  implied by  a week  day,  and
+!	non-zero (TRUE) is a  future week day  is implied.  0  is
+!	the usual case for file dates/times, and non-zero may  be
+!	used in e.g. setting future alerts, job submissions, etc.
+!
+! Usage:
+!	Insert in the declaration statement group the statement
+!
+!	EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+!
+!	Then where a date/time PARSE statement would normally  be
+!	required, replace it  by a  simple assignment  statement,
+!	such as:
+!	
+!	time_and_date_value = GENERAL_TIME_AND_DATE_PARSE($CURTAD,"TODAY",0);
+!	
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[30-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE delta_time;
+
+INTEGER date_half,
+	day,
+	delta,
+	hour,
+	minute,
+	month,
+	month_day,
+	time_and_date,
+	time_half,
+	week_day,
+	year;
+
+STRING	date_string;
+
+PARSE (
+TOKEN "-" (HELP "-hh:mm:ss before now") : 
+	PARSE (DAYTIME (TIME,STDHELP) :
+	BEGIN
+	time_and_date = $INPUTTAD($DATE + " " + $ATOM);
+	CALL $EXPANDTAD (time_and_date,year,month,month_day,
+		week_day,hour,minute);
+	time_and_date = Delta_Time(current_time_and_date,0,
+		-3600*hour-60*minute)
+	END);
+
+TOKEN "+" (HELP "+hh:mm:ss from now") : 
+	PARSE (DAYTIME (TIME,STDHELP) :
+	BEGIN
+	time_and_date = $INPUTTAD($DATE + " " + $ATOM);
+	CALL $EXPANDTAD (time_and_date,year,month,month_day,
+		week_day,hour,minute);
+	time_and_date = Delta_Time(current_time_and_date,0,
+		3600*hour+60*minute)
+	END);
+
+KEYWORD(WORDS(
+	MONDAY:1,
+	TUESDAY:2,
+	WEDNESDAY:3,
+	THURSDAY:4,
+	FRIDAY:5,
+	SATURDAY:6,
+	SUNDAY:7,
+	NOW:8,
+	YESTERDAY:9,
+	TODAY:10,
+	TOMORROW:11),
+	DEFAULT default_time_and_date,
+	STDHELP) :
+	BEGIN
+	day = -1;
+	CALL $EXPANDTAD (current_time_and_date,year,month,month_day,
+		week_day,hour,minute);
+	CASE $VALUE FROM 1 TO 11 OF BEGIN
+!       [1 to 7]: day = $value-1;
+	[1] :	day = 0;
+	[2] :	day = 1;
+	[3] :	day = 2;
+	[4] :	day = 3;
+	[5] :	day = 4;
+	[6] :	day = 5;
+	[7] :	day = 6;
+	[8] :	time_and_date = current_time_and_date;
+	[9] :	IF future_week_day = 0 
+		THEN ! past week day requested
+			day = week_day + 6
+		ELSE ! future week day requested
+			day = week_day - 8;
+	[10] :	time_and_date = $INPUTTAD($DATE + " 00:00:01");
+	[11] :	IF future_week_day = 0 
+		THEN ! past week day requested
+			day = week_day + 8
+		ELSE ! future week day requested
+			day = week_day + 1;
+	END; ! CASE
+	IF day+1 > 0 
+	THEN	BEGIN
+		delta = day - week_day;
+		IF future_week_day = 0 THEN ! past week day requested
+			BEGIN IF delta >= 0 THEN delta = delta - 7; END
+		ELSE ! future week day requested
+			BEGIN IF delta <=0 THEN delta = delta + 7; END;
+
+		date_half = current_time_and_date/262144;
+		time_half = current_time_and_date - 262144*date_half;
+		time_and_date = time_half + (date_half + delta)*262144;
+		CALL $EXPANDTAD (time_and_date,year,month,month_day,
+			week_day,hour,minute);
+		time_and_date = $MERGETAD(year,month,month_day,0,0) + 3
+		END;
+	PARSE (	DAYTIME (TIME,STDHELP,DEFAULT "00:00:01") :
+			BEGIN
+			date_string = $OUTPUTTAD(time_and_date);
+			date_string =
+				date_string[1:$SEARCH(date_string," ")];
+			time_and_date = $INPUTTAD(date_string + $ATOM)
+			END;
+		OTHERWISE : NOP)
+	END;
+
+DAYTIME (STDHELP) : time_and_date = $INPUTTAD($ATOM);
+
+DAYTIME (DATE,HELP "date (at time 00:00:01)") : 
+	time_and_date = $INPUTTAD($ATOM+" 00:00:01");
+
+DAYTIME (TIME,HELP "time (of today)") : 
+	time_and_date = $INPUTTAD($DATE + " " + $ATOM);
+
+INPUTFILE (
+	HELP "input filespec (and use its last write date)") : 
+	time_and_date = $FileInfo_I($Parse,$FBWRT);
+);
+
+RETURN time_and_date;
+END;COMMAND IAPPEND;
+!------------------------------------------------------------------------
+! Purpose:
+!	Append files with optional header.
+!
+! Usage:
+!	IAPPEND [switches] outputfile filelist
+!
+! Remarks:
+!	If the file specification is omitted, then *.*.* is assumed.
+!	This replacement for the system command APPEND gives options
+!	defined by the optional switches:
+!
+!	/IBM	- Insert "./   ADD   NAME=filename"
+!	/CDC	- Insert "*DECK filename"
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER 
+	InFileId,
+	OutFileId;
+STRING
+	command_echo,
+	header,
+	output_file,
+	record,
+	temporary_file;
+
+header = "";
+temporary_file = $STRING($TERMNUMBER) + "-APPEND.TMP;T";
+
+GUIDE "files";
+
+PARSE(
+SWITCH(WORDS(
+	CDC:1,
+	IBM:2),
+	HELP "output file, or switch defining style of file separator,",
+	STDHELP) : header = $ATOM;
+
+OTHERWISE : NOP);
+
+PARSE (
+FILE	(HELP "Output file",
+	OUTPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "FOO",
+ 	DEFAULT_EXT "DAT") : output_file = $FILEL);
+
+PARSE (
+FILELIST (HELP "List of files to be appended",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*") : NOP);
+
+OutFileId = $Open (output_file,$Append);
+
+DO
+	BEGIN
+	IF header = "CDC" 
+	THEN record = "*DECK " + $File_Nam($Parse) + "     " + $FILEL
+	ELSE IF header = "IBM"
+	THEN record = "./   ADD   NAME=" + $File_Nam($Parse) + "     " +
+		$FILEL;
+	IF header <> "" 
+	THEN	BEGIN
+		CALL $Write (OutFileId,record);
+		END;
+	DOCOMMAND ORIGINAL "APPEND " + $FILEL + " " + output_file
+	END
+UNTIL $Nextfile = 0;
+CALL $Close (OutFileId)
+END; ! IAPPEND
+COMMAND IAPPEND;
+!------------------------------------------------------------------------
+! Purpose:
+!	Append files with optional header.
+!
+! Usage:
+!	IAPPEND [switches] outputfile filelist
+!
+! Remarks:
+!	If the file specification is omitted, then *.*.* is assumed.
+!	This replacement for the system command APPEND gives options
+!	defined by the optional switches:
+!
+!	/IBM	- Insert "./   ADD   NAME=filename"
+!	/CDC	- Insert "*DECK filename"
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER 
+	InFileId,
+	OutFileId;
+STRING
+	command_echo,
+	header,
+	output_file,
+	record,
+	temporary_file;
+
+header = "";
+temporary_file = $STRING($TERMNUMBER) + "-APPEND.TMP;T";
+
+GUIDE "files";
+
+PARSE(
+SWITCH(WORDS(
+	CDC:1,
+	IBM:2),
+	HELP "output file, or switch defining style of file separator,",
+	STDHELP) : header = $ATOM;
+
+OTHERWISE : NOP);
+
+PARSE (
+FILE	(HELP "Output file",
+	OUTPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "FOO",
+ 	DEFAULT_EXT "DAT") : output_file = $FILEL);
+
+PARSE (
+FILELIST (HELP "List of files to be appended",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*") : NOP);
+
+DO
+	BEGIN
+	IF header = "CDC" 
+	THEN record = "*DECK " + $File_Nam($Parse) + "     " + $FILEL
+	ELSE IF header = "IBM"
+	THEN record = "./   ADD   NAME=" + $File_Nam($Parse) + "     " +
+		$FILEL;
+	IF header <> "" 
+	THEN	BEGIN
+		OutFileId = $Open (temporary_file,$Output);
+		CALL $Write (OutFileId,record);
+		CALL $Close (OutFileId);
+		DOCOMMAND ORIGINAL "APPEND " + temporary_file + " " + 
+			output_file TO command_echo
+		END;
+	DOCOMMAND ORIGINAL "APPEND " + $FILEL + " " + output_file
+	END
+UNTIL $Nextfile = 0
+END; ! IAPPEND
+COMMAND KEYLOAD;
+!------------------------------------------------------------------------
+! Purpose:
+!	KEYLOAD font and function key files to terminals.
+!
+! Usage:
+!	KEYLOAD {/CRLF} filespecs
+!
+! Remarks:
+!	If the switch /CRLF is  given, ASCII CR LF pairs  present
+!	in the file will be sent.  By default, they are stripped.
+!	Wildcarded specifications are permitted.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[29-Sep-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER	CRLF,
+	FileId,
+	NO,
+	YES;
+STRING	record;
+
+NO = 0;
+YES = 1;
+
+GUIDE "files";
+
+PARSE (
+SWITCH(WORDS(CRLF:1),STDHELP) : CRLF = YES;
+OTHERWISE : CRLF = NO);
+
+PARSE (
+FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_EXT "BGF",
+	DEFAULT_GEN 0,
+	INPUT,
+	HELP "list of files to KEYLOAD") : NOP;
+);
+
+DO	BEGIN
+	FileId = $OPEN($FILEL,$Input);
+	record = $Read(FileId);
+	WHILE $Eof(FileId) = 0 DO
+	BEGIN
+		IF CRLF = NO 
+			THEN DISPLAY BINARY record
+			ELSE DISPLAY BINARY record + $CRLF;
+		record = $Read(FileId)
+	END
+	END
+UNTIL $Nextfile = 0
+
+END; !KEYLOAD
+
+COMMAND library;
+!------------------------------------------------------------------------
+!
+! Purpose:
+!	Update a load library by replacement of one or more routines using
+!	MAKLIB.
+!
+! Usage:
+!	LIBRARY libname modulelist
+!
+! Remarks:
+!	Libname is a standard file specifier with default extension ".REL".
+!	Modulelist is a list of one or more files (default extension ".REL")
+!	whose names are the same as the modules they contain.  Each specified
+!	module will be replaced in the library and an index to the library
+!	will be reconstructed.  The intermediate replacements are done in
+!	files named "SCR:libname.MKL"; the final indexed library will be
+!	one generation higher of the original library, and will be in the
+!	same directory as the original library.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	SalT Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER done,initialized;
+STRING extension,library_name,module_name,scratch_directory,temporary_library,
+	library_extension,library_file;
+
+done = 0;
+initialized = 0;
+scratch_directory = "SCR:";
+extension = ".MKL";
+
+GUIDE "to be updated";
+
+PARSE(FILE (HELP "Name of library to be updated",DEFAULT_EXT "REL") : NOP);
+
+library_file = $FILEL;
+library_name = $File_Nam($Parse);
+library_extension = "." + $File_Typ($Parse);
+temporary_library = scratch_directory + library_name + extension;
+
+
+WHILE done = 0 DO
+PARSE(
+FILE	(HELP "List of modules to be replaced",DEFAULT_EXT "REL") : 
+	BEGIN
+	IF initialized = 0 THEN BEGIN
+		DOCOMMAND "COPY " + library_file + " " + temporary_library;
+		INVOKE "SYS:MAKLIB";
+		initialized = 1
+	END;
+	module_name = $File_Nam($Parse);
+	TYPEIN temporary_library + "=" 
+		+ temporary_library + "/MASTER:" + module_name
+		+ "," + $FILES + "/REPLACE:" + module_name
+	END;
+
+COMMA:	NOP;
+
+EOL :	BEGIN
+	TYPEIN library_name + library_extension + "="
+		 + temporary_library + "/INDEX";
+	TYPEIN "";
+	CLEARTYPEOUT;
+	DOCOMMAND "DELETE  " + temporary_library;
+	CLEARTYPEOUT;
+	DOCOMMAND "EXPUNGE " + scratch_directory;
+	CLEARTYPEOUT;
+	done = 1;
+	END)
+END;
+COMMAND LINE_COUNT;
+!------------------------------------------------------------------------
+! Purpose:
+!	Count number of lines in one or more files.
+!
+! Usage:
+!	LINE-COUNT {/switch} filespecs
+!
+! Remarks:
+!	The filespecs field may contain any list of file
+!	specifications which would be acceptable to the DELETE
+!	command.  The /LIMIT switch may be used to request display
+!	of lines longer than a specified number of characters.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[20-Nov-81]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER
+	average_length,
+	InFileId,
+	limit,
+	line_number,
+	maximum_length,
+	total_length;
+
+STRING
+	record;
+
+GUIDE "of file(s)";
+
+PARSE (
+SWITCH(WORDS(LIMIT::1)) : 
+	PARSE(NUMBER 
+	(STDHELP,
+	HELP "display lines longer than LIMIT value",
+	DEFAULT "0") : limit = $VALUE);
+
+OTHERWISE : limit = 0 );
+
+PARSE (
+FILELIST(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	INPUT,
+	STDHELP) : NOP);
+DO 
+	BEGIN
+	line_number = 0;
+	maximum_length = 0;
+	total_length = 0;
+	InFileId = $Open ($FILEL,$Input);
+	record = $Read (InFileId);
+	WHILE $EOF(InFileId) = 0 DO
+		BEGIN
+		total_length = total_length + $LENGTH(record);
+		IF $LENGTH(record) > maximum_length 
+		THEN maximum_length = $LENGTH(record);
+		line_number = line_number + 1;
+		IF limit > 0
+		THEN IF $LENGTH(record) > limit
+		THEN DISPLAY $STRING(line_number) + "=" + record;
+		record = $Read (InFileId)
+		END;
+	CALL $Close (InFileId);
+	DISPLAY $FILES + " contains " + $STRING(line_number) +
+	" lines.";
+	IF line_number > 0 
+	THEN average_length = total_length/line_number
+	ELSE average_length = 0;
+	DISPLAY "Longest = " + $STRING(maximum_length) + 
+	", average = " + $STRING(average_length);
+	END
+UNTIL $NextFile = 0;
+DISPLAY "[Done]"
+END; !LINE_COUNT
+COMMAND LOCAL_HELP;
+!------------------------------------------------------------------
+!
+! Short descriptions about local  College of Science  commands are
+! invoked using the HELP or LOCAL-HELP commands:
+!	
+! LOCAL-HELP (about) topic	  [type ? for full list of topics]
+!
+! F U R T H E R   H E L P:
+! -----------------------
+! *HELP ? displays the list of available help topics. For Example:-
+!     HELP EXEC briefly describes all new extended exec features
+!     HELP MFEXEC describes the multiforking features of the EXEC.
+!     HELP PCL introduces the EXEC Programmable Command Language.
+!     HELP DO and MIC describe the do-mic runfil mechanism
+! *PS:<INFO> contains information specific to the College Computer.
+! *The GUIDE program has help on Rel2 exec commands (this is Rel4).
+! *XINFO is a display based tree like information system.
+! *DOC: is the directory with a lot of online documentation.
+! *FINGER is an alternate systat command with  differing information.
+!--------------------------------------------------------------------
+!Author:
+!	Cedric Griss Nov-23-80
+!--------------------------------------------------------------------
+BEGIN STRING hlpfil;
+	hlpfil="ps:<subsys.pcl>local-help";
+	GUIDE "about";
+	PARSE (EOL:goto doit;
+	       KEYWORD(help "local EXEC command",stdhelp,words(
+DROP:1,
+DSKUSE:1,
+FINGER:1,
+LOCAL_HELP:1,
+QSPELL:1,
+RECORD:1,
+REPORT:1,
+SCRIBE:1,
+SEND:1,
+TEST:1
+)): hlpfil="ps:<subsys.pcl>"+$atom;
+!	       KEYWORD (help "General topic description",stdhelp,words(
+!**list-hlp**
+!)): hlpfil="hlp:"+$atom
+);
+	parse(eol:nop);
+doit:	docommand original "type "+hlpfil+".hlp";
+	end;
+COMMAND MAKE_INVISIBLE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Set OFFLINE files invisible.
+!
+! Usage:
+!	MAKE-INVISIBLE filespecs
+!
+! Remarks:
+!	The filespecs field may contain any list of file
+!	specifications which would be acceptable to the DIRECTORY
+!	command.  This command remedies the deficiency of the 
+!	SET INVISIBLE command, which does not permit wild-card
+!	specifications.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER
+	InFileId;
+
+STRING
+	command_echo,
+	directory_entry,
+	directory_file,
+	file_name,	
+	file_prefix;
+
+GUIDE "OFFLINE files only";
+
+PARSE (FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	HELP "list of files (default DSK:*.*.*)",
+	WILD) : NOP);
+
+DO BEGIN ! Make directory listing and set listed OFFLINE files invisible
+	file_prefix = $File_Dev($Parse) + ":<" + $File_Dir($Parse) + ">";
+	directory_file = "TMPCOR-DATA-BASE-" + $STRING($TERMNUMBER)
+		 + "SI.LST";
+	DOCOMMAND ORIGINAL "DIRECTORY " + $FILEL + ",
+	OUTPUT " + directory_file + "
+	SEPARATE
+	NO HEAD
+	NO SUMMARY
+	
+	";
+!----->	DOCOMMAND ORIGINAL "OPR:WAIT";
+	InFileId = $Open (directory_file,$Input);
+	directory_entry = $READ(InFileId);
+	WHILE $EOF(InFileId) = 0 DO
+		BEGIN
+		IF $SEARCH(directory_entry,";OFFLINE") > 0 THEN
+			BEGIN
+			file_name = directory_entry[2:
+				$SEARCH(directory_entry,";")-2];
+			DOCOMMAND ORIGINAL "SET FILE INVISIBLE " + 
+				file_prefix + file_name;
+			END;
+		directory_entry = $READ(InFileId);
+		END; !WHILE
+	CALL $Close (InFileId);
+	DOCOMMAND ORIGINAL "DELETE " + directory_file TO command_echo
+	END
+UNTIL $Nextfile = 0
+END; !Set_Invisible
+COMMAND MAKE_PCL_HELP_FILES;
+!------------------------------------------------------------------------
+! Purpose:
+!	Automatically construct PCL help files from system PCL command
+!	internal documentation.
+!
+! Usage:
+!	MAKE-PCL-HELP-FILES filespecs
+!
+! Remarks:
+!	The  filespecs   field  may   contain  any   list  of   file
+!	specifications which would  be acceptable  to the  DIRECTORY
+!	command.  The default file extension  is .PCL, and for  each
+!	file processed, a file with  extension .HLP is created.   In
+!	order for this to  work properly, PCL  commands must have  a
+!	standard format:
+!	
+!	* line 1 = COMMAND name
+!	* line 2..k = optional command statement continuation
+!	* line k+1 = !------etc
+!	* lines k+2..n = ! comments
+!	* line n+1 = !------etc
+!	
+!	The remainder of the file is ignored.  Lines k+1 and n+1 are
+!	stripped, and the exclamation  point in column 1 is removed.
+!	This PCL command provides an example of the expected form of
+!	internal  documentation.   The  HELP files  generated always 
+!	have  the same  generation number as their corresponding PCL
+!	files.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER
+	InFileId,
+	OutFileId;
+STRING
+	command_echo,
+	record,
+	help_file;
+
+GUIDE "from internal documentation in PCL files";
+
+PARSE (FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "PCL",
+	INPUT,
+	HELP "list of files (default DSK:*.PCL.*)") : NOP);
+
+DO ! Until $Nextfile = 0
+	BEGIN
+	help_file = $File_Dev($Parse) + ":<" + $File_Dir($Parse) + 
+		">" + $File_Nam($Parse) + ".HLP";
+	DOCOMMAND ORIGINAL "DELETE " + help_file + ".*" TO command_echo;
+	help_file = help_file + "." + 
+		$STRING($FileInfo_I($Parse,$FBGEN)/262144);
+	InFileId = $Open ($FILEL,$Input);
+	OutFileId = $Open (help_file,$Output);
+	record = $Read(InFileId);
+	IF $EOF(InFileId) <> 0 
+	THEN ABORT "Empty PCL file" +
+		$CRLF + "Bad file = " + $FILEL;
+	IF $SEARCHRAISED(record,"COMMAND") <> 1 
+	THEN ABORT "COMMAND not found in column 1" +
+		" - unacceptable PCL file format." +
+		$CRLF + "Bad file = " + $FILEL +
+		$CRLF + "Bad record = """ + record + "";
+	CALL $Write (OutFileId, " Command:" + $CRLF + 
+		"        " + record[8:*] + $CRLF);
+	DO 
+		BEGIN ! Skip to ----- line
+		record = $Read(InFileId); 
+		IF $EOF(InFileId) <> 0 
+		THEN ABORT "First  !---- line not found before end-of-file" +
+			" - unacceptable PCL file format." +
+			$CRLF + "Bad file = " + $FILEL;
+		IF record[1:5] <> "!----" 
+		THEN CALL $Write (OutFileId,"        " + record)
+		END
+	UNTIL record[1:5] = "!----";	
+	record = $Read(InFileId);
+	WHILE record[1:5] <> "!----" DO
+		BEGIN
+		IF $LENGTH(record) > 1
+		THEN CALL $Write (OutFileId,record[2:*])
+		ELSE CALL $Write (OutFileId," ");
+		record = $Read(InFileId);
+		IF $EOF(InFileId) <> 0 
+		THEN ABORT "Second !---- line not found before end-of-file" +
+			" - unacceptable PCL file format." +
+			$CRLF + "Bad file = " + $FILEL
+		END;
+	CALL $Close (InFileId);
+	CALL $Close (OutFileId);
+	DISPLAY help_file + " [OK]"
+	END
+UNTIL $Nextfile = 0
+END; !Make_pcl_help_Files
+COMMAND NDIRECTORY;
+!------------------------------------------------------------------------
+! Purpose:
+!	Give a verbose directory listing of new files created today.
+!
+! Usage:
+!	NDIRECTORY {filespec}
+!
+! Remarks:
+!	If the file specification is omitted, then *.*.* is assumed.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[04-Sep-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+STRING command_line;
+
+GUIDE "of files created TODAY";
+
+PARSE (FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	DEFAULT_GEN *,
+	HELP "list of files (default DSK:*.*.*)",
+	WILD) : NOP);
+
+command_line = "";
+
+DO	! Reconstruct command line
+	command_line = command_line + $FILEL + ","
+UNTIL $Nextfile = 0;
+
+DOCOMMAND ORIGINAL "VDIRECTORY " + command_line + $CRLF +
+	"SEPARATE" + $CRLF + "NO PROTECTION" + $CRLF +
+	"SINCE TODAY" + $CRLF + $CRLF
+
+END; !NDIRECTORY
+COMMAND QSPELL;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute the SPELL spelling correction program with a single
+!	input command line.
+!
+! Usage:
+!	QSPELL inputfile [outputfile]
+!
+! Remarks:
+!	The output file defaults to TTY: unless otherwise specified.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Feb-81]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL STRING PROCEDURE
+	filename;
+
+STRING
+	echo,
+	input_file,
+	output_file;
+
+GUIDE "check of file";
+
+PARSE(
+FILE	(HELP "Input file",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "FOO",
+	DEFAULT_EXT "DOC",
+	DEFAULT_GEN 0) : input_file = $FILEL);
+
+PARSE(
+FILE	(HELP "Output exception file",
+	OUTPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_EXT "EXCEPTIONS",
+	DEFAULT_GEN 0) : output_file = $FILEL;
+
+EOL	(HELP "carriage return for default of TTY:") : output_file = "TTY:");
+
+INVOKE "SYS:SPELL";
+IF output_file = "TTY:" THEN DISPLAY "Exceptions...";
+TYPEIN "N";
+TYPEIN "Q";
+TYPEIN input_file;
+TYPEIN output_file;
+TYPEIN "E";
+DISPLAY $CRLF + "[Done]"
+END; ! QSPELL
+COMMAND P79COM;
+!------------------------------------------------------------------------
+! Purpose:
+!	Construct source comparison files for <PLOT79>.
+!
+! Usage:
+!	P79COM newfile [oldfile]
+!
+! Remarks:
+!	The oldfile specification can be omitted if its generation number
+!	is one less than that of the newfile.  The difference file is
+!	assigned a name constructed from the newfile directory name and
+!	file name with the same generation number, and is written in
+!	the directory PS:<PLOT79>.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[28-Aug-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER
+	i;
+
+STRING
+	old_file,
+	new_file,
+	difference_file,
+	help_string,
+	work;
+
+help_string = "old version (if generation number is not 1 less" +
+		" than new version), or carriage return";
+
+GUIDE "<PLOT79> source comparisons";
+
+PARSE (
+FILE	(INPUT,
+	HELP "new version",
+	STDHELP,
+	DEFAULT_EXT "FOR") : new_file = $FILEL);
+
+!
+! Convert the directory name to part of the difference file name,
+! removing the angle brackets and replacing "." by "-".
+!
+work = $File_Dir($Parse);
+difference_file = "";
+
+i = 0;
+DO	BEGIN
+	i = i + 1;
+	IF work[i:1] = "."
+	THEN	difference_file = difference_file + "-"
+	ELSE	difference_file = difference_file + work[i:1]
+	END
+UNTIL i >= $LENGTH(work);
+
+difference_file = difference_file + "-" + $File_Nam($Parse) + 
+	"-" + $File_Typ($Parse);
+
+IF $LENGTH(difference_file) > 39 THEN 	! Make sure length is legal.
+	BEGIN
+	difference_file = difference_file[$LENGTH(difference_file)+1-39:39];
+	difference_file = difference_file[$SEARCH(difference_file,"-")+1:*]
+	END;
+
+difference_file = "PS:<PLOT79>" + difference_file +  ".DIF." +
+	$STRING($FileInfo_I($Parse,$FBGEN)/262144);
+
+PARSE (
+FILE	(INPUT,
+	HELP help_string,
+	STDHELP,
+	DEFAULT_EXT "FOR") : old_file = $FILEL;
+
+EOL : BEGIN
+      i = ($FileInfo_I($Parse,$FBGEN)-1)/262144;
+      old_file = $File_Dev($Parse) + ":<" + $File_Dir($Parse) + ">"
+	+ $File_Nam($Parse) + "." + $File_Typ($Parse) + "."
+	+ $STRING(i)
+      END);
+
+DISPLAY "Old: " + old_file;
+DISPLAY "New: " + new_file;
+DISPLAY "Dif: " + difference_file;
+
+INVOKE "SYS:SRCCOM";
+
+TYPEIN	old_file + $CRLF + 
+	new_file + $CRLF + 
+	$CRLF + 		! No marked source file output.
+	difference_file + $CRLF +
+	"F" + $CRLF;		! Switch to ignore changes in spacing and tabs.
+	CLEARTYPEOUT;
+
+DISPLAY "[Done]";
+
+END; ! P79COM
+COMMAND PCC;
+!----------------------------------------------------------------------
+! pcc.pcl - PCC exec command to drive the portable C compiler (pcc-20),
+!	    with bells and whistles.  Needs procs for repeated stuff at end...
+!
+! Author:	Jay Lepreau
+!		Computer Science Dept.
+!		University of Utah
+! Date:		March 15, 1981
+! Copyright (c) Jay Lepreau
+!
+! Note:	Requires exec level at least 4(703) if /link=yes.  If linking not
+!	required, delete the /link switch and the 'prompt' statement.
+!----------------------------------------------------------------------
+begin
+	external string pccfile, cppoptions, pcclink, pccfullcomp;
+	external integer pccflags;
+
+	string	s, snul, helpline, opthelp;
+	string	oldir, fn1, fnhead, devdir;
+	string	ifile, mfile, macfile, relfile;
+	string	fn1short, shorthead, shortrel;
+
+	integer length, err;
+	integer more, firstoption, saval, usersav;
+
+	guide "Compile C program";
+
+	if pccfile = "" then helpline = "source filespec"
+	  else helpline =  "source filespec (default " + pccfile + ")";
+	if cppoptions = "" then opthelp = ""
+	  else opthelp = "options (default " + cppoptions + ")";
+	if pccflags = 0 then begin		! set initial defaults
+!		pccflags = 1;
+		pccfullcomp = "YES";
+		pcclink = "NO";
+	end;
+
+	parse (	file(default pccfile, default_ext "c", help helpline):
+			pccfile = $files;
+		);
+
+	more = 1;
+   while more=1 do
+	parse (	switch (help opthelp, stdhelp,
+			words(	include		:: 1,
+				define		:: 2,
+				undefine	:: 3,
+				kill_cpp_options:  4,
+				link		:: 5,	!delete for old exec
+				full_compile	::6)):
+			begin
+				saval = $value;
+				case $value from 1 to 6 of begin
+				[1]: begin
+					s = "I";
+					parse(directory(parseonly):
+						s = s + $atom);
+				     end;
+				[2]: begin
+					s = "D";
+ 					parse(field(help "token"):
+						s = s + $atom);
+				     end;
+				[3]: begin
+					s = "U";
+ 					parse(field(help "token"):
+						s = s + $atom);
+				     end;
+				[4]: begin
+					firstoption = 0;	!safety...
+					cppoptions = "";
+					opthelp = "";
+				     end;
+				[5]: parse(keyword(default pcclink,
+						      words(yes	:1,
+							    no	:2)):
+					pcclink = $atom);
+				[6]: parse(keyword(default pccfullcomp,
+						      words(yes	:1,
+							    no	:2)):
+					pccfullcomp = $atom);
+				end;
+
+				if saval <= 3 then begin
+					if firstoption = 1 then begin
+						firstoption = 0;
+						cppoptions = "";
+					end;
+					cppoptions = cppoptions + " -" + s;
+			  		opthelp = "options (default " +cppoptions+ ")";
+				end;
+			end;
+
+		eol(help "confirm for current defaults"): more = 0
+		);	!end of switch parse
+
+	if pccflags = 0 then begin			!set default pcc:
+		pccflags = 1;			!..do here cause of pcl bug
+		docommand original "info log pcc:" to s;
+		if s = "" then docommand original "define pcc: ps:<subsys.pcc>";
+	end;
+
+	fn1 = $file_nam($parse);
+	length = $length(fn1);
+	fn1short = fn1 [1 : 6];
+	devdir = $file_dev($parse) + ":<" + $file_dir($parse) + ">";
+	fnhead = devdir + fn1;
+	docommand original "define pcctmp: " + devdir;		!short for link
+	shorthead = "pcctmp:" + fn1short;
+
+	ifile = "ps:<temp>" + fn1 + ".i";
+	if pccfullcomp = "NO" then mfile = "nul:"
+	    else mfile = "ps:<temp>" + fn1 + ".m";
+	macfile = "ps:<temp>" + fn1 + ".mac";
+	relfile = fnhead + ".rel";
+	shortrel = shorthead + ".rel";
+
+	docommand "pcc:cpp.exe " + cppoptions + " " + pccfile + " >" + ifile;
+	docommand "pcc:c1.exe <" + ifile + " >" + mfile;
+	docommand "delete " + ifile to snul;
+
+	if pccfullcomp = "YES" then begin
+		docommand "pcc:c2.exe -l <" + mfile + " >" + macfile;
+		docommand "delete " + mfile to snul;
+		invoke "sys:macro.exe";
+		typein relfile + "=" + macfile;
+		typein "";
+		gettypeout s;
+		killprogram;			!to be safe
+		err = $search(s, "?") + $search(s, "%");
+		if err > 0 then begin
+			display "**** Assembly Problem ****";
+			display s;
+			abort "Aborting,  macro file = " + macfile;
+		end
+		else begin
+			display macfile + " ==> " + relfile;
+			docommand "delete " + macfile to snul;
+		end;
+		if pcclink = "YES" then begin
+			if length > 6 then docommand original
+				"rename " + relfile + " " + shortrel to snul;
+			oldir = $connecteddirectory;   !cause uses 100's of pgs
+			docommand original "connect ps:<temp>" to snul;
+			invoke "sys:link.exe";
+			typein "@pcc:psect.ccl";
+			typein 	shortrel;
+resrc:			typein "pcc:prolib/s,pcc:plib1/s,pcc:prolib/s";
+                        typein "pcc:plib1/s";   !re-search
+			typein "/u";
+			gettypeout s;
+			err = $search(s, "?") + $search(s, "%");
+			if err > 0 then begin
+				display "**** Link Problem ****";
+				display s;
+				docommand original "connect " + oldir to snul;
+				if length > 6 then docommand original
+				  "rename " + shortrel + " " + relfile to snul;
+				abort "Aborting...";
+			end;
+			if $search(s, "LNKUGS No") > 0 then begin
+				if usersav = 0 then typein shorthead + "/sav";
+				typein "/go";
+				gettypeout s;
+				err = $search(s, "?") + $search(s, "%");
+				if err > 0 then begin
+					display "**** Link Problem ****";
+					display s;
+					docommand original
+					  "delete " + shorthead + ".exe,"+$crlf
+						+ "expunge" + $crlf to snul;
+					if length > 6 then docommand original
+					  "rename " + shortrel + " " + relfile to snul;
+					docommand original
+					  "connect " + oldir to snul;
+					abort "Aborting...";
+				end;
+				docommand original
+				  "connect " + oldir to snul;
+				if length > 6 then
+				  docommand original
+				    "rename " + shorthead+".* "+fnhead+".*" to snul;
+			end
+			else begin		!undefined symbols
+				display s;
+				display "Enter additional link commands,  ending with 'GO', or type 'ABORT'";
+			more = 1;
+			do begin
+				prompt "*";		!delete for old exec
+				parse (keyword (words(abort : 1,
+						      go    : 2)): more = 0;
+					text: begin
+						s = $atom;
+						if $searchraised(s, "/SAV") > 0
+							then usersav = 1
+							else usersav = 0;
+						typein s;
+						gettypeout s;
+						display s;
+					      end;
+					);
+				parse eol;
+			end until more = 0;
+				if $atom = "ABORT" then begin
+					docommand original
+					  "connect " + oldir to snul;
+					if length > 6 then
+					  docommand original
+					    "rename " + shorthead+".* "+fnhead+".*" to snul;
+					abort "Aborting...";
+				end;	
+				goto resrc;
+			end;
+		end;
+	end;
+end;
+
+command SHOW_PCC_DEFAULTS;
+begin
+	external string pccfile, cppoptions, pcclink, pccfullcomp;
+	display "pcc default source file			= " + pccfile;
+	display "pcc default pre-processor options	= " + cppoptions;
+	display "pcc full-compile flag			= " + pccfullcomp;
+	display "pcc link flag				= " + pcclink;
+end;
+
+
+string pccfile;
+string cppoptions;
+string pcclink;
+string pccfullcomp;		! NO means syntax check only (cpp, pass1)
+integer pccflags;		! 0 means never invoked before
+
+COMMAND PLOT;
+!------------------------------------------------------------------------
+! Purpose:
+!	Sent Printronix plot files to printer queue.
+!
+! Usage:
+!	PLOT [switches] filelist
+!
+! Remarks:
+!	If the file specification is omitted, then *.PLT.0 is assumed.
+!	The switch /COPIES:nnn may be given if more than one copy
+!	of each file is required.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[06-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+STRING
+	command_echo,
+	ext,
+	header,
+	output_file,
+	record,
+	temporary_file;
+
+INTEGER
+	copies;
+
+GUIDE "files";
+
+PARSE(
+SWITCH(	WORDS(COPIES::1),HELP "Printronix plot file, or switch ",STDHELP) : 
+	BEGIN
+	CASE $VALUE FROM 1 TO 1 OF 
+		BEGIN
+		[1] : PARSE (NUMBER (DEFAULT "1",STDHELP) : copies = $VALUE);
+		END
+	END;
+
+OTHERWISE : copies = 1);
+
+PARSE (
+FILELIST (HELP "List of files to be plotted",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "PLT",
+	DEFAULT_GEN 0) : NOP);
+
+DO
+	BEGIN
+	DISPLAY "[" + $FILEL + "]";
+	DOCOMMAND ORIGINAL "PRINT /FILE:PLOT /NOHEADER /DELETE /COPIES:" + 
+		$STRING(copies) + " " + $FILEL
+	END
+UNTIL $NextFile = 0
+
+END; ! PLOT
+COMMAND PQ;
+!------------------------------------------------------------------------
+! Purpose:
+!	Append files with header for submission to printer queue.
+!
+! Usage:
+!	PQ [switches] filelist
+!
+! Remarks:
+!	If the  file  specification  is omitted,  then  *.*.*  is
+!	assumed.
+!
+!	The switch /COPIES:nnn may be given if more than one copy
+!	of each file is required.
+!
+!	The switch /HEADER:nn will cause the insertion of a  page
+!	header every nn  lines (nn  = 62 by  default if  omitted)
+!	containing the file name and page number.
+!	
+!	The       switches        /SINCE:date_and_time        and
+!	/BEFORE:date_and_time may  be  used to  select  files  by
+!	write date and time.  The switch values may be any  valid
+!	DEC-20 date  and time  strings, or  YESTERDAY, TODAY,  or
+!	TOMORROW (time 00:00:01), or past day of week (MONDAY  ..
+!	SUNDAY), or NOW (current time).  The defaults are
+!
+!	/SINCE:first_day_and_time_of_clock 
+!	and 
+!	/BEFORE:NOW
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[18-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+INTEGER
+     before_time_and_date,
+     copies,
+     copy_count,
+     curtad,
+     done,
+     ff_loc,
+     file_count,
+     footer,
+     header,
+     InFileId,
+     line_number,
+     NO,
+     OutFileId,
+     page_number,
+     page_size,
+     print,
+     select_time_and_date,
+     since_time_and_date,
+     YES;
+
+STRING
+     bs,
+     clock_start,
+     command_echo,
+     date_string,
+     ext,
+     ff,
+     output_file,
+     page_header,
+     printed_by_line,
+     record,
+     temporary_file;
+
+
+NO = 0;
+YES = 1;
+curtad = $CURTAD;
+
+before_time_and_date = curtad;
+bs = $CVITC(8);
+clock_start = $OUTPUTTAD(0);
+copies = 1;
+done = NO;
+ff = $CVITC(12);
+file_count = 0;
+header = NO;
+footer = NO;
+page_header = ""; 
+print = YES;
+page_size = 0;
+select_time_and_date = NO;
+since_time_and_date = NO;
+temporary_file = $STRING($TERMNUMBER) + "-APPEND.TMP;T";
+output_file = $STRING($TERMNUMBER) + ".LST.-1";
+OutFileId = $Open (output_file,$Output);
+CALL $Close (OutFileId);
+output_file = $STRING($TERMNUMBER) + ".LST.0";
+printed_by_line = " " + bs + "Printed by " + $USERNAME + 
+     " on " + $DATE + " " + $TIME +
+     $CRLF + " ----------------------------------------" +
+     "----------------------------------------" + $CRLF;
+
+GUIDE "files";
+
+WHILE done = NO DO PARSE(
+SWITCH( WORDS(
+     BEFORE::1,
+     SINCE::2,
+     COPIES::3,
+     PRINT:4,
+     NOPRINT:5,
+     HEADER::6,
+     NOHEADER:7,
+     FOOTER:8,
+     NOFOOTER:9),STDHELP):
+     BEGIN
+     CASE $VALUE FROM 1 TO 9 OF BEGIN
+     [1]:	BEGIN
+		before_time_and_date = 
+			GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+		select_time_and_date = YES
+		END;
+     [2]:	BEGIN
+		since_time_and_date =
+			GENERAL_TIME_AND_DATE_PARSE(curtad,clock_start,0);
+		select_time_and_date = YES
+		END;
+     [3] : PARSE (NUMBER (DEFAULT "1",STDHELP) : copies = $VALUE);
+     [4] : print = YES;
+     [5] : print = NO;
+     [6] : PARSE (NUMBER (DEFAULT "62",HELP "lines/page") : 
+	       page_size = $VALUE);
+     [7] : page_size = 0;
+     [8] : footer = YES;
+     [9] : footer = NO
+     END; ! CASE
+     END; ! SWITCH
+
+EOL (HELP "file specifications") : ABORT "No files specified";
+
+OTHERWISE : done = YES);
+
+PARSE (
+FILELIST (HELP "List of files to be appended",
+     INPUT,
+     DEFAULT_DEV "DSK",
+     DEFAULT_NAM "*",
+     DEFAULT_EXT "*") : NOP);
+
+IF page_size > 0 THEN 
+     BEGIN
+     IF page_size < 15 THEN page_size = 15;
+     header = YES;
+     IF footer = YES THEN page_size = page_size - 3
+     END;
+IF select_time_and_date = YES THEN
+DISPLAY "Print files written SINCE " + $OUTPUTTAD(since_time_and_date) +
+" and BEFORE " + $OUTPUTTAD(before_time_and_date);
+
+DO   IF $FileInfo_I(-1,12) >= since_time_and_date 
+     THEN IF $FileInfo_I(-1,12) < before_time_and_date
+     THEN BEGIN
+	  ext = $file_typ($parse);
+	  IF ext = "BIN" THEN GOTO cycle;
+	  IF ext = "EXE" THEN GOTO cycle;
+	  IF ext = "DIRECTORY" THEN GOTO cycle;
+	  IF ext = "REL" THEN GOTO cycle;
+	  copy_count = 0;
+	  WHILE copy_count < copies DO 
+	       BEGIN ! make next copy
+	       file_count = file_count + 1;
+	       page_header = " " + bs + 
+		    $FileInfo_S(-1,64+9816770569) + "	Page ";
+	       record = page_header + "1" + $CRLF + printed_by_line;
+	       IF file_count > 1 THEN record = ff + record;
+	       OutFileId = $Open (temporary_file,$Output);
+	       CALL $Write (OutFileId,record);
+	       CALL $Close (OutFileId);
+	       copy_count = copy_count + 1;
+	       DOCOMMAND ORIGINAL "APPEND " + temporary_file + " " + 
+		    output_file TO command_echo;
+	       IF header = NO
+	       THEN DOCOMMAND ORIGINAL "APPEND " + $FILEL + " " + output_file
+	       ELSE BEGIN ! Copy file inserting page headers
+		    InFileId = $Open($FILEL,$Input);
+		    record = $Read(InFileId);
+		    OutFileId = $Open(output_file,$Append);
+		    page_number = 1;
+		    line_number = 6;
+		    WHILE $Eof(InFileId) = 0 DO
+			 BEGIN
+			 ff_loc = $SEARCH(record,ff);
+			 IF ff_loc > 0 THEN
+			      BEGIN ! remove FF
+			      IF page_number > 1 THEN line_number = page_size; 
+			      record = record[1:ff_loc-1] + record[ff_loc+1:*]
+			      END;
+			 IF line_number >= page_size THEN
+			      BEGIN ! print page header
+			      IF footer = YES THEN CALL $Write (OutFileId,
+				   $CRLF + page_header + $STRING(page_number));
+			      page_number = page_number + 1;
+			      line_number = 3;
+			      CALL $Write (OutFileId,ff + page_header +
+				   $STRING(page_number) + $CRLF)
+			      END;
+			 line_number = line_number + 1;
+			 CALL $Write (OutFileId,record);
+			 record = $Read(InFileId)
+			 END;
+		    IF footer = YES THEN
+			 BEGIN
+			 WHILE line_number < page_size DO
+			      BEGIN
+			      CALL $Write (OutFileId,"");
+			      line_number = line_number + 1
+			      END;
+			 CALL $Write (OutFileId,$CRLF + page_header +
+			       $STRING(page_number))
+			 END;
+		    CALL $Close (InFileId);
+		    CALL $Close (OutFileId)
+		    END ! Copy file inserting page headers
+	  END;  ! make next copy
+     cycle: NOP
+     END
+UNTIL $Nextfile = 0;
+
+DOCOMMAND ORIGINAL "DELETE " + temporary_file TO command_echo;
+
+DOCOMMAND ORIGINAL "SET FILE GENERATION-RETENTION-COUNT " + output_file
+     + " 0" TO command_echo;
+
+IF print = YES 
+THEN DOCOMMAND ORIGINAL "PRINT /AFTER:+0:0:10 /NOHEADER " + output_file
+ELSE DISPLAY " Listings on file " + output_file
+END; ! PQ
+COMMAND print;
+!------------------------------------------------------------------------
+! Purpose:
+!	Print a list of files using one of the College of Science 
+!	printers (default Physics Printronix 600).
+!
+! Usage:
+!	PRINT {/switches} filespecs
+!
+! Remarks:
+!	The filespecs field may contain any list of file specifications.
+!	The available switches are as follows:
+!	/COPIES:nn	Number of copies desired (default = 1)
+!	/FORTRAN	Files contain ASA carriage control in column 1.
+!	/INDENT:nn	Indent the file right (nn > 0) or left (nn < 0;
+!			nn characters lost on each line) immediately
+!			prior to printing.
+!	/NOHEAD		Header suppression for UAC printer only.
+!	/SIXLPI		Six lines/inch printing.
+!	/EIGHTLPI	Eight lines/inch printing (default).
+!	/B129		Mathematics Annex printer.
+!	/CHEMISTRY	Chemistry Printronix 300 printer.
+!	/PHYSICS	Physics Printronix 600 printer (default).
+!	/MATHEMATICS	Mathematics printer.
+!	/UAC		Utah Archaelogical Center Decision Data 6540.
+!
+!	When /INDENT or /FORTRAN are specified, temporary files are
+!	created in the connected directory named FOOPTX.LST and/or
+!	the filename to the extension of which is appended the string
+!	"terminalnumberTMP"; these temporary files are deleted before
+!	completion of execution.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER done,indent,copies,count;
+STRING fortran,header,lpi,printer,suffix;
+
+fortran = "";
+lpi = "";
+printer = "SYS:PRX";
+done = 0;
+copies = 1;
+indent = 0;
+header = "";
+
+GUIDE "files";
+
+WHILE done = 0 DO PARSE (
+SWITCH(WORDS(
+	FORTRAN:1,
+	SIXLPI:2,
+	EIGHTLPI:3,
+	INDENT::4,
+	COPIES::5,
+	B129:6,
+	CHEMISTRY:7,
+	MATHEMATICS:8,
+	PHYSICS:9,
+	UAC:10,
+	NOHEAD:11),
+	STDHELP,
+	HELP "Defaults: /EIGHTLPI /COPIES:1 /INDENT:0 /PHYSICS") : 
+	CASE $VALUE FROM 1 TO 11
+ OF BEGIN
+	[1] : fortran = $ATOM;
+	[2] : lpi = "6";
+	[3] : lpi = "";
+	[4] : PARSE (NUMBER (DEFAULT "10",STDHELP) : indent = $VALUE);
+	[5] : PARSE (NUMBER (DEFAULT "1",STDHELP) : copies = $VALUE);
+	[6] : printer = "SYS:COPLPT";
+	[7] : printer = "SYS:P300";
+	[8] : printer = "SYS:COPY53";
+	[9] : printer = "SYS:PRX";
+	[10]: printer = "SYS:UACPRT";
+	[11]: header = "/NOHEAD";
+	END;
+
+EOL (HELP "file specifications") : ABORT "No files specified";
+
+OTHERWISE : done = 1);
+
+PARSE (FILELIST (HELP "List of files to print",DEFAULT_EXT "LST") : NOP);
+
+IF printer <> "SYS:UACPRT" THEN header = "";
+
+IF indent = 0
+THEN IF fortran = "" 
+	THEN suffix = ""
+	ELSE suffix = "-" + $STRING($TERMNUMBER) + "TMP"
+ELSE suffix = "-" + $STRING($TERMNUMBER) + "TMP";
+
+DO SELECT $File_Typ($Parse) OF BEGIN
+
+["REL"]: NOP;
+["EXE"]: NOP;
+["BIN"]: NOP;
+[OTHERWISE]:
+IF fortran = "" THEN BEGIN
+	IF indent <> 0 THEN DOCOMMAND "INDENT-FILE /INDENT:" +
+			$STRING(indent) + " " + $FILES + " "
+			+ $FILES + suffix;
+	DISPLAY printer[5:*] + ":	" + $FILES;
+	INVOKE printer;
+	count = copies;
+	WHILE count > 0 DO BEGIN
+		count = count - 1;
+		TYPEIN $FILES + suffix + " " + lpi + header
+		END;
+	TYPEIN "";
+	IF indent <> 0 THEN DOCOMMAND ORIGINAL "DELETE " + $FILES + suffix
+	END
+ELSE BEGIN
+	DOCOMMAND ORIGINAL "COPY " + $FILEL + " FOOPTX.LST";
+	DISPLAY "FORPTX:	" + $FILES;
+	INVOKE "SYS:FORPTX";
+	TYPEIN "FOOPTX.LST";
+	TYPEIN "FOOPTX.LST";
+	DOCOMMAND ORIGINAL "OPR:WAIT";
+	KILLPROGRAM;
+	DOCOMMAND ORIGINAL "RENAME FOOPTX.LST " + $FILES + suffix + " ";
+	IF indent <> 0 THEN DOCOMMAND "INDENT-FILE /INDENT:" +
+			$STRING(indent) + " " + $FILES + suffix + " "
+			 + $FILES + suffix;
+	DISPLAY printer[5:*] + ":	" + $FILES;
+	INVOKE printer;
+	count = copies;
+	WHILE count > 0 DO BEGIN
+		count = count - 1;
+		TYPEIN $FILES + suffix + " " + lpi + header
+		END;
+	TYPEIN "";
+	DOCOMMAND ORIGINAL "DELETE " + $FILES + suffix
+END
+END
+UNTIL $Nextfile = 0;
+DISPLAY "[Done]"
+END;
+COMMAND PURGE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Delete all but the highest generation of all or selected files
+!	in the connected directory, as well as all TMPCOR-DATA-BASE.TMP,
+!	EMACS-AUTO-SAVE and _^RSV..* EMACS files on the connected 
+!	directory, and PASCAL OUTPUT..* files.
+!
+! Usage:
+!	PURGE {filespec}
+!
+! Remarks:
+!	If the file specification is omitted, then *.*.* is assumed.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+STRING	devstr;
+
+GUIDE "all but highest file generation";
+PARSE (
+FILELIST 
+	(HELP "List of files to be purged to 1 generation (default DSK:*.*.*)",
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	WILD) : NOP);
+
+devstr = $File_Dev($Parse) + "<" + $File_Dir($Parse) + ">";
+
+DO	DOCOMMAND ORIGINAL "DELETE " + $FILEL + "," + $CRLF 
+	+ "KEEP 1 (GENERATION)" + $CRLF + " " + $CRLF
+UNTIL $Nextfile = 0;
+
+DOCOMMAND ORIGINAL "DELETE " + devstr +
+	"%%%TMPCOR-DATA-BASE.TMP.*," + devstr +
+	"EMACS-AUTO-SAVE.*.*," + devstr +
+	"_^RSV..*," + devstr +
+	"OUTPUT..*"
+END; ! purge
+COMMAND QSPELL;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute the SPELL spelling correction program with a single
+!	input command line.
+!
+! Usage:
+!	QSPELL inputfile [outputfile]
+!
+! Remarks:
+!	The output file defaults to TTY: unless otherwise specified.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[15-Mar-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL STRING
+	Qspell_dev,
+	Qspell_dir,
+	Qspell_nam,
+	Qspell_typ,
+	Qspell_device;
+
+STRING
+	echo,
+	input_file,
+	output_file,
+	s1,
+	s2,
+	s3,
+	s4;
+
+GUIDE "check of file";
+
+IF qspell_dev <> "" THEN
+	PARSE(
+	FILE	(HELP "Input file",
+		INPUT,
+		DEFAULT_DEV qspell_dev,
+		DEFAULT_DIR qspell_dir,
+		DEFAULT_NAM qspell_nam,
+		DEFAULT_EXT qspell_typ,
+		DEFAULT_GEN 0) : input_file = $FILES)
+ELSE
+	PARSE(
+	FILE	(HELP "Input file",
+		INPUT,
+		DEFAULT_DEV "DSK:",
+		DEFAULT_NAM "FOO",
+		DEFAULT_EXT "LST",
+		DEFAULT_GEN 0) : input_file = $FILES);
+
+
+s1 = $File_Dev($PARSE);
+s2 = $File_Dir($PARSE);
+s3 = $File_Nam($PARSE);
+s4 = $File_Typ($PARSE);
+
+PARSE(
+FILE	(HELP "Output exception file",
+	OUTPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_EXT "EXCEPTIONS",
+	DEFAULT_GEN 0) : output_file = $FILES;
+
+EOL	(HELP "carriage return for default of TTY:") : 
+	output_file = "TTY" + $STRING($TERMNUMBER,8) + ":");
+
+qspell_dev = s1;
+qspell_dir = s2;
+qspell_nam = s3;
+qspell_typ = s4;
+
+INVOKE   "SYS:SPELL";
+IF output_file = "TTY" + $STRING($TERMNUMBER,8) + ":" 
+THEN DISPLAY "Exceptions in " + input_file + ":";
+
+TYPEIN "N";
+TYPEIN "Q";
+TYPEIN "";
+TYPEIN input_file;
+TYPEIN output_file;
+TYPEIN "E";
+KILLPROGRAM;
+DISPLAY $CRLF + "[Done]"
+END; ! QSPELL
+
+String qspell_dev;
+String qspell_dir;
+String qspell_nam;
+String qspell_typ;
+String qspell_device;
+
+COMMAND RECORD;
+!---------------------------------------------------------------------
+! 	
+! RECORD writes  the  following information  to  a user  specified  file
+! (defaults to  PS:<USER-DIR>RECORD.LOG.-2 :  Date  and time,  TTY  line
+! number, program  name, cpu  time, username,  and connected  directory.
+! Note that a  temporary file is  created and deleted  on the  directory
+! PS:<TEMP>.
+! 	
+! The intended purpose of the command is to gather usage statistics  for
+! a given user group.   It can accomplish this  by the insertion of  the
+! command:
+! 	
+! 	RECORD <a-statistics-directory>
+! 	
+! into the  logout.cmd file  on the  users directory  or on  a  superior
+! directory of the user.  This will cause the statistics to be  appended
+! to the file RECORD.LOG.-2 on the directory.
+! 
+! 	Use as a Statistics Mechanism for user group UU
+! 	
+! For this to work properly, the  protection codes of the various  files
+! and directories involved must be:
+! 	
+!      <UU>		    DIRECTORY PROTECTION 774000 (access for users
+! 	      		         UU.* controlled by file protection codes)
+! 
+!      <UU>LOGOUT.CMD	    FILE PROTECTION 774000      (read access only)
+! 
+!      <UU.RECORD>	    DIRECTORY PROTECTION 774000
+! 
+!      <UU.RECORD>USED.CPU  FILE PROTECTION 770400 (append access by UU.*)
+! 	
+! and  insert  the  line  "RECORD  <UU.RECORD>USED.CPU"  into  the  file
+! LOGOUT.CMD on the directory PS:<UU>.
+! 	
+! This  arrangement  prevents  the   users  UU.*  from  corrupting   the
+! statistics gathered insofar  as possible. A  malicious user could  use
+! the command  RECORD from  his  terminal without  logging out  and  add
+! entries to the record file  appearing  to  have gotten more  CPU  than
+! really was used, but no user can remove entries from  the  record file
+! once they have been made.
+! 
+! However, if the user  creates a file LOGOUT.CMD  in his own  directory
+! and neglects to include a RECORD  command therein, his usage will  not
+! be trapped.
+! 
+! 
+! The statistics file must already exist on <UU.RECORD> since the user's
+! access to it is controlled by the file protection code rather than the
+! directory protection code. Therefore if the file is migrated, it  must
+! be recreated.
+! 
+! The USED.CPU file may be analyzed by the Fortran program REPORT.
+! 
+! Note that this command will not work properly if it is invoked from  a
+! TAKE file, but it does work ok from an indirect file.
+!
+!---------------------------------------------------------------------
+!
+BEGIN
+INTEGER LEN,N,NEND,P1,P2,IOCHN;
+STRING REPORT_FILE,SYSTAT_LINE,TEMP_FILE,TEMPDIR,CHARAC,TEXT,USER,BUF;
+STRING XX;
+EXTERNAL STRING PROCEDURE TEMP_FILENAME,SYSDYS,USERNAME,ACCOUNT;
+EXTERNAL STRING PROCEDURE FILENAME,FILEDIRECTORY,FILEEXTENSION;
+!
+! TO CHANGE THE NAME OF THE DIRECTORY FOR TEMPORARY FILE, SIMPLY
+! CHANGE THE DIRECTORY NAME IN THE NEXT LINE
+!
+TEMPDIR="PS:<TEMP>";
+!
+! GET THE SUMMARY FILE NAME
+!
+GUIDE "statistics";
+PARSE FILE (HELP "statistics filename", DEFAULT_GEN -,
+            DEFAULT_DEV "PS", DEFAULT_DIR $USERNAME,
+	    DEFAULT_NAM "RECORD", DEFAULT_EXT "LOG");
+PARSE EOL;
+REPORT_FILE=$FILE_DIR($PARSE)+$FILE_NAM($PARSE)+"."+
+ $FILE_TYP($PARSE)+".-2";
+!
+! GET THE STATISTICS:
+! SYSDYS GETS TIME AND DATE OF LOGOUT FROM SYSTAT HEADER AND GETS
+! JOB CPU, USERNAME, ETC. FROM SYSTAT . T LINE
+!
+!
+SYSTAT_LINE=SYSDYS;
+!
+! KNOCK SPURIOUS <CR> OFF END SINCE APPEND OPERATION BELOW CAUSES
+! TEXT TO GO IN AS A SEPARATE RECORD
+!
+LEN=$LENGTH(SYSTAT_LINE)-1;
+SYSTAT_LINE=SYSTAT_LINE[1:LEN];
+!
+! REMOVE PROGRAM NAME FROM SYSTAT LINE
+!
+P1=$SEARCH(SYSTAT_LINE,"RECORD")-1;
+P2=P1+7;
+SYSTAT_LINE=SYSTAT_LINE[1:P1]+SYSTAT_LINE[P2:*];
+!
+! GET ACCOUNT FROM I JOB COMMAND AND ADD IT TO SYSTAT LINE
+!
+SYSTAT_LINE=ACCOUNT+"  "+SYSTAT_LINE;
+!
+! BUILD TEMPORARY FILE NAME AND OPEN IT FOR OUTPUT
+!
+USER=USERNAME;
+N=$LENGTH(USER)+1;
+NEND=0;
+UNTIL NEND=1        DO BEGIN
+                       N=N-1;
+                       CHARAC=USER[N:1];
+                       IF N=1 THEN NEND=1;
+                       IF CHARAC="." THEN NEND=1;
+                       END;
+IF N <> 1 THEN N=N+1;
+TEXT="."+USER[N:*];
+TEMP_FILE=TEMPDIR+TEMP_FILENAME(TEXT);
+IOCHN = $OPEN(TEMP_FILE,$OUTPUT);
+!
+! WRITE THE SYSTAT LINE
+!
+CALL $WRITE(IOCHN,SYSTAT_LINE);
+!
+! CLOSE THE TEMPORARY FILE
+!
+CALL $CLOSE(IOCHN);
+!
+! APPEND TEMPORARY FILE TO SUMMARY FILE
+!
+BUF="APPEND "+TEMP_FILE+" "+REPORT_FILE;
+DOCOMMAND ORIGINAL BUF TO XX;
+!
+! DELETE THE TEMPORARY FILE
+!
+BUF="DELETE "+TEMP_FILE;
+DOCOMMAND ORIGINAL "DELETE "+ TEMP_FILE TO XX;
+!
+!  AND THAT IS ALL
+!
+END
+!
+!
+!
+!
+STRING PROCEDURE TEMP_FILENAME(STRING TEXT);
+BEGIN
+!
+!**********************************************************************
+!
+! PROCEDURE TO CONSTRUCT A UNIQUE TEMPORARY FILE NAME FROM THE SYSTEM
+! CLOCK READING.
+!
+! THE FORM OF THE FILE NAME IS A FOUR DIGIT NUMBER APPENDED TO THE
+! BEGINNING OF THE STRING STORED IN THE ARGUMENT TEXT. THUS THE USER
+! CAN SPECIFY THE FINAL CHARACTERS OF THE FILE NAME AND THE FILE
+! EXTENSION.
+!
+! COLLISIONS OF FILENAMES WITHIN A GIVEN PCL ROUTINE ARE UNLIKELY
+! TO OCCUR SINCE THE FOUR DIGIT NUMBER CHANGES FASTER THAN THIS
+! PROCEDURE EXECUTES.
+!
+! COLLISIONS WHEN REFERRED TO BY SEPARATE USERS ARE ALSO VERY UNLIKELY.
+!
+! NOTWITHSTANDING THE ABOVE, COLLISIONS ARE POSSIBLE. THEREFORE THIS
+! PROCEDURE SHOULD NOT BE USED WHEN A COLLISION WOULD BE SERIOUS.
+!
+!**********************************************************************
+!
+INTEGER FULL;
+STRING FILE;
+!
+! get clock reading and increase frequency
+!
+FULL=$CURTAD*6;
+!
+! make it into a string
+!
+FILE=$STRING(FULL);
+!
+! and pick up least significant digits to append user text to
+!
+FILE=FILE[7:*]+TEXT;
+!
+! return the filename to the user
+!
+RETURN FILE;
+END;
+!
+!
+!
+!
+STRING PROCEDURE SYSDYS;
+BEGIN
+!
+!**********************************************************************
+!
+! procedure extracts relevant information from systat display
+!
+!**********************************************************************
+!
+STRING DISPLA,LINE;
+INTEGER N;
+!
+! get output of systat into string variable displa
+!
+DOCOMMAND ORIGINAL "SY . SY T DIRECTORY" TO DISPLA;
+!
+!
+! start building report LINE. columns 8-16 of systat LINE are the time
+! and date in the header LINE. these constants may have to be changed
+! if the format of the systat display is changed.
+!
+LINE=DISPLA[6:18];
+!
+!
+! search for star after job number which marks current job
+!
+!
+N=$SEARCH(DISPLA,"*")+1;
+!
+! get rest of systat LINE
+! and append it to time date info already gotten
+!
+LINE=LINE+DISPLA[N:*];
+!
+! REMOVE COMMA PRECEDING CONNECTED DIRECTORY
+!
+N=$SEARCH(LINE,",")-1;
+IF N>0 THEN LINE=LINE[1:N]+"  "+LINE[N+2:*];
+!
+! return systat display LINE to user
+!
+RETURN LINE;
+END
+STRING PROCEDURE USERNAME;
+!
+!**********************************************************************
+!
+! Procedure returns username associated with the job which calls
+! the procedure. It accomplishes this by issueing the command
+! "I JOB-STATUS" and  finding the username in the returned string.
+! The username is found as the string following the keyword
+! "User" and terminated by a ",". A radical change in the format of
+! the output of the  I JOB-STATUS command could make this procedure
+! inoperative.
+!
+! John Downing, Univ. of Utah, Chem Dept, 1/20/81
+!
+!*********************************************************************
+!
+BEGIN
+STRING BUFFER;
+INTEGER P1,P2,LEN;
+!
+! get the output string
+!
+DOCOMMAND ORIGINAL "I JOB" TO BUFFER;
+!
+! find the keyword
+!
+P2=$SEARCH(BUFFER,"User");
+!
+! space over the keyword and a space following it
+!
+P1=P2+5;
+!
+! search for user name terminator
+!
+P2=$SEARCH(BUFFER,",",P1);
+!
+! calculate length of username
+!
+LEN=P2-P1;
+!
+! return user name
+!
+RETURN BUFFER[P1:LEN];
+END
+STRING PROCEDURE ACCOUNT;
+BEGIN
+STRING LINE;
+INTEGER P1,P2,LEN;
+DOCOMMAND ORIGINAL "I JOB" TO LINE;
+P1=$SEARCH(LINE,"Account");
+P2=$SEARCH(LINE," ",P1);
+P1=$SEARCH(LINE,",",P2);
+LEN=P1-P2;
+RETURN LINE[P2:LEN];
+END
+COMMAND REPORT;
+!----------------------------------------------------------------------
+! 
+!         This command reads the file created by RECORD command  and
+! generates a table listing all jobs in the file satisifying all the
+! conditions given by the following switches:
+! 
+! /ACCOUNT:"acct string"
+!         Only jobs charged to the given account will be included in
+!         the report.  The default is *, i.e., all accounts.
+! 	
+! /ALL
+!         Create a report file with a line for each job.  If all  is
+!         not specified only accumulated cpu time will be printed.
+! 
+! /BATCH
+!         Only batch jobs will be included in the report. Batch jobs
+!         are those having a line number greater than 125.
+! 
+! /FINAL:date & time
+!         Only jobs which logged out  before the specified date  and
+!         time will  be  included in  the  report.  Default  is  the
+!         current date at time 00:00:01.
+! 
+! /INITIAL:date & time
+!         Only jobs which  logged out after  the specified date  and
+!         time will be included in the report.  The defaults are the
+!         same as for /FINAL.
+! 
+! /INTERACTIVE
+!         Only interactive jobs are included in the report. A job is
+!         considered to be interactive if it has a line number  less
+!         than or equal to 125.  If neither /INTERACTIVE nor  /BATCH
+!         are specified, both types of jobs will be included.
+! 
+! /USER:username
+!         Only jobs  of  the  specified user  are  included  in  the
+!         report. The default for this switch is *, i.e., all users.
+! 
+! The format for the command is:
+! 
+!         REPORT {/switches} recordfile {reportfile}
+! 
+! If the report  file is not  given, it  is taken to  be TTY:.   The
+! report file is formatted for printing on a 132 column printer.
+!---------------------------------------------------------------------
+! 
+!  John Downing, University of Utah, Chemistry dept., 1/28/81
+! 
+! 
+BEGIN
+STRING NAME,XREC,XREP,BTAD,FTAD,ACCNT,LINE_OUT;
+STRING IN_DAT,IN_CPUS,TEMP;
+STRING REC,RECU,IN_DATE,IN_ACCNT,IN_LINE,IN_CPU,IN_USER,IN_CONN;
+STRING IN_TIME;
+INTEGER B_JOB,I_JOB,ALL_OUTPUT,POSIT,DATE_OK,ACCNT_OK,NAME_OK,JOB_OK;
+INTEGER CHECK,NN,HH,MM,SS,TIME_SUM,OUT_CHN,IN_CHN;
+EXTERNAL STRING PROCEDURE UNIFORM_RECORD, NEXT_FIELD;
+EXTERNAL PROCEDURE HEADER,RECORD_OUT;
+EXTERNAL INTEGER PROCEDURE DATE_DIFF;
+!
+! Set up defaults for switches
+!
+NAME="*";
+ACCNT="*";
+B_JOB=1;
+I_JOB=1;
+ALL_OUTPUT=0;
+BTAD="01-Jan-50 00:00:01";
+FTAD="01-Jan-99 00:00:01";
+!
+! Begin switch parse
+!
+GUIDE "on statistics";
+REP:
+PARSE(
+  FILE (HELP "Record filename", DEFAULT_GEN -, DEFAULT_DEV "PS",
+        DEFAULT_DIR $USERNAME, DEFAULT_NAM "RECORD",
+        DEFAULT_EXT "LOG" ):  GOTO GOTFLE;
+  SWITCH (WORDS(	INITIAL::1,
+			USER::2,
+			FINAL::3,
+			ACCOUNT::4,
+			BATCH:5,
+			INTERACTIVE:6,
+			ALL:7
+				),HELP "switches",STDHELP):
+    BEGIN
+	CASE $VALUE FROM 1 TO 7 OF
+		BEGIN
+		[1]: PARSE(KEYWORD(WORDS(NOW:1,TODAY:2),
+		     DEFAULT "NOW", HELP "date and time to begin"):
+			CASE $VALUE FROM 1 TO 2 OF
+			BEGIN
+			[1]: BTAD=$OUTPUTTAD($CURTAD);
+			[2]: BTAD=$DATE+" 00:00:01";
+			END;
+			DAYTIME (STDHELP):BTAD=$ATOM;
+			DAYTIME ( DATE,HELP "date"):
+				BTAD=$ATOM+" 00:00:01";
+			DAYTIME (TIME, HELP "time"): 
+				BTAD=$DATE+" "+$ATOM);
+		[2]: PARSE (USERNAME (HELP "username"):NAME=$ATOM);
+		[3]: PARSE(KEYWORD(WORDS(NOW:1,TODAY:2),
+		     DEFAULT "NOW", HELP "date and time to finish"):
+			CASE $VALUE FROM 1 TO 2 OF
+			BEGIN
+			[1]: FTAD=$OUTPUTTAD($CURTAD);
+			[2]: FTAD=$DATE+" 00:00:01";
+			END;
+			DAYTIME(STDHELP):BTAD=$ATOM;
+			DAYTIME(DATE, HELP "date"):
+				FTAD=$ATOM+ " 00:00:01";
+			DAYTIME(TIME, HELP "time"):
+				FTAD=$DATE+" "+$ATOM);
+		[4]: PARSE(QUOTEDSTRING (HELP "account"):ACCNT=$ATOM);
+		[5]: BEGIN
+		     I_JOB=0;
+		     B_JOB=1;
+		     END;
+		[6]: BEGIN
+		     I_JOB=1;
+		     B_JOB=0;
+		     END;
+		[7]: ALL_OUTPUT=1;
+		END;  
+		GOTO REP;
+	END;  
+OTHERWISE: ABORT "file specifications expected");
+GOTFLE:
+  XREC=$FILEL;
+  GUIDE "to report file";
+  PARSE FILE (HELP "report filename",Default_Dev "TTY"):XREP=$FILEL;
+  PARSE EOL:NOP;
+!
+! Initialize I/O and accumulators
+!
+OUT_CHN = $OPEN(XREP,$OUTPUT);
+IN_CHN =  $OPEN(XREC,$INPUT);
+HH=0;
+MM=0;
+SS=0;
+!
+! Write input switch values. Also write header line for table
+! if /all was specified
+!
+CALL HEADER(BTAD,NAME,FTAD,ACCNT,ALL_OUTPUT,B_JOB,I_JOB,OUT_CHN);
+!
+!  Read the RECORD file, write summary table if /all, and accumulate
+!  cpu times.
+!
+UNTIL $EOF(IN_CHN) <>0 DO
+BEGIN
+REC=$READ(IN_CHN);
+!
+! Strip <CR>
+!
+NN=$LENGTH(REC)-1;
+REC=REC[1:NN];
+	IF $LENGTH(REC)<>0 THEN 
+	BEGIN
+!
+! Replace spaces in the line read with a single $ to make
+! searching easier
+!
+		RECU=UNIFORM_RECORD(REC);
+!
+! Pick out each field of line
+!
+		POSIT=1;
+		IN_ACCNT=NEXT_FIELD(RECU,"$",POSIT);
+		IN_DAT=NEXT_FIELD(RECU,"$",POSIT);
+		IN_TIME=NEXT_FIELD(RECU,"$",POSIT);
+		IN_DATE=IN_DAT+" "+IN_TIME;
+		IN_LINE=NEXT_FIELD(RECU,"$",POSIT);
+		IN_CPU=NEXT_FIELD(RECU,"$",POSIT);
+		IN_USER=NEXT_FIELD(RECU,"$",POSIT);
+		IN_CONN=NEXT_FIELD(RECU,"$",POSIT);
+!
+! Check if date of logout is between specified dates
+! and set date ok switch accordingly
+!
+	IF DATE_DIFF(BTAD,IN_DATE)>=0
+	   THEN IF DATE_DIFF(IN_DATE,FTAD)>=0
+	   THEN DATE_OK=1 ELSE DATE_OK=0
+	   ELSE DATE_OK=0;
+!
+! Check if user name matches specified user name and
+! set name ok switch accordingly
+!
+	IF NAME="*" THEN NAME_OK=1
+		    ELSE IF NAME=IN_USER THEN NAME_OK=1
+					 ELSE NAME_OK=0;
+!
+! Check if account string matches specified account string
+! and set account ok switch accordingly
+!
+	IF ACCNT="*" THEN ACCNT_OK=1
+		     ELSE IF ACCNT=IN_ACCNT THEN ACCNT_OK=1
+				 	    ELSE ACCNT_OK=0;
+!
+! Check line number to determine if it was a batch or interactive
+! job. It is assumed to be an interactive job if the line number
+! is <= 125. This constant may need to be adjusted if changes are
+! made in the system.
+!
+	JOB_OK=0;
+	IF I_JOB=1 THEN IF $INTEGER(IN_LINE)<=125  THEN JOB_OK=1;
+	IF B_JOB=1 THEN IF $INTEGER(IN_LINE)>125  THEN JOB_OK=1;
+!
+!
+!  AND the switches
+!
+	CHECK=DATE_OK*NAME_OK*ACCNT_OK*JOB_OK;
+!
+! And if the job satisfies all of them, include it in the report
+!
+	IF CHECK<> 0 THEN BEGIN
+!
+! Set up cpu time string to extract hours, minutes, and seconds
+!
+		IN_CPUS=":"+IN_CPU+":";
+!
+! Accumulate hour, minute and second fields separately
+!
+		POSIT=1;
+		HH=HH+$INTEGER(NEXT_FIELD(IN_CPUS,":",POSIT));
+		MM=MM+$INTEGER(NEXT_FIELD(IN_CPUS,":",POSIT));
+		SS=SS+$INTEGER(NEXT_FIELD(IN_CPUS,":",POSIT));
+!
+! If /ALL specified, write job information to summary table
+!
+		IF ALL_OUTPUT =1 THEN
+!
+! Put job information into format
+! and write it to table
+!
+		CALL RECORD_OUT(IN_ACCNT,IN_DAT,IN_LINE,IN_CPU,IN_USER,
+				IN_TIME,IN_CONN,OUT_CHN);
+		END;
+	END;
+END;
+!
+! Convert accumulated time to seconds and write it
+!
+TIME_SUM=HH*3600+MM*60+SS;
+LINE_OUT=$CRLF+$CRLF+$CRLF+" TOTAL CPU TIME "+
+	 $STRING(TIME_SUM)+" SECONDS";
+CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Close I/O and quit
+!
+CALL $CLOSE(OUT_CHN);
+CALL $CLOSE(IN_CHN);
+END
+PROCEDURE HEADER(STRING BTAD,NAME,FTAD,ACCNT;INTEGER ALL_OUTPUT,B_JOB,
+		 I_JOB,OUT_CHN);
+BEGIN
+!
+!
+! Procedure writes switch values and, if /ALL, also the header line
+! for the summary table
+!
+!
+STRING LINE_OUT,B,I;
+INTEGER N;
+!
+! First write title line
+!
+! Centered in a 132 column wide field
+!
+! For different widths, change the centering constant 58 below
+!
+N=1;
+LINE_OUT="";
+UNTIL N=58 DO BEGIN
+		LINE_OUT=LINE_OUT+" ";
+		N=N+1;
+	      END;
+!
+! Append title line
+!
+LINE_OUT=LINE_OUT+"CPU TIME SUMMARY";
+CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Skip lines
+!
+LINE_OUT=$CRLF+$CRLF+$CRLF;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Write switch values, reformatting where necessary
+!
+IF B_JOB=1 THEN B="YES"
+	   ELSE B="NO";
+IF I_JOB=1 THEN I="YES"
+	   ELSE I="NO";
+LINE_OUT="FOR PERIOD BEGINNING  "+BTAD;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+LINE_OUT="AND ENDING            "+FTAD;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+LINE_OUT="USER NAME             "+NAME;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+LINE_OUT="ACCOUNT               "+ACCNT;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+LINE_OUT="INCLUDING BATCH       "+B;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+LINE_OUT="INCLUDING INTERACTIVE "+I;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Skip lines
+!
+LINE_OUT=$CRLF+$CRLF+$CRLF;
+CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Write summary table column heads if /ALL
+!
+IF ALL_OUTPUT=1 THEN
+	BEGIN
+!
+!	Build line
+!
+	LINE_OUT=" ACCOUNT              DATE              ";
+	LINE_OUT=LINE_OUT+"TIME           LINE              CPU";
+	LINE_OUT=LINE_OUT+"              USER           ";
+	LINE_OUT=LINE_OUT+"CONNECTED DIRECTORY";
+!
+! And write it
+!
+	CALL $WRITE(OUT_CHN,LINE_OUT);
+!
+! Underline column headers
+!
+	N=1;
+	LINE_OUT="";
+	UNTIL N=130 DO BEGIN
+			LINE_OUT=LINE_OUT+"-";
+			N=N+1;
+		       END;
+!
+! Write underlining
+!
+	CALL $WRITE(OUT_CHN,LINE_OUT);
+	END;
+!
+! Go back to where you came from
+!
+END
+PROCEDURE RECORD_OUT(STRING IN_ACCNT,IN_DATE,IN_LINE,IN_CPU,IN_USER,
+			    IN_TIME,IN_CONN; INTEGER OUT_CHN);
+BEGIN
+!
+! Take fields extracted from the job description line and put them
+! in the format of the summary table
+!
+STRING LINE_OUT,SPACE;
+EXTERNAL STRING PROCEDURE ADD_SPACES;
+SPACE=" ";
+!
+! skip 1 space
+!
+LINE_OUT=SPACE;
+!
+! Concatenate spaces to the fields to make them of the proper
+! width, and concatenate the result to the report line being
+! built.
+!
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_ACCNT,21);
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_DATE,18);
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_TIME,18);
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_LINE,18);
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_CPU,17);
+LINE_OUT=LINE_OUT+ADD_SPACES(IN_USER,18);
+LINE_OUT=LINE_OUT+IN_CONN;
+!
+! Write the summary table line just built
+!
+CALL $WRITE(OUT_CHN,LINE_OUT);
+END
+STRING PROCEDURE ADD_SPACES(STRING FIELD;INTEGER FIELD_LENGTH);
+BEGIN
+!
+! Concatenates spaces to the end of the string FIELD until its length
+! is FIELD_LENGTH. At least one space is concatenated even if 
+! $LENGTH(FIELD)=FIELD_LENGTH
+!
+STRING SPACE,LINE_OUT;
+INTEGER NSPC,N,LEN;
+SPACE=" ";
+!
+! Transfer argument to temp string
+!
+LINE_OUT=FIELD;
+!
+! Get length
+!
+LEN=$LENGTH(LINE_OUT);
+!
+! Calculate number of spaces to concatenate
+!
+NSPC=FIELD_LENGTH-LEN;
+IF NSPC <= 0 THEN NSPC=1;
+N=1;
+!
+! Concatenate required number of spaces
+!
+UNTIL N>=NSPC DO BEGIN
+		LINE_OUT=LINE_OUT+SPACE;
+		N=N+1;
+		END;
+!
+! Return padded field
+!
+RETURN LINE_OUT;
+END
+STRING PROCEDURE NEXT_FIELD(STRING LINE,DELIM;INTEGER POSIT);
+!
+!**********************************************************************
+!
+!	PROCEDURE TO EXTRACT SUCCESSIVE FIELDS SEPARATED BY
+! 	DELIMITERS FROM A LINE.
+!	THE STRING ARGUMENTS SUPPLY THE TEXT LINE AND THE DELIMITER
+!	RESPECTIVELY. THE ARGUMENT POSIT ON INPUT IS THE LINE POSITION
+!	TO BEGIN SEARCHING AT. ON OUTPUT, IT POINTS TO THE BEGINNING
+!	OF THE DELIMITER WHICH TERMINATED THE SEARCH (A DELIMITER NEED
+!	NOT BE A SINGLE CHARACTER). IF NO DELIMITER IS FOUND, THE
+!	NULL STRING IS RETURNED, AND POSIT IS SET TO 0. IF ONLY ONE
+!	DELIMITER IS FOUND, THE CONTENTS OF LINE FROM THE POSITION
+!	FOLLOWING THAT DELIMITER TO THE END OF LINE ARE RETURNED AND
+!	POSIT IS SET TO $LENGTH(LINE).
+!	A NULL LINE CAUSES THE RETURNED STRING TO BE NULL AND POSIT TO
+!	BE SET TO 0 REGARDLESS OF THE DELIMITER.
+!	A NULL DELIMITER SETS THE RETURNED STRING TO BE NULL AND LEAVES
+!	POSIT UNCHANGED.
+!	IF THE ONLY DELIMITER FOUND IS AT THE END OF THE LINE, A NULL
+!	STRING IS RETURNED, AND POSIT IS SET TO $LENGTH(LINE).
+!
+!
+!
+!
+!	JOHN DOWNING, UNIV. OF UTAH, CHEM. DEPT., 01/22/81
+!
+!**********************************************************************
+!
+BEGIN
+INTEGER P1,LEN,P2,DLEN;
+DLEN=$LENGTH(DELIM);
+P1=$SEARCH(LINE,DELIM,POSIT)+DLEN;
+IF P1=DLEN THEN BEGIN
+		POSIT=0;
+		RETURN "";
+		END;
+P2=$SEARCH(LINE,DELIM,P1);
+IF P2=0 THEN P2=$LENGTH(LINE)+1;
+POSIT=P2;
+LEN=P2-P1;
+IF LEN=0 THEN RETURN ""
+	 ELSE RETURN LINE[P1:LEN];
+END
+STRING PROCEDURE UNIFORM_RECORD(STRING INPUT_LINE);
+BEGIN
+!
+!*********************************************************************
+!
+!	PROCEDURE RETURNS STRING WHICH IS ARGUMENT INPUT_LINE WITH ALL
+!	STRINGS OF SPACES REPLACED BY A SINGLE "$".
+!
+!	ALSO, THE FIRST CHARACTER OF THE RETURNED STRING AS WELL AS THE
+!	LAST WILL BE A $ REGARDLESS OF THE PRESENCE OF SPACES IN THOSE
+!	POSITIONS OF INPUT_LINE
+!
+!
+!	THE RETURNED STRING IS SUITABLE FOR SEARCHING BY PROCEDURE
+!	NEXT_FIELD WITH THE DELIMITER $.
+! JOHN W. DOWNING, UNIV. OF UTAH, CHEM. DEPT, 1/26/81
+!
+!**********************************************************************
+!
+STRING UTMP,LAST_CHAR;
+INTEGER LEN,N;
+LEN=$LENGTH(INPUT_LINE);
+N=1;
+UTMP="";
+LAST_CHAR="$";
+UNTIL N>LEN DO 	BEGIN
+		IF INPUT_LINE[N:1] <> " " THEN
+					  BEGIN
+					  UTMP=UTMP+INPUT_LINE[N:1];
+					  LAST_CHAR=INPUT_LINE[N:1];
+					  END
+					  ELSE
+						IF LAST_CHAR <>" " THEN
+						BEGIN
+						UTMP=UTMP+"$";
+						LAST_CHAR= " ";
+						END;
+N=N+1;
+END;
+N=$LENGTH(UTMP);
+IF UTMP[N:1] <> "$" THEN UTMP=UTMP+"$";
+IF UTMP[1:1] <> "$" THEN UTMP="$"+UTMP;
+RETURN UTMP;
+END
+INTEGER PROCEDURE DATE_DIFF(STRING DATE1,DATE2);
+BEGIN
+!
+! Procedure returns the time difference between date/time strings
+! stored in arguments DATE1 and DATE2. The difference is in system
+! clock ticks, i.e., 262144 ticks/day
+!
+INTEGER I1,I2;
+I1=$INPUTTAD(DATE1);
+I2=$INPUTTAD(DATE2);
+RETURN I2-I1;
+END
+COMMAND RSF3;
+!-----------------------------------------------------------------------
+!
+!	This PCL command  is written  to be  used to  create a  file
+!	which contains the names of new  files which need to be  run
+!	through the SFTRAN preprocessor. The  file is written to  be
+!	used by the DO processor and is of the form:
+!
+!		SF3.MIC
+!		SF3 FileName
+!		SF3 FileNmae
+!		SF3 FileName
+!		DEL SF3.MIC
+!
+!	The last line is used to delete this file and thus not  take
+!	up space in the directory as this infromation will no longer
+!	be current after it has been executed.
+!
+!	[17-Jun-82]
+!	
+!-----------------------------------------------------------------------
+BEGIN
+
+STRING 
+	Micfile,
+	FortranName,
+	SftranName,
+	Line;
+
+INTEGER
+	Date_FOR,
+	Date_SF3,
+	In_chn,
+	Out_chn;
+
+Micfile = "SF3.MIC";
+
+Out_chn = $Open(Micfile,$OUTPUT);
+
+PARSE (
+FILELIST 
+	(HELP "List of files to be preprocessed by SFTRAN",
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*") : NOP);
+
+DO
+	SELECT $File_Typ($Parse) OF 
+	BEGIN
+	["ENV"]:	NOP;
+	["EXE"]:	NOP;
+	["REL"]:	NOP;
+	["BIN"]:	NOP;
+	["PLT"]:	NOP;
+
+	["FOR"]:	BEGIN
+			FortranName = $File_Nam($Parse);
+			Date_FOR = $Fileinfo_I(-1, 11);
+			END;
+
+	["SF3"]:	BEGIN
+			SftranName = $File_Nam($Parse);
+			Date_SF3 = $Fileinfo_I(-1, 11);
+!
+!	Test if the names are the same, if so then test if  Date_SF3
+!	> Date_FOR, if so then write the name to the output file for
+!	processing.
+!
+
+			If Date_SF3 > Date_FOR THEN BEGIN
+				Line = "SF3 " + SftranName;
+				CALL $Write(Out_chn,Line);
+				END;
+
+			END;
+
+	[OTHERWISE]:	NOP;
+	END
+UNTIL $Nextfile = 0;
+
+CALL $Write(Out_chn,"DEL " + MicFile);
+CALL $Close(Out_chn);
+
+END;   ! RSF3COMMAND SEND ;
+
+BEGIN
+    STRING STEXT1 ;
+    STRING STEXT2 ;
+    STRING SEPLIN ;
+    STRING TMPTXT ;
+    STRING LF ;
+    INTEGER TTYNUM ;
+    INTEGER JSYS ;
+    INTEGER CHNNUM ;
+    INTEGER MEMSAV ;
+    INTEGER MEMADR ;
+    INTEGER MEMPNT ;
+    INTEGER CRPOS1 ;
+    INTEGER CRPOS2 ;
+    SEPLIN = "====================================================" + $CRLF ;
+    LF = $CVITC(10) ;
+    MEMSAV = $GET_MEM (500) ;
+    PARSE NOISE "MESSAGE TO" ;
+    PARSE (
+    NUMBER (HELP "Octal line number" , RADIX 8) : TTYNUM = 8%400000 + $VALUE ;
+    KEYWORD (WORDS (ALL:1)) : TTYNUM = -1 ;
+          ) ;
+    PARSE (
+    EOL (HELP "Confirm for input from terminal") :
+    BEGIN
+	MEMADR = MEMSAV ;
+	MEMPNT = 8%777777000000 + MEMADR ;
+        DISPLAY "Enter text, end with CR followed by ESC or ^Z :" ;
+	CHNNUM = 8%400000000000 + 2000 ;
+	JSYS = $JSYS(8%523,MEMPNT,CHNNUM,0) ;
+	IF JSYS = 0 THEN ABORT "RDTTY Jsys error" ;
+	STEXT2 = $SGET (MEMADR) ;
+	TMPTXT = "" ;
+	CRPOS1 = 1 ;
+	CRPOS2 = $SEARCH (STEXT2,LF) ;
+	IF CRPOS2 = 0 THEN TMPTXT = "Message vide ..." + $CRLF + " ";
+	UNTIL CRPOS2 = 0  DO
+	BEGIN
+	    TMPTXT = TMPTXT + STEXT2[CRPOS1:CRPOS2+1-CRPOS1] + $CVITC(9) ;
+	    CRPOS1 = CRPOS2+1 ;
+	    CRPOS2 = $SEARCH (STEXT2,LF,CRPOS1) ;
+	END ;
+	STEXT2 = $CRLF + "      =>" + TMPTXT[1:$LENGTH(TMPTXT)-1] ; 
+	DISPLAY "" ;
+    END ;
+    INPUTFILE (HELP "Text file") :
+    BEGIN
+	PARSE EOL ;
+	CHNNUM=$OPEN($FILES,$INPUT);
+	STEXT2=$CRLF+"      =>"+$READ(CHNNUM);
+	IF $EOF(CHNNUM)<>0 THEN STEXT2=STEXT2+"Message vide ..."+$CRLF+" ";
+	WHILE $EOF(CHNNUM)=0 DO 
+	BEGIN
+	    STEXT2=STEXT2+$CRLF+$CVITC(9)+$READ(CHNNUM);
+	END ;
+	CALL $CLOSE(CHNNUM) ;
+	STEXT2 = STEXT2[1:$LENGTH(STEXT2)-1] ; 
+    END ;
+          ) ;
+    STEXT1 = $CRLF + SEPLIN + "[" + $TIME ;
+    STEXT1 = STEXT1 + "  Message from user " + $UserName ;
+    STEXT1 = STEXT1 + " at terminal " + $STRING($TermNumber,8) + "]";
+    STEXT1 = STEXT1 + STEXT2 + SEPLIN ;
+    MEMADR = MEMSAV ;
+    MEMPNT = 8%777777000000 + MEMADR ;
+    CALL $SPUT (STEXT1,MEMADR) ;
+    JSYS = $JSYS (8%775,TTYNUM,MEMPNT) ;
+    IF JSYS = 0 THEN ABORT "TTMSG Jsys error" ;
+    CALL $RET_MEM (MEMSAV,500) ;
+    DISPLAY "Message send at " + $TIME ;
+END
+COMMAND TDELETE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Delete files written between specified dates and times.
+!
+! Usage:
+!	TDELETE /SINCE:time_and_date /BEFORE:time_and_date filespecs
+!
+! Remarks:
+!	The switch values may be  any valid DEC-20 date and  time
+!	strings,  or   YESTERDAY,   TODAY,  or   TOMORROW   (time
+!	00:00:01), or a past week  day, or a file  specification,
+!	which causes the file's  last write date  and time to  be
+!	used.             The            defaults             are
+!	/SINCE:first_day_and_time_of_clock and /BEFORE:NOW.   Use
+!	of the default switches will then make this equivalent to
+!	a DELETE command.
+!
+!	The  filespecs  field  may  contain  any  list  of   file
+!	specifications which would  be acceptable  to the  DELETE
+!	command.  Because of a limitation in the current  version
+!	of  PCL,  SINCE  and  BEFORE  cannot  be  implemented  as
+!	subcommands, nor can  any other subcommands  be read  for
+!	use by DELETE.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[01-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+INTEGER	before_time_and_date,
+	curtad,
+	done,
+	NO,
+	since_time_and_date,
+	YES;
+
+STRING	clock_start,
+	date_string;
+
+NO = 0;
+YES = 1;
+curtad = $CURTAD;
+
+clock_start = $OUTPUTTAD(0);
+before_time_and_date = curtad;
+since_time_and_date = 0;
+done = NO;
+
+GUIDE "files";
+
+WHILE done = NO DO 
+PARSE (
+SWITCH(	WORDS(BEFORE::1,SINCE::2),STDHELP):
+	CASE $VALUE FROM 1 TO 2 OF BEGIN
+	[1]:	before_time_and_date = 
+			GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+	[2]:	since_time_and_date =
+			GENERAL_TIME_AND_DATE_PARSE(curtad,clock_start,0);
+	END; ! CASE
+OTHERWISE : done = YES);
+
+PARSE (
+FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	DEFAULT_GEN 0,
+	HELP "list of files (default DSK:*.*.0)") : NOP;
+);
+
+DISPLAY "Deletion of files written 
+SINCE " + $OUTPUTTAD(since_time_and_date) + " and 
+BEFORE " + $OUTPUTTAD(before_time_and_date);
+
+DO 	IF $FileInfo_I(-1,12) >= since_time_and_date 
+	THEN IF $FileInfo_I(-1,12) < before_time_and_date
+	THEN DOCOMMAND ORIGINAL "DELETE " + $FILEL
+UNTIL $Nextfile = 0
+
+END;
+
+COMMAND TEST;
+!----------------------------------------------------------------------
+!Purpose:
+!	To conditionally  execute EXEC commands depending upon
+!	the setting of system variables.
+!Usage:
+!	TEST (if) sys-var (and then if) lgc-val (do command) cmd
+!Where:
+!	sys-var	-- BATCH              set true if in batch
+!		-- DIALUP             set true if a dialup terminal.
+!		-- EMACSTERMINAL      set true if emacs will run on TTY
+!		-- OTHER-BATCHJOB     set true if other job by me in batch
+!		-- OVER-PERMANENT (allocation by) Number-Pages
+!				      set true if over permanent allocation
+!		-- PRIME-TIME	      set true if its prime time
+!		-- SCHEDULED-DOWN (in less than) Number-Days
+!				      set true if down time scheduled
+!		-- SPECIAL-SCHEDULING set true if special scheduling in effect
+!		-- USER-GROUP (is)    set true if user group matches
+!
+!	lgc-val -- TRUE or FALSE     condition to compare sys-var against
+!
+!	cmd	-- Command to be executed if state sys-var equals lgc-val
+!Remarks:
+!	This command is useful in .CMD or .MIC files for doing tasks like
+!	defining editors, or automatically invoking programs.
+!----------------------------------------------------------------------
+!Author:
+!	Cedric Griss
+!Date:
+!	Oct-23-80
+!      [Nov-27-80]
+!      [Dec-14-81]
+!Re-write:
+!	Pieter Bowman
+!      [6 Jan 82]
+!----------------------------------------------------------------------
+BEGIN INTEGER Typ,Lgl,TmpRes,TmpNum,Tty; STRING Str,Grp,Usr,TmpStr;
+   EXTERNAL INTEGER PROCEDURE Prime;
+   GUIDE "if";
+   PARSE(KEYWORD(STDHELP,HELP "Flag name",
+         WORDS(BATCH:1,EMACSTerminal:2,DIALUP:3,PRIME_TIME:4,
+	       SPECIAL_SCHEDULING:5,USER_GROUP:6,
+	       OTHER_BATCHJOB:7,OVER_PERMANENT:8,SCHEDULED_DOWN:9,
+	       TERMINAL_NUMBER:10)):Typ = $VALUE;
+         OTHERWISE : ABORT "Unrecognized keyword");
+   IF Typ = 6 THEN BEGIN
+      GUIDE "is";
+      PARSE(KEYWORD(STDHELP,HELP "Top level group",
+                    WORDS(CH:1,JS:2,JM:3,FH:4,MA:5,PH:6,VI:7,GU:8,
+		          OP:9,BI:10)): Grp=$ATOM[1:2];
+	    KEYWORD(NOHELP,WORDS(C_GRISS:9,BEEBE:9)):Grp=$ATOM[1:2];
+            OTHERWISE : ABORT "Unrecognised group");
+      IF $USERNAME[1:5]="CH.JS" THEN USR="JS"
+       ELSE IF $USERNAME[1:5]="CH.JM" THEN USR="JM"
+       ELSE USR=$USERNAME[1:2];
+      END
+   ELSE IF Typ = 8 THEN BEGIN
+      GUIDE "allocation by more than";
+      PARSE(NUMBER(DEFAULT "0",RADIX 10,HELP "Pages over allocation"):
+			TmpNum=$value);
+      GUIDE "pages"
+      END
+   ELSE IF Typ = 9 THEN BEGIN
+      GUIDE "is more than";
+      PARSE(NUMBER (DEFAULT "1",RADIX 10,HELP "Number of days hence")
+		  :TmpNum=$Value);
+      GUIDE "days away"
+      END
+   ELSE IF Typ = 10 THEN PARSE(NUMBER(RADIX 8,HELP "terminal number")
+                  :Tty = $VALUE);
+   GUIDE "and then if";
+   PARSE(KEYWORD(STDHELP,HELP "Logical condition of flag",
+                 WORDS(FALSE:1,TRUE:2)):Lgl=$VALUE;
+         OTHERWISE : ABORT "Unrecognised Logical condition");
+   GUIDE "execute command";
+   PARSE(TEXT (HELP "Command to execute or return for several commands")
+              : Str = $ATOM);
+   IF Str = "" THEN DO BEGIN
+      PROMPT "Command:";
+      PARSE(TEXT (HELP "Commands to execute end with blank line")
+                 : Str = Str + $ATOM + $CrLf;
+            EOL : GOTO cont);
+      END UNTIL $ATOM = "";
+
+cont:
+!Some preliminary work
+   IF Typ = 7 THEN BEGIN
+      DOCOMMAND ORIGINAL "sys no head no where no . no what no system"+
+			 " controlling " + $username TO TmpStr;
+      TmpRes = $SEARCH(TmpStr,$username)
+      END
+   ELSE IF Typ = 8 THEN BEGIN
+      DOCOMMAND ORIGINAL "information disk-usage" to TmpStr;
+      TmpRes = $SEARCH(TmpStr,"allocation by ");
+      IF TmpRes = 0 THEN GOTO NEXT;
+      TmpRes = $integer(TmpStr[TmpRes+14:*])-TmpNum
+      END
+   ELSE IF Typ = 9 THEN BEGIN
+      DOCOMMAND ORIGINAL "information downtime" to TmpStr;
+      TmpRes = $SEARCH(TmpStr, $Cr) + 6;
+      IF TmpRes = 0 THEN GOTO NEXT;
+      TmpRes = (($inputtad(TmpStr[TmpRes : 18]) - $curtad) /  262144)-TmpNum
+      END;
+
+NEXT:  
+! do the instruction
+   IF Lgl = 2 THEN CASE Typ FROM 1 TO 10 OF
+        BEGIN [1] : IF $BATCH = -1 THEN DOCOMMAND Str;		!Batch
+	      [2] : IF $EMACSTerminal = 1 THEN DOCOMMAND Str;	!Emacs
+	      [3] : IF $TERMNUMBER <= 5 THEN DOCOMMAND Str;	!Dial
+	      [4] : IF $TMON(34)=0 THEN DOCOMMAND Str;		!Prime
+	      [5] : IF $TMON(33)=1 THEN DOCOMMAND Str;		!Special-Sched
+              [6] : IF Grp = Usr   THEN DOCOMMAND Str;		!User
+	      [7] : IF TmpRes = 0  THEN DOCOMMAND Str;		!Other-Batch
+	      [8] : IF TmpRes > 0  THEN DOCOMMAND Str;		!Over-Permanent
+	      [9] : IF TmpRes > 0  THEN DOCOMMAND Str;		!Scheduled-Down
+	      [10] : IF $TERMNUMBER = Tty THEN DOCOMMAND Str
+             END
+     ELSE CASE Typ FROM 1 TO 10 OF
+        BEGIN [1] : IF $BATCH = 0 THEN DOCOMMAND Str;		!Batch
+	      [2] : IF $EMACSTerminal = 0 THEN DOCOMMAND Str;	!Emacs
+	      [3] : IF $TERMNUMBER > 5 THEN DOCOMMAND Str;	!Dial
+	      [4] : IF $TMON(34)=1 THEN DOCOMMAND Str;		!Prime
+	      [5] : IF $TMON(33)=0 THEN DOCOMMAND Str;		!Special-Sched
+              [6] : IF Grp <> Usr  THEN DOCOMMAND Str;		!User
+	      [7] : IF TmpRes <> 0  THEN DOCOMMAND Str;		!Other-Batch
+	      [8] : IF TmpRes <= 0  THEN DOCOMMAND Str;		!Over-Permanent
+	      [9] : IF TmpRes <= 0  THEN DOCOMMAND Str;		!Scheduled-Down
+	      [10] : IF $TERMNUMBER <> Tty THEN DOCOMMAND Str
+             END
+   END;
+COMMAND TYPE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Type out one or more files to the terminal.
+!
+! Usage:
+!	TYPE {filespecs}
+!
+! Remarks:
+!	If the file specification is omitted, then *.*.* is assumed.
+!	This replacement for the system command TYPE tries harder
+!	to find reasonable extensions, so that most of the time,
+!	one need not give a file extension.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[10-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+STRING
+	dashes;
+
+GUIDE "files to terminal";
+
+PARSE (
+FILELIST 
+	(HELP "List of files to be typed",
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*") : NOP);
+
+dashes = "----------------------------------------" +
+	"----------------------------------------";
+
+DO
+	SELECT $File_Typ($Parse) OF 
+	BEGIN
+	["ENV"]:	NOP;
+	["EXE"]:	NOP;
+	["REL"]:	NOP;
+	["BIN"]:	NOP;
+	[OTHERWISE]:	BEGIN
+			DISPLAY dashes[1:$LENGTH($FILEL)] + $CRLF + $FILEL +
+				$CRLF + dashes[1:$LENGTH($FILEL)] + $CRLF;
+			DOCOMMAND ORIGINAL "TYPE " + $FILEL
+			END
+	END
+UNTIL $Nextfile = 0
+END; ! TYPE
+COMMAND update_alert;
+!------------------------------------------------------------------------
+! Purpose:
+!	Update the ALERT.CMD file (created by ALERT) by discarding
+!	alerts which have already passed.
+!
+! Usage:
+!	UPDATE-ALERT
+!
+! Remarks:
+!	The ALERT.CMD file is read and copied to a new generation.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[20-Nov-81]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER
+	alert_time,
+	InFileId,
+	now,
+	OutFileId;
+
+STRING
+	alert_file,
+	record;
+
+GUIDE "file named ALERT.CMD by discarding passed alerts";
+
+alert_file = "PS:<" + $USERNAME + ">ALERT.CMD";
+
+now = $CURTAD;
+
+InFileId = $Open (alert_file,$Input);
+
+OutFileId = $Open (alert_file,$Output);
+
+record = $READ(InFileId);
+
+WHILE $EOF(InFileId) = 0 DO ! Copy the old file to the new file.
+	BEGIN
+	alert_time = $INTEGER(record[$SEARCH(record,"=")+1:*]);
+	IF now > alert_time 
+	THEN 	! Discard the outdated alert.
+		record = $READ(InFileId)
+	ELSE	BEGIN	! Copy the alert.
+		CALL $Write (OutFileId,record);
+		record = $READ(InFileId);
+		CALL $Write (OutFileId,record)
+		END;
+	record = $READ(InFileId)
+	END; ! WHILE
+
+CALL $Close (InFileId);
+
+CALL $Close (OutFileId);
+
+END; !UPDATE_ALERT
+COMMAND VT100;
+BEGIN
+STRING SINK;
+GUIDE "mode, leaving Tektronix graphics region intact";
+PARSE (EOL : NOP);
+DISPLAY BINARY ":2e[26H[1J[1;64r[?51l";
+DOCOMMAND "TERMINAL VT100" TO SINK;
+DOCOMMAND "TERMINAL WIDTH 80" TO SINK;
+DOCOMMAND "TERMINAL LENGTH 64" TO SINK
+END
+COMMAND VT52;
+BEGIN
+STRING SINK;
+GUIDE "mode, leaving Tektronix graphics region intact";
+PARSE (EOL : NOP);
+DISPLAY BINARY ":1eY9 [1JH[1;64r[?51l";
+DOCOMMAND "TERMINAL VT52" TO SINK;
+DOCOMMAND "TERMINAL WIDTH 80" TO SINK;
+DOCOMMAND "TERMINAL LENGTH 64" TO SINK
+END;
+COMMAND WHAT;
+!------------------------------------------------------------------------
+! Purpose:
+!	Display the logical name(s) (if any) which point to
+!	a specified directory.
+!
+! Usage:
+!	WHAT directoryname
+!
+! Remarks:
+!	None.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[14-Dec-81]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER	Index,
+	I1,
+	I2,
+	Last_Index,
+	Number_Found;
+
+STRING	Command_Echo,
+	Directory_Name;
+
+GUIDE "logical name is attached to directory";
+
+PARSE (DIRECTORY : Directory_Name = $ATOM);
+
+PARSE (EOL : NOP);
+
+Directory_Name = Directory_Name[$SEARCH(Directory_Name,"<"):*];
+
+DOCOMMAND ORIGINAL "INFORMATION LOGICAL-NAMES ALL" TO Command_Echo;
+
+Command_Echo = $CRLF + Command_Echo;
+Number_Found = 0;
+Index = 1;
+Last_Index = 0;
+WHILE Index <> 0 DO
+	BEGIN
+	Index = $SEARCHRAISED(Command_Echo[Last_Index+1:*],Directory_Name);
+	IF Index > 0 
+	THEN 	BEGIN
+		Number_Found = Number_Found + 1;
+		Index = Index + Last_Index;
+		Last_Index = Index;
+		I1 = Index - 1;
+		WHILE Command_Echo[I1:2] <> $CRLF DO I1 = I1 - 1;
+		I2 = Index + 1;
+		WHILE Command_Echo[I2:2] <> $CRLF DO I2 = I2 + 1;
+		DISPLAY Command_Echo[I1+2:I2-I1-1]
+		END
+	ELSE	IF Number_Found = 0 THEN DISPLAY "%No logical name defined"
+	END ! WHILE
+END; !WHAT
+COMMAND XDIRECTORY; ! {Extended Directory}
+!------------------------------------------------------------------------
+! Purpose:
+!	Give a directory listing of files, optionally without  an
+!	extension or generation number, writing the listing  into
+!	a file for  possible later editing  into a command  file.
+!
+!	The   available   switches    will   frequently    permit
+!	construction of command files  without any editing  being
+!	necessary.  The file  names can be  surrounded by  prefix
+!	and suffix  strings, and  placed more  than once  in  the
+!	output.
+!
+!	The general form of the output file is
+!
+!	begintext
+!	prefixFILENAMEsuffix
+!	prefixFILENAMEsuffix
+!	...
+!	prefixFILENAMEsuffix
+!	endtext
+!	
+!	where trailing  and  leading blanks  must  be  explicitly
+!	entered in  the prefix  and suffix  strings if  they  are
+!	required around  the filename.   The begintext,  endtext,
+!	parameter, prefix, and suffix strings can be  dynamically
+!	edited by substituting text for special escape sequences,
+!	\\, \1, \2, \3, \4, \5, \D,  \F, \N, \P, \R, \T, and  \W.
+!	The case of  the letter  following the  backslash is  not
+!	significant;  \W  and  \w  are  equivalent.   The  escape
+!	sequences are as follows:
+!
+!	  Because the escape  character, backslash, may  rarely
+!	  be required in a command,  a double occurrence of  it
+!	  is reduced to a single one  which does not act as  an
+!	  escape on the following  letter.  Thus, "\\"  becomes
+!	  "\" in the output.
+!
+!	  Considering a file  name to  be made up  of the  five
+!	  fields, (1)  device,  (2) directory,  (3)  name,  (4)
+!	  extension, and (5) generation, the sequences \1,  \2,
+!	  \3, \4,  and \5  are  replaced by  the  corresponding
+!	  values for the current file name.  This allows  finer
+!	  control of the file name insertion than is  available
+!	  with the  \F sequence  described below.   These  five
+!	  strings contain NO punctuation; the actual file  name
+!	  string is therefore "\1:<\2>\3.\4.\5"
+!	  
+!	  The special sequence "\D"  (backslash D) is  replaced
+!	  by the current date in the form "dd-mon-yy"  wherever
+!	  it occurs in the prefix and suffix strings.
+!	
+!	  The special sequence "\F"  (backslash F) is  replaced
+!	  by the file  name.  This  can be used  to insert  the
+!	  file name more than once in the output.  The form the
+!	  file name takes depends  on the switches  /EXTENSION,
+!	  /NOEXTENSION, /GENERATION, and /NOGENERATION.
+!
+!	  The special sequence "\N"  (backslash N) can be  used
+!	  to represent a  line break in  the prefix and  suffix
+!	  strings,  since  DEC-20  command  language  does  not
+!	  permit  input  of  quoted  strings  containing   line
+!	  breaks.
+!
+!	  The special sequence "\R"  (backslash R) is  replaced
+!	  by the last read date and time of the current file.
+!
+!	  The special sequence "\P"  (backslash P) is  replaced
+!	  by a page mark (ASCII FF).
+!
+!	  The special sequence "\T"  (backslash T) is  replaced
+!	  by the current time  in the form "hh:mm:ss"  wherever
+!	  it occurs in the prefix and suffix strings.
+!	
+!	  The special sequence "\W"  (backslash W) is  replaced
+!	  by the last write date and time of the current  file.
+!	
+!	The created command  file can  be optionally  immediately
+!	executed  by  the  DO  processor  with  a  user-specified
+!	parameter list.
+!
+! Usage:
+! @XDIRECTORY	{/BEFORE:"date and time, week day, NOW, TODAY, or filename"}-
+!		{/BEGINTEXT:"text"}-
+!		{/DO         | /NODO}-
+!		{/DIRECTORY  | /NODIRECTORY}-
+!		{/ENDTEXT:"text"}-
+!		{/EXTENSION  | /NOEXTENSION}-
+!		{/FILE       | /NOFILE}-
+!		{/GENERATION | /NOGENERATION}-
+!		{/PARAMETERS:"text"}-
+!		{/PREFIX:"text"}-
+!		{/SINCE:"date and time, week day, NOW, TODAY, or filename"}-
+!		{/SUFFIX:"text"}-
+!		{/OUTPUT:"filename"}-
+!		{file specifications}
+!
+! Remarks:
+!	The defaults are:
+!	/BEFORE:NOW
+!	/BEGINTEXT:""
+!	/NODIRECTORY
+!	/NODO
+!	/ENDTEXT:""
+!	/EXTENSION
+!	/FILE
+!	/NOGENERATION
+!	/PARAMETERS:""
+!	/PREFIX:""
+!	/SINCE:first_day_and_time_of_clock
+!	/SUFFIX:""
+!	/OUTPUT:"DSK:XDIRECTORY.MIC;T" 
+!	*.*.0
+!	
+!	The /NODIRECTORY switch suppresses .DIRECTORY files  from
+!	processing, which is usually desirable.
+!
+!	The /BEFORE and SINCE switches can be used to select only
+!	those files last  written in a  specified time  interval.
+!	If a file name is specified,  the last write date of  the
+!	file is used.  An example is given below.
+!
+!	The    switch    /NOEXTENSION    automatically     forces
+!	/NOGENERATION,  since  this  would  otherwise  result  in
+!	syntactically invalid file names in the output file.
+!
+!	The default switches  result in  file names  of the  form
+!	"file.ext", which is  what is most  commonly required  in
+!	command files.   However, if  the files  are not  in  the
+!	connected  directory,  the  names  will  have  the   form
+!	"<directory>file.ext"  if   they  are   on  the   current
+!	structure, and "device:<directory>file.ext"  if they  are
+!	on another  structure.   The short  form  "file.ext"  can
+!	always be obtained from the escape sequence "\3.\4".
+!
+!	If the /DO switch is given, the command
+!
+!	@DO outputfile parameters
+!
+!	is executed, with the two fields taken from the values of
+!	the /OUTPUT  and  /PARAMETERS switches,  and  any  escape
+!	sequences in the parameters field have been  substituted.
+!	
+! Examples:
+!
+!	@XDIRECTORY	/PREFIX:"@directory"-
+!			/SUFFIX:",\N@since today\N@"-
+!			*.FOR
+!
+!	will produce a  XDIRECTORY.MIC file  containing lines  of
+!	the form
+!
+!	@directory FILE1.FOR,
+!	@since today
+!	@
+!	@directory FILE2.FOR,
+!	@since today
+!	@
+!	...etc...
+!
+!	which can then be executed by the command
+!	
+!	@DO FOO
+!
+!	An example with multiple file name substitution is
+!	
+!	@XDIRECTORY	/DO -
+!			/PREFIX:"@DETABF "-
+!			/SUFFIX:",\F\N@COMPILE\F\N"-
+!			*.for
+!
+!	This will  produce  and  execute  a  XDIRECTORY.MIC  file
+!	containing lines of the form
+!
+!	@DETABF file1.FOR,file1.FOR
+!	@COMPILE file1.FOR
+!
+!	@DETABF file2.FOR,file2.FOR
+!	@COMPILE file2.FOR
+!
+!	...etc...
+!
+!	An example with date and time switches is
+!
+!	@XDIREC	/DO -
+!	@	/SINCE:TODAY -
+!	@	/PREFIX:"@sf3 ",-
+!	@	/SUFFIX:"@COMPILE /OPT \3.FOR"
+!	@	*.sf3
+!	
+!	which  will  run  today's  modifications  to  .sf3  files
+!	through the SFTRAN3 preprocessor and then compile them.
+!
+!	Another example is
+!
+!	@XDIREC	/DO -
+!	@	/BEFORE:SFTRAN.INC -
+!	@	/PREFIX:"@sf3 /r ",-
+!	@	/SUFFIX:"@COMPILE /OPT \3.FOR"
+!	@	*.sf3
+!	
+!	which will reprocess all SFTRAN3 files written before the
+!	INCLUDE file was changed.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[30-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+INTEGER	before_time_and_date,
+	curtad,
+	day,
+	date_half,
+	delta,
+	directory,
+	dofile,
+	done,
+	extension,
+	file,
+	generation,
+	hour,
+	index,
+	minute,
+	month,	
+	month_day,
+	NO,
+	OutFileId,
+	process,
+	query,
+	QueryFileId,
+	since_time_and_date,
+	td_selection,
+	time_half,
+	week_day,
+	year,
+	YES;
+
+STRING	answer,
+	begin_text,
+	clock_start,
+	command_string,
+	current_string,
+	date_string,
+	end_text,
+	filename,
+	output_file,
+	parameters,
+	prefix,
+	secret_escape,
+	secret_separator,
+	suffix;
+
+curtad = $CURTAD;
+clock_start = $OUTPUTTAD(0);
+before_time_and_date = -1;
+since_time_and_date = -1;
+NO = 0; 
+YES = 1;
+
+secret_escape = "";		! For protecting \\ sequences.
+secret_separator = "";	! For separating parameter string from
+				! command string.  These must both be 2
+				! characters long; otherwise changes in
+				! the substring operations below are
+				! necessary.
+
+! Set default values for all parameters.
+
+begin_text = "";
+directory = NO;
+dofile = NO;
+end_text = "";
+extension = YES;
+file = YES;
+generation = NO;
+output_file = "DSK:XDIRECTORY.MIC;T";
+parameters = "";
+prefix = "";
+query = NO;
+suffix = "";
+
+GUIDE "of files";
+
+done = NO;
+WHILE done = NO DO 
+PARSE (
+SWITCH(HELP "file specifications, or",
+	WORDS(	OUTPUT::1,
+		PREFIX::2,
+		SUFFIX::3,
+		EXTENSION:4,
+		NOEXTENSION:5,
+		GENERATION:6,
+		NOGENERATION:7,
+		DO:8,
+		NODO:9,
+		PARAMETERS::10,
+		BEFORE::11,
+		SINCE::12,
+		FILE:13,
+		NOFILE:14,
+		DIRECTORY:15,
+		NODIRECTORY:16,
+		QUERY:17,
+		NOQUERY:18,
+		BEGINTEXT::19,
+		ENDTEXT::20),
+	STDHELP):
+	CASE $VALUE FROM 1 TO 20 OF BEGIN
+	[1]:PARSE (FILE (HELP "output file (default DSK:XDIRECTORY.MIC.-1)",
+			DEFAULT_DEV "DSK:",
+			DEFAULT_NAM "XDIRECTORY",
+			DEFAULT_EXT "MIC",
+			OUTPUT ) : output_file = $FILEL);
+	[2]:	PARSE (QUOTEDSTRING(
+			HELP "string which prefixes filename in output",
+			DEFAULT """""") : 
+			prefix = $ATOM);
+	[3]:	PARSE (QUOTEDSTRING(
+			HELP "string which suffixes filename in output",
+			DEFAULT """""") : 
+			suffix = $ATOM);
+	[4]:	BEGIN
+			GUIDE "included on file names";
+			extension = YES
+		END;
+	[5]:	BEGIN
+			GUIDE "or generation number included on file names";
+			extension = NO
+		END;
+	[6]:	BEGIN
+			GUIDE "number included on file names";
+			generation = YES
+		END;
+	[7]:	BEGIN
+			GUIDE "number included on file names";
+			generation = NO
+		END;
+	[8]:	BEGIN 
+			GUIDE "command file when done";
+			dofile = YES
+		END;
+	[9]:	BEGIN 
+			GUIDE "command file when done";
+			dofile = NO
+		END;
+	[10]:	PARSE (QUOTEDSTRING(
+			STDHELP,
+			HELP "string of parameters for DO processor",
+			DEFAULT """""") : 
+			parameters = $ATOM);
+
+	[11]:	before_time_and_date = 
+			GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+
+	[12]:	since_time_and_date = 
+			GENERAL_TIME_AND_DATE_PARSE(curtad,clock_start,0);
+
+	[13]:	BEGIN
+			GUIDE "spec between prefix and suffix";
+			file = YES
+		END;
+	[14]:	BEGIN
+			GUIDE "spec between prefix and suffix";
+			file = NO
+		END;
+	[15]:	BEGIN
+			GUIDE "files included";
+			directory = YES
+		END;
+	[16]:	BEGIN
+			GUIDE "files included";
+			directory = NO
+		END;
+	[17]:	BEGIN
+			GUIDE "user for acceptance";
+			query = YES
+		END;
+	[18]:	BEGIN
+			GUIDE "user for acceptance";
+			query = NO
+		END;
+	[19]:	PARSE (QUOTEDSTRING(
+			STDHELP,
+			HELP "text for beginning of DO file",
+			DEFAULT """""") : 
+			begin_text = $ATOM);
+
+	[20]:	PARSE (QUOTEDSTRING(
+			STDHELP,
+			HELP "text for end of DO file",
+			DEFAULT """""") : 
+			end_text = $ATOM)
+	END; !CASE
+
+OTHERWISE : done = YES);
+
+PARSE (
+FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	DEFAULT_GEN 0,
+	HELP "list of files (default DSK:*.*.0)") : NOP;
+);
+
+OutFileId = $Open (output_file,$Output);
+if query = YES THEN QueryFileId = $Open ("TTY:",$Input);
+!
+! Put the five strings into one to lessen the substitution work.
+!	
+if file = YES 
+THEN command_string = begin_text + secret_separator +
+		prefix + "\F" + suffix + secret_separator + 
+		parameters + secret_separator + end_text
+ELSE command_string = begin_text + secret_separator + 
+		prefix + suffix + secret_separator + 
+		parameters + secret_separator + end_text;
+
+!
+! Perform filename-independent escape substitutions outside of
+! file loop.
+!	
+index = $SEARCHRAISED(command_string,"\\");
+WHILE index > 0 DO
+	BEGIN
+	command_string = command_string[1:index-1] + secret_escape +
+		command_string[index+2:*];
+	index = $SEARCHRAISED(command_string,"\\")
+	END;
+
+index = $SEARCHRAISED(command_string,"\N");
+WHILE index > 0 DO 
+	BEGIN
+	command_string = command_string[1:index-1] + $CRLF + 
+		command_string[index+2:*];
+	index = $SEARCHRAISED(command_string,"\N")
+	END;
+
+index = $SEARCHRAISED(command_string,"\D");
+WHILE index > 0 DO 
+	BEGIN
+	command_string = command_string[1:index-1] + $Date + 
+		command_string[index+2:*];
+	index = $SEARCHRAISED(command_string,"\D")
+	END;
+
+index = $SEARCHRAISED(command_string,"\T");
+WHILE index > 0 DO 
+	BEGIN
+	command_string = command_string[1:index-1] + $Time + 
+		command_string[index+2:*];
+ 	index = $SEARCHRAISED(command_string,"\T")
+	END;
+
+index = $SEARCHRAISED(command_string,"\P");
+WHILE index > 0 DO 
+	BEGIN
+	command_string = command_string[1:index-1] + $CVITC(12) + 
+		command_string[index+2:*];
+ 	index = $SEARCHRAISED(command_string,"\P")
+	END;
+
+td_selection = YES;
+IF before_time_and_date = -1 THEN
+    BEGIN
+    IF since_time_and_date = -1 THEN td_selection = NO;
+    before_time_and_date = curtad
+    END;
+IF since_time_and_date = -1 THEN since_time_and_date = 0;
+
+IF td_selection = YES THEN 
+    BEGIN
+    DISPLAY NORETURN "Processing of files written ";
+    IF since_time_and_date > 0 THEN DISPLAY "SINCE " + 
+        $OUTPUTTAD(since_time_and_date) + " and ";
+    DISPLAY "BEFORE " + $OUTPUTTAD(before_time_and_date)
+    END;
+
+IF query = YES 
+THEN DISPLAY "Query mode: Respond" + $CRLF +
+"Y to accept" + $CRLF +
+"N to reject" + $CRLF +
+"G to accept and stop further queries" + $CRLF +
+"or" + $CRLF +
+"Q to quit";
+
+! Retrieve  the  begin_text   and  end_text   strings  now   that
+! file-independent substitutions have been done.   Command_string
+! contains concatenated strings
+! 
+! begin_text$$prefixsuffix$$parameters$$end_text 
+!
+! which must be separated into
+!
+! begin_text	prefixsuffix$$parameters	end_text
+!
+index =	$SEARCHRAISED(command_string,secret_separator);
+begin_text = command_string[1:index-1];
+command_string = command_string[index+2:*];
+
+index =	$SEARCHRAISED(command_string,secret_separator);
+parameters = command_string[index+2:*];
+command_string = command_string[1:index-1];
+
+index =	$SEARCHRAISED(parameters,secret_separator);
+end_text = parameters[index+2:*];
+parameters = parameters[1:index-1];
+command_string = command_string + parameters;
+
+IF begin_text <> "" THEN CALL $Write (OutFileId,begin_text);
+
+done = NO;
+DO BEGIN
+	IF query = YES
+	THEN BEGIN
+		DO	
+			BEGIN
+			DISPLAY NORETURN $FILEL + " Accept? (Y, N, G or Q) ";
+			answer = $Read(QueryFileId)
+			END
+		UNTIL $SEARCHRAISED("YNGQ",answer[1:1]) > 0;
+		IF $SEARCHRAISED(answer[1:1],"Y") = 1 THEN process = YES
+		ELSE IF $SEARCHRAISED(answer[1:1],"N") = 1 THEN process = NO
+		ELSE IF $SEARCHRAISED(answer[1:1],"G") = 1 THEN query = NO
+		ELSE	BEGIN
+			process = NO;
+			query = NO;
+			done = YES
+			END
+	END
+	ELSE process = YES;
+	IF directory = NO
+	THEN IF $File_Typ($Parse) = "DIRECTORY" 
+	THEN process = NO;
+  	IF $FileInfo_I(-1,$FBWRT) >= since_time_and_date 
+	THEN IF $FileInfo_I(-1,$FBWRT) < before_time_and_date
+	THEN IF process = YES THEN
+	BEGIN
+	IF extension = YES
+	THEN	IF generation = YES
+		THEN filename = $FILEN
+		ELSE filename = $FILES
+	ELSE	filename = $File_Nam($Parse);
+
+!
+!	Perform filename-dependent escape substitutions.
+!	
+	current_string = command_string;
+
+	index = $SEARCHRAISED(current_string,"\F");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			filename + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\F")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\1");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$File_Dev($Parse) + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\1")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\2");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$File_Dir($Parse) + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\2")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\3");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$File_Nam($Parse) + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\3")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\4");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$File_Typ($Parse) + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\4")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\5");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$STRING($Filev) + current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\5")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\R");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$OutputTaD($FileInfo_I($Parse,$FBREF)) +
+			current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\R")
+		END;
+	
+	index = $SEARCHRAISED(current_string,"\W");
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + 
+			$OutputTaD($FileInfo_I($Parse,$FBWRT)) +
+			current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,"\W")
+		END;
+	
+	index = $SEARCHRAISED(current_string,secret_escape);
+	WHILE index > 0 DO 
+		BEGIN
+		current_string = current_string[1:index-1] + "\" +
+			current_string[index+2:*];
+		index = $SEARCHRAISED(current_string,secret_escape)
+		END;
+	
+	index = $SEARCHRAISED(current_string,secret_separator);
+	CALL $Write (OutFileId,current_string[1:index-1])
+
+END;
+IF $Nextfile = 0 THEN done = YES
+END
+UNTIL done = YES;
+
+IF end_text <> "" THEN CALL $Write (OutFileId,end_text);
+
+CALL $Close (OutFileId);
+
+IF dofile = YES THEN 
+	DOCOMMAND ORIGINAL "DO " + output_file + " " + parameters
+
+END; !XDIRECTORY
+   

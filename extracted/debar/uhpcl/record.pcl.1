@@ -1,0 +1,292 @@
+COMMAND RECORD;
+!---------------------------------------------------------------------
+! 	
+! RECORD writes  the  following information  to  a user  specified  file
+! (defaults to  PS:<USER-DIR>RECORD.LOG.-2 :  Date  and time,  TTY  line
+! number, program  name, cpu  time, username,  and connected  directory.
+! Note that a  temporary file is  created and deleted  on the  directory
+! PS:<TEMP>.
+! 	
+! The intended purpose of the command is to gather usage statistics  for
+! a given user group.   It can accomplish this  by the insertion of  the
+! command:
+! 	
+! 	RECORD <a-statistics-directory>
+! 	
+! into the  logout.cmd file  on the  users directory  or on  a  superior
+! directory of the user.  This will cause the statistics to be  appended
+! to the file RECORD.LOG.-2 on the directory.
+! 
+! 	Use as a Statistics Mechanism for user group UU
+! 	
+! For this to work properly, the  protection codes of the various  files
+! and directories involved must be:
+! 	
+!      <UU>		    DIRECTORY PROTECTION 774000 (access for users
+! 	      		         UU.* controlled by file protection codes)
+! 
+!      <UU>LOGOUT.CMD	    FILE PROTECTION 774000      (read access only)
+! 
+!      <UU.RECORD>	    DIRECTORY PROTECTION 774000
+! 
+!      <UU.RECORD>USED.CPU  FILE PROTECTION 770400 (append access by UU.*)
+! 	
+! and  insert  the  line  "RECORD  <UU.RECORD>USED.CPU"  into  the  file
+! LOGOUT.CMD on the directory PS:<UU>.
+! 	
+! This  arrangement  prevents  the   users  UU.*  from  corrupting   the
+! statistics gathered insofar  as possible. A  malicious user could  use
+! the command  RECORD from  his  terminal without  logging out  and  add
+! entries to the record file  appearing  to  have gotten more  CPU  than
+! really was used, but no user can remove entries from  the  record file
+! once they have been made.
+! 
+! However, if the user  creates a file LOGOUT.CMD  in his own  directory
+! and neglects to include a RECORD  command therein, his usage will  not
+! be trapped.
+! 
+! 
+! The statistics file must already exist on <UU.RECORD> since the user's
+! access to it is controlled by the file protection code rather than the
+! directory protection code. Therefore if the file is migrated, it  must
+! be recreated.
+! 
+! The USED.CPU file may be analyzed by the Fortran program REPORT.
+! 
+! Note that this command will not work properly if it is invoked from  a
+! TAKE file, but it does work ok from an indirect file.
+!
+!---------------------------------------------------------------------
+!
+BEGIN
+INTEGER LEN,N,NEND,P1,P2,IOCHN;
+STRING REPORT_FILE,SYSTAT_LINE,TEMP_FILE,TEMPDIR,CHARAC,TEXT,USER,BUF;
+STRING XX;
+EXTERNAL STRING PROCEDURE TEMP_FILENAME,SYSDYS,USERNAME,ACCOUNT;
+EXTERNAL STRING PROCEDURE FILENAME,FILEDIRECTORY,FILEEXTENSION;
+!
+! TO CHANGE THE NAME OF THE DIRECTORY FOR TEMPORARY FILE, SIMPLY
+! CHANGE THE DIRECTORY NAME IN THE NEXT LINE
+!
+TEMPDIR="PS:<TEMP>";
+!
+! GET THE SUMMARY FILE NAME
+!
+GUIDE "statistics";
+PARSE FILE (HELP "statistics filename", DEFAULT_GEN -,
+            DEFAULT_DEV "PS", DEFAULT_DIR $USERNAME,
+	    DEFAULT_NAM "RECORD", DEFAULT_EXT "LOG");
+PARSE EOL;
+REPORT_FILE=$FILE_DIR($PARSE)+$FILE_NAM($PARSE)+"."+
+ $FILE_TYP($PARSE)+".-2";
+!
+! GET THE STATISTICS:
+! SYSDYS GETS TIME AND DATE OF LOGOUT FROM SYSTAT HEADER AND GETS
+! JOB CPU, USERNAME, ETC. FROM SYSTAT . T LINE
+!
+!
+SYSTAT_LINE=SYSDYS;
+!
+! KNOCK SPURIOUS <CR> OFF END SINCE APPEND OPERATION BELOW CAUSES
+! TEXT TO GO IN AS A SEPARATE RECORD
+!
+LEN=$LENGTH(SYSTAT_LINE)-1;
+SYSTAT_LINE=SYSTAT_LINE[1:LEN];
+!
+! REMOVE PROGRAM NAME FROM SYSTAT LINE
+!
+P1=$SEARCH(SYSTAT_LINE,"RECORD")-1;
+P2=P1+7;
+SYSTAT_LINE=SYSTAT_LINE[1:P1]+SYSTAT_LINE[P2:*];
+!
+! GET ACCOUNT FROM I JOB COMMAND AND ADD IT TO SYSTAT LINE
+!
+SYSTAT_LINE=ACCOUNT+"  "+SYSTAT_LINE;
+!
+! BUILD TEMPORARY FILE NAME AND OPEN IT FOR OUTPUT
+!
+USER=USERNAME;
+N=$LENGTH(USER)+1;
+NEND=0;
+UNTIL NEND=1        DO BEGIN
+                       N=N-1;
+                       CHARAC=USER[N:1];
+                       IF N=1 THEN NEND=1;
+                       IF CHARAC="." THEN NEND=1;
+                       END;
+IF N <> 1 THEN N=N+1;
+TEXT="."+USER[N:*];
+TEMP_FILE=TEMPDIR+TEMP_FILENAME(TEXT);
+IOCHN = $OPEN(TEMP_FILE,$OUTPUT);
+!
+! WRITE THE SYSTAT LINE
+!
+CALL $WRITE(IOCHN,SYSTAT_LINE);
+!
+! CLOSE THE TEMPORARY FILE
+!
+CALL $CLOSE(IOCHN);
+!
+! APPEND TEMPORARY FILE TO SUMMARY FILE
+!
+BUF="APPEND "+TEMP_FILE+" "+REPORT_FILE;
+DOCOMMAND ORIGINAL BUF TO XX;
+!
+! DELETE THE TEMPORARY FILE
+!
+BUF="DELETE "+TEMP_FILE;
+DOCOMMAND ORIGINAL "DELETE "+ TEMP_FILE TO XX;
+!
+!  AND THAT IS ALL
+!
+END
+!
+!
+!
+!
+STRING PROCEDURE TEMP_FILENAME(STRING TEXT);
+BEGIN
+!
+!**********************************************************************
+!
+! PROCEDURE TO CONSTRUCT A UNIQUE TEMPORARY FILE NAME FROM THE SYSTEM
+! CLOCK READING.
+!
+! THE FORM OF THE FILE NAME IS A FOUR DIGIT NUMBER APPENDED TO THE
+! BEGINNING OF THE STRING STORED IN THE ARGUMENT TEXT. THUS THE USER
+! CAN SPECIFY THE FINAL CHARACTERS OF THE FILE NAME AND THE FILE
+! EXTENSION.
+!
+! COLLISIONS OF FILENAMES WITHIN A GIVEN PCL ROUTINE ARE UNLIKELY
+! TO OCCUR SINCE THE FOUR DIGIT NUMBER CHANGES FASTER THAN THIS
+! PROCEDURE EXECUTES.
+!
+! COLLISIONS WHEN REFERRED TO BY SEPARATE USERS ARE ALSO VERY UNLIKELY.
+!
+! NOTWITHSTANDING THE ABOVE, COLLISIONS ARE POSSIBLE. THEREFORE THIS
+! PROCEDURE SHOULD NOT BE USED WHEN A COLLISION WOULD BE SERIOUS.
+!
+!**********************************************************************
+!
+INTEGER FULL;
+STRING FILE;
+!
+! get clock reading and increase frequency
+!
+FULL=$CURTAD*6;
+!
+! make it into a string
+!
+FILE=$STRING(FULL);
+!
+! and pick up least significant digits to append user text to
+!
+FILE=FILE[7:*]+TEXT;
+!
+! return the filename to the user
+!
+RETURN FILE;
+END;
+!
+!
+!
+!
+STRING PROCEDURE SYSDYS;
+BEGIN
+!
+!**********************************************************************
+!
+! procedure extracts relevant information from systat display
+!
+!**********************************************************************
+!
+STRING DISPLA,LINE;
+INTEGER N;
+!
+! get output of systat into string variable displa
+!
+DOCOMMAND ORIGINAL "SY . SY T DIRECTORY" TO DISPLA;
+!
+!
+! start building report LINE. columns 8-16 of systat LINE are the time
+! and date in the header LINE. these constants may have to be changed
+! if the format of the systat display is changed.
+!
+LINE=DISPLA[6:18];
+!
+!
+! search for star after job number which marks current job
+!
+!
+N=$SEARCH(DISPLA,"*")+1;
+!
+! get rest of systat LINE
+! and append it to time date info already gotten
+!
+LINE=LINE+DISPLA[N:*];
+!
+! REMOVE COMMA PRECEDING CONNECTED DIRECTORY
+!
+N=$SEARCH(LINE,",")-1;
+IF N>0 THEN LINE=LINE[1:N]+"  "+LINE[N+2:*];
+!
+! return systat display LINE to user
+!
+RETURN LINE;
+END
+STRING PROCEDURE USERNAME;
+!
+!**********************************************************************
+!
+! Procedure returns username associated with the job which calls
+! the procedure. It accomplishes this by issueing the command
+! "I JOB-STATUS" and  finding the username in the returned string.
+! The username is found as the string following the keyword
+! "User" and terminated by a ",". A radical change in the format of
+! the output of the  I JOB-STATUS command could make this procedure
+! inoperative.
+!
+! John Downing, Univ. of Utah, Chem Dept, 1/20/81
+!
+!*********************************************************************
+!
+BEGIN
+STRING BUFFER;
+INTEGER P1,P2,LEN;
+!
+! get the output string
+!
+DOCOMMAND ORIGINAL "I JOB" TO BUFFER;
+!
+! find the keyword
+!
+P2=$SEARCH(BUFFER,"User");
+!
+! space over the keyword and a space following it
+!
+P1=P2+5;
+!
+! search for user name terminator
+!
+P2=$SEARCH(BUFFER,",",P1);
+!
+! calculate length of username
+!
+LEN=P2-P1;
+!
+! return user name
+!
+RETURN BUFFER[P1:LEN];
+END
+STRING PROCEDURE ACCOUNT;
+BEGIN
+STRING LINE;
+INTEGER P1,P2,LEN;
+DOCOMMAND ORIGINAL "I JOB" TO LINE;
+P1=$SEARCH(LINE,"Account");
+P2=$SEARCH(LINE," ",P1);
+P1=$SEARCH(LINE,",",P2);
+LEN=P1-P2;
+RETURN LINE[P2:LEN];
+END
+  

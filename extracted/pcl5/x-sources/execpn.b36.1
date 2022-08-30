@@ -1,0 +1,1454 @@
+! UPD ID= 86, PS:<5-0.PCL.LOCAL>EXECPN.B36.13,  10-Feb-83 12:49:54 by DEBAR
+! [fun65] Add $strfix function
+! UPD ID= 82, PS:<5-0.PCL.LOCAL>EXECPN.B36.12,  19-Jan-83 13:14:22 by DEBAR
+! [fun62] Correct bug in $ret_mem
+! UPD ID= 66, PS:<5-0.PCL.LOCAL>EXECPN.B36.11,  24-Nov-82 23:24:17 by DEBAR
+! [fun50] Allow $fileSet to accept string spec of file (see [fun49]
+! UPD ID= 62, PS:<5-0.PCL.LOCAL>EXECPN.B36.10,  24-Nov-82 13:19:36 by DEBAR
+! [fun48] $isfile(string) says if the file does exit
+! UPD ID= 53, PS:<5-0.PCL.LOCAL>EXECPN.B36.9,  12-Nov-82 23:55:26 by DEBAR
+! [fun43] [fun44] Correct order of calls to pcegop - pcegop returns typ
+!   [fun43] involves changes to a lot of the routines in this module,
+!           not specifically marked in the text.
+! UPD ID= 50, PS:<5-0.PCL.LOCAL>EXECPN.B36.8,  12-Nov-82 11:32:53 by DEBAR
+! [fun41] Change order of arguments of $setfield
+! UPD ID= 49, PS:<5-0.PCL.LOCAL>EXECPN.B36.7,  10-Nov-82 17:20:18 by DEBAR
+! [FUN39] JSYS INTERFACE
+! UPD ID= 46, PS:<5-0.PCL.LOCAL>EXECPN.B36.5,   5-Nov-82 16:30:53 by DEBAR
+! [fun38] $termlength
+! UPD ID= 42, PS:<5-0.PCL.LOCAL>EXECPN.B36.4,   3-Nov-82 16:34:42 by DEBAR
+! [fun36] Parse: $Xatom, $Command
+! UPD ID= 38, PS:<5-0.PCL.LOCAL>EXECPN.B36.3,  27-Oct-82 22:23:15 by DEBAR
+! [fun33] Problem with fileinfo_i when using wild-cards.
+! UPD ID= 32, PS:<5-0.PCL.LOCAL>EXECPN.B36.2,  21-Oct-82 21:57:49 by DEBAR
+! [fun29] $FileSet
+! UPD ID= 30, PS:<5-0.PCL.LOCAL>EXECPN.B36.1,  21-Oct-82 10:16:02 by DEBAR
+! [fun28] $directoryinfo_i, $directoryinfo_s
+! UPD ID= 25, PS:<5-0.PCL.LOCAL>EXECPU.B36.4,  20-Oct-82 10:08:48 by DEBAR
+! [fun27] $getfield, $setfield, $and, $or
+
+MODULE EXECPN =
+BEGIN
+
+!++
+!
+! FNDP extensions to EXECPU utilities.
+! Copyright (C) 1982, FDNP Computing Center, Belgium
+!
+!--
+
+!++
+!    This module contains the system service routines which are provided
+!  as part of the standard Exec. !! FNDP extensions only.
+!--
+
+!
+! Standard definitions
+!
+
+LIBRARY 'EXECPD';		!Get common definitions
+LIBRARY 'BLI:TENDEF';		!There are JSYS's in this module
+LIBRARY 'BLI:MONSYM';
+SWITCHES LINKAGE(EXEC);
+
+BUILTIN JSYS;
+
+!
+! Table of contents:
+!
+
+FORWARD ROUTINE
+                                ! [fun27]+ $getfield, $setfield, $and, $or
+    dingfl,                     ! Integer procedure $getfield
+    dinsfl,                     ! Integer procedure $setfield
+    dinand,                     ! Integer procedure $and
+    dinor,                      ! Integer procedure $or
+                                ! [fun27]- $getfield, $setfield, $and, $or
+                                ! [fun28]+ $directoryinfo_i, $directoryinfo_s
+    dindii,                     ! Integer procedure $directoryinfo_i
+    dindis,                     ! String procedure $directoryinfo_s
+    dinrcd,                     ! do a rcdir
+    dingtd,                     ! do a gtdir
+                                ! [fun28]- $directoryinfo_i, $directoryinfo_s
+                                ! [fun29]: $Fileset
+    dinsfi: novalue,            ! system procedure $FileSet
+                                ! [fun36]+ Parse: $Xatom, $Command
+    dinxat,                     ! system variable $xatom,
+    dincmd,                     ! system variable $command.
+                                ! [fun36]-
+    divtln,                     ! [fun38] $termlength
+                                ! [Fun39]+ Jsys Interface
+    dingmm,                     ! integer procedure $get_mem
+    dinrmm: novalue,            ! procedure $ret_mem,
+    dinipm: novalue,            ! procedure $iput
+    dinigm,                     ! integer procedure $iget
+    dinspm: novalue,            ! procedure $sput
+    dinsgm,                     ! string procedure $sget
+    dinjfc,                     ! integer prodecure $jfn
+    dinjs0,                     ! integer procedure $jsys
+    dinjs1: novalue,            ! procedure $jsys1
+    dinjsx,                     ! integer procedure serving $jsys0/1
+    dinsad,                     ! integer procedure $strloc
+                                ! [Fun39]- Jsys Interface
+                                ! [FUN48]:
+    dinisf,
+                                ! [fun65]: Add $strfix function
+    dinsfx;                     ! Add $strfix procedure
+
+!
+! Macros:
+!
+
+MACRO ERROR(TXT) = PCEERR(UPLIT(%ASCIZ TXT)) %;
+
+!
+! External references:
+!
+
+EXTERNAL ROUTINE
+    PCEERR,			! EXECPX Report execution error
+    PCEAST,			! EXECPX Allocate string space
+    PCECST,			! EXECPX Make copy of a string
+    PCEGOP : exec1,             ! [fun44] EXECPX Get value of operand
+    PCEFST: NOVALUE,		! EXECPX Free string storage
+    PCMGMM,			! EXECPM General memory allocator
+    PCMSTI,			! CVTDBO routine
+    RETMEM,			! EXECSU General memory release
+    SUBBP,			! EXECSU Subtract two byte pointers
+    DIUJFN: exec1;              ! [fun50] EXECPU Get jfn from fil spec
+
+EXTERNAL
+    PCCURC: REF ECB_BLK,	! Current Execution Context Block
+    PCLPMT: VECTOR,		! Prompt string table
+    XDICT,			! Permanent storage pool
+    REDPMT: VECTOR,		! Regular prompt table
+    JOBNO,			! Job number of this job
+    CUSRNO,			! User number
+    CSBUFP: STR_VAL,		! Temporary string buffer pointer
+                                ! [fun36]+ Parse: $Xatom, $Command
+    ATMBUF: VECTOR,		! Common COMND% atom buffer
+    CBUF: VECTOR,               ! exec command buffer
+    SBLOCK: VECTOR,             ! exec command state block
+                                ! [fun36]-
+                                ! [fun39]+ Jsys Interface
+    PCSFRE,                     ! pointer to free string memory
+    PCVRG1,                     ! $reg1 location
+    PCVRG2,                     ! $reg2 location
+    PCVRG3,                     ! $reg3 location
+    PCVRG4,                     ! $reg4 location
+    PCVJSK;                     ! $jsysok location
+                                ! [fun39]-
+
+
+
+GLOBAL ROUTINE dingfl (ap,cnt) =             ! Integer procedure $getfield
+
+!++
+! Functional description:
+! $getfield(from,pos,wid) extracts an unsigned bit field wid bits
+! wide, dropping the pos least significant bits. Exits in error if bad
+! arguments are given.
+!
+! Formal parameters:
+! Usual for pcl system procedure.
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! extracted bit field
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   pos,                         ! position value
+   wid;                         ! width of field
+builtin
+   lsh;
+if .cnt neq 3 then error ('Bad arguments to $getfield');
+wid = pcegop (.(.ap+2),ste_typ_int);
+pos = pcegop (.(.ap+1),ste_typ_int);if .pos lss 0 or .pos gtr 36 or .wid lss 0 or .wid gtr 36 or
+   .pos+.wid gtr 36 then error ('Bad arguments to $getfield');
+lsh (lsh (pcegop(..ap,ste_typ_int), 36-.pos-.wid), .wid-36)
+end;
+
+
+
+GLOBAL ROUTINE dinsfl (ap,cnt) =             ! Integer procedure $setfield
+
+!++
+! Functional description:
+!    int = $setfield(field,value,pos,wid) puts an unsigned bit field wid bits
+! wide, dropping the pos least significant bits. Exits in error if bad
+! arguments are given.
+!
+! Formal parameters:
+! Usual for pcl system procedure.
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! Modified destination word
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   value,                       ! value to modify
+   mask,                        ! mask of ones in field position
+   pos,                         ! position value
+   wid;                         ! width of field
+builtin
+   lsh;
+if .cnt neq 4 then error ('Bad arguments to $setfield');
+wid = pcegop (.(.ap+3),ste_typ_int);
+pos = pcegop (.(.ap+2),ste_typ_int);
+if .pos lss 0 or .pos gtr 36 or .wid lss 0 or .wid gtr 36 or
+   .pos+.wid gtr 36 then error ('Bad arguments to $getfield');
+value = pcegop (.(.ap+1),ste_typ_int);
+mask = lsh( lsh(-1,36-.wid),.wid+.pos-36);      ! ones where we have
+                                                ! field
+                                ! [fun41]: Change order of arguments of
+                                ! $setfield
+(.value and (not .mask))
+or (lsh(pcegop(.(.ap),ste_typ_int),.pos) and .mask)
+
+end;
+
+
+GLOBAL ROUTINE dinand (ap,cnt) =             ! integer procedure $and
+
+!++
+! Functional description:
+! $and(a,b) returns the logical and of a and b, bit by bit
+!
+! Formal parameters:
+! usual for system pcl procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! And of a and b
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   op2;
+
+if .cnt neq 2 then error ('Bad arguments to $and');
+op2 = pcegop(.(.ap+1),ste_typ_int);
+pcegop(..ap,ste_typ_int) and .op2
+end;
+
+
+GLOBAL ROUTINE dinor (ap,cnt) =             ! integer procedure $or
+
+!++
+! Functional description:
+! $or(a,b) returns the logical or of a and b, bit by bit
+!
+! Formal parameters:
+! usual for system pcl procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! And of a and b
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+
+local
+   op2;
+
+if .cnt neq 2 then error ('Bad arguments to $and');
+op2 = pcegop(.(.ap+1),ste_typ_int);
+pcegop(..ap,ste_typ_int) or .op2
+end;
+
+
+GLOBAL ROUTINE dindii (ap,cnt) =        ! integer procedure $directoryinfo_i
+
+!++
+! Functional description:
+! $directoryinfo_i("dirname",code)
+! Returns integer information about directory according to code.
+!  code is gtdir directory block offset, or $cddan for gtdal info.
+!
+! Formal parameters:
+! usual for pcl system procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! integer value requested
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+
+local
+   str : str_val,               ! directory name string value
+   code,                        ! code of result needed
+   dirnum;                      ! directory number
+
+if .cnt neq 2 then error ('Bad arguments to $directoryInfo_i');
+code = pcegop (.(.ap+1),ste_typ_int);   ! get info code
+str = pcegop (..ap,ste_typ_str);        ! get directory name
+
+dirnum = dinrcd(.str);          ! get directory number
+
+if ..ap eql opn_tmp_str then pcefst(.str);      ! release temp string argument
+
+                                ! select proper jsys
+if .code gtr 0 and .code leq $cddfe then begin
+   local
+      dirblk : vector [17],     ! Directory block info
+      u_group : vector[30],     ! User group lists
+      d_group : vector[30],
+      sd_group : vector [30],
+      account : vector [ch$allocation(40)];     ! account string
+   if dingtd (.dirnum,dirblk,u_group,d_group,sd_group,account) then
+      .dirblk[.code]
+   else
+      0
+   end
+else if .code geq $cdda1 and .code leq $cdda3 then begin
+   register
+      r1=1,r2=2,r3=3;
+   r1 = .dirnum;
+   if not jsys (-1,gtdal,r1,r2,r3) then
+       0
+   else if .code eql $cdda1 then .r1
+   else if .code eql $cdda2 then .r3
+   else if .code eql $cdda3 then .r2
+   else 0
+   end
+else
+   0
+
+end;
+
+
+
+GLOBAL ROUTINE dindis (ap,cnt) =        ! string procedure $directoryinfo_s
+
+!++
+! Functional description:
+! $directoryinfo_i("dirname",code)
+! Returns string information about directory, selected by code as offset into
+! gtdir directory block.
+!
+! Formal parameters:
+! usual for pcl system procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! integer value requested
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+
+local
+   str : str_val,               ! directory name string value
+   adr,                         ! temp, address of a string
+   code,                        ! code of result needed
+   dirnum,                      ! directory number
+   stv : str_val,               ! string value used for returning result
+   dirblk : vector [17],        ! Directory block info
+   u_group : vector[30],     ! User group lists
+   d_group : vector[30],
+   sd_group : vector [30],
+   account : vector [ch$allocation(40)],     ! account string
+   sarea : vector[100];         ! result string
+
+if .cnt neq 2 then error ('Bad arguments to $directoryInfo_i');
+code = pcegop (.(.ap+1),ste_typ_int);   ! get info code
+str = pcegop (..ap,ste_typ_str);        ! get directory name
+
+dirnum = dinrcd(.str);          ! get directory number
+
+if ..ap eql opn_tmp_str then pcefst(.str);      ! release temp string argument
+
+if not dingtd (.dirnum,dirblk,u_group,d_group,sd_group,account) then 
+   return (pcecst (0));           ! return empty string
+
+                                ! select proper jsys
+select .code of set
+[$cdugp]:
+   adr = u_group;
+[$cddgp]:
+   adr = d_group;
+[$cdcug]:
+   adr = sd_group;
+[$cdugp,$cddgp,$cdcug]: begin
+   bind
+      group = (.adr) : vector [30];
+   register
+      r1=1,r2=2,r3=3;
+   r1 = bytptr (sarea);
+   r3 = 10;
+   incr i from 1 to .group[0]-1 by 1 do begin
+      if .i gtr 1 then
+         ch$wchar_a (%c',', r1);
+      r2 = .group[.i];
+      jsys (-1,nout,r1,r2,r3);
+      end;
+   ch$wchar (0, .r1);           ! end with null
+   stv[stv_len] = ch$diff (.r1, bytptr(sarea));
+   stv[stv_adr] = sarea;
+   pcecst(.stv)
+   end;
+[$cddac]:       begin
+                                ! return account string
+   local
+      len;
+   len = 0;
+   adr = ch$ptr (account);
+   while ch$rchar_a (adr) neq 0 do len = .len + 1 ;
+   stv[stv_len] = .len;
+   stv[stv_adr] = account;
+   pcecst(.stv)
+   end;
+[OTHERWISE]:
+   (pcecst(0));
+TES
+
+end;
+
+
+ROUTINE DINRCD (STR)  =         ! Internal procedure doing Rcdir
+
+!++
+! Functional description:
+! Returns the directory number of directory with name in str.
+! If no match, returns 0.
+!
+! Formal parameters:
+! string value pointing to directory name.
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! Directory number.
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+
+external register z=0;
+register
+    r1=1,r2=2,r3=3;
+map
+   str : str_val;               ! string value
+
+r1 = 0;
+r2 = bytptr (.str[stv_adr]);
+if (jsys(-1,rcdir,r1,r2,r3)) then
+    .r3
+else
+    0
+
+end;
+
+
+                                ! internal routine to do a gtdir
+GLOBAL ROUTINE DINGTD 
+(dirnum,p_dirblk,p_u_group,p_d_group,p_sd_group,p_account) =
+
+!++
+! Functional description:
+! dingtd(dirnum,p_dirblk,p_u_group,p_d_group,p_sd_group,p_account)
+! returns in dirblk...
+! the gtdir information for directory dirnum. Returns true for success,
+! false for failure.
+!
+! Formal parameters:
+! - directory number
+! - address of crdir block
+! - address of space for user-group list
+! - address of space for directory group list
+! - address of space for subdirectory group list
+! - address of space for account default
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! 1 for success, 0 for failure
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z =0;
+
+bind
+   dirblk = (.p_dirblk) : vector[17],
+   u_group = (.p_u_group) : vector[30],
+   d_group = (.p_d_group) : vector[30],
+   sd_group = (.p_sd_group) : vector[30],
+   account = (.p_account) : vector[8];
+
+incr i from 0 to 17 by 1 do dirblk[.i] = 0;
+dirblk[0] = 17;
+dirblk[11] = u_group;
+u_group[0] = 30;
+dirblk[12] = d_group;
+d_group[0] = 30;
+dirblk[14] = sd_group;
+sd_group[0] = 30;
+dirblk[15] = bytptr(account);
+                             ! do gtdir
+begin
+   register r1=1,r2=2,r3=3;
+   r1 = .dirnum;
+   r2 = dirblk;
+   r3 = 0;
+   jsys(-1,gtdir,r1,r2,r3)
+   end
+
+end;
+
+
+GLOBAL ROUTINE DINSFI (AP,CNT) : NOVALUE =        ! System procedure $FileSet
+
+!++
+! Functional description:
+!     call $fileset (fil, offset, mask, value) sets a value or a string in
+! the Fdb of the file specified by channel (or $parse for current file).
+!    Fil is either a channel number, or -1 for currently parsed file, or
+! a string with the file name.
+!
+! Formal parameters:
+! usual for PCL system procedure
+!
+! Implicit inputs:
+! file 
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! none
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   chn,                         ! Channel requested
+                                ! [fun50]+ File name for $fileset
+        chn_typ,                ! Channel argument type
+        jfn_tmp,                ! 1 if temp jfn name
+                                ! [fun50]-
+   jfn,                         ! Jfn of file
+   offset,                      ! Offest in fdb
+   mask,                        ! Mask for fdb word
+   value,                       ! [integer] value to set
+   typ_value,                   ! type of value (int or str)
+   stv : str_val,               ! String value if 4th arg is string
+   stp,                         ! Byte pointer built from stv
+   use;                         ! Which jsys do we need (0=none)
+
+literal
+   _chfdb=1,                    ! Use Values
+   _arcf=2,
+   _sfust=3,
+   _sactf=4,
+   _sftad=5;
+
+if .cnt neq 4 then error ('Bad arguments to $FileSet');
+                                ! get JFN and check it
+                                ! [fun50]+
+value = pcegop (.(.ap+3),ste_typ_any ; typ_value);
+mask = pcegop(.(.ap+2),ste_typ_int);    ! mask for this word
+offset = pcegop (.(.ap+1),ste_typ_int); ! offset in fdb
+chn = pcegop(..ap, ste_typ_any;  chn_typ);
+jfn = diujfn (.chn, .chn_typ ; jfn_tmp);
+                                ! [fun50]-
+
+                                ! SELECT JSYS TO BE USED
+                                ! The combination of the word offset in the fdb
+                                ! and the mask to used defines which jsys will
+                                ! be used.
+
+use = (SELECTONE .offset OF SET
+[$FBCTL]: begin                 ! .fbctl word: chfdb or arcf
+   if (.mask and 
+       (not (fb_tmp or fb_prm or fb_del or fb_nod or fb_inv or fb_fcf
+             or fb_ndl)) ) eql 0 then _chfdb
+   else if (.mask and
+       (not (fb_arc or fb_off)) ) eql 0 then _arcf
+   else
+       0
+   end;
+[$fbprt,$fbcre,$fbbyv,$fbsiz,$fbcrv,$fbwrt,$fbref,$fbcnt,$fbbk0,
+ $fbusw]:
+   (_chfdb);
+[$fbtdt]:
+   (_arcf);
+[$fbaut,$fblwr]:
+   (_sfust);
+[$fbact]:
+   (_sactf);
+[$fbbbt]: begin
+   if (.mask and 
+       (not (ar_1st)) ) eql 0 then _chfdb
+   else  if (.mask and
+       (not (ar_rar or ar_riv or ar_ndl or ar_nar or ar_exm or
+             ar_rfl or ar_wrn or ar_rsn or ar_psz)) ) eql 0 then _arcf
+   else
+      0
+   end;
+[$fbnet,$fbfet,$fbtp1,$fbss1,$fbtp2,$fbss2]:
+   (_sftad);
+[OTHERWISE]:
+   (0);
+   TES);
+
+if .use eql 0 then error ('Unchangeable FDB offset/mask combination')
+else if .use eql _arcf or .use eql _sftad
+   then error ('ARCF, SFTAD Interfaces not provided');
+
+                                ! GET VALUE OR STRING
+SELECTONE .use of SET
+[_chfdb]:
+   if .typ_value neq ste_typ_any and
+      .typ_value neq ste_typ_int then
+      error ('Bad argument to $FileSet');
+[_sfust,_sactf]: begin
+   if .typ_value neq ste_typ_any and
+      .typ_value neq ste_typ_str then
+      error ('Bad argument to $FileSet');
+   stv = .value;
+   stp = bytptr (.stv[stv_adr]);
+   end;
+   TES;
+
+                                ! PERFORM JSYS REQUESTED
+
+
+IF NOT (SELECTONE .use of SET
+[_chfdb]: begin
+   register r1=1,r2=2,r3=3;
+                                ! Do not update directory right away
+   r1 = fld(1,cf_nud) or fld(.offset,cf_dsp) or fld(.jfn,cf_jfn);
+   r2 = .mask;
+   r3 = .value;
+   jsys (-1,chfdb,r1,r2,r3)
+   end;
+[_sfust]: begin
+   register r1=1,r2=2;
+   r1 = (if .offset eql $fbaut then $sfaut else
+        if .offset eql $fblwr then $sflwr else 0) ^ 18 or .jfn; 
+   r2 = .stp;
+   jsys (-1,sfust,r1,r2)
+   end;
+[_sactf]: begin
+   register r1=1, r2=2;
+   r1 = .jfn;
+   r2 = .stp;
+   jsys (-1,sactf,r1,r2)
+   end;
+[OTHERWISE]:
+   (0);
+   TES)
+THEN error ('Invalid $FileSet function');
+
+                                ! RELEASE STRING
+if .(.ap+3) eql opn_tmp_str then pcefst(.stv);
+                                ! [fun50]+
+if .jfn_tmp then begin          ! Release jfn and string
+   begin
+      register r1=1;
+      r1 = .jfn;
+      jsys (-1, rljfn, r1);
+      end;
+   if .(.ap) eql opn_tmp_str then pcefst(.chn);
+   end;
+                                ! [fun50]-
+end;
+
+
+GLOBAL ROUTINE DINXAT =                ! system variable $xatom
+
+!++
+! Functional description:
+!	Return current contents of atom buffer as string variable.
+!
+! Formal parameters:
+!	None
+!
+! Implicit inputs:
+!	ATMBUF
+!
+! Implicit outputs:
+!	none
+!
+! Routine value:
+!	string value of current parse atom (atmbuf in exec)
+!
+! Side effects:
+!	None
+!
+!--
+
+    begin
+    external register z=0;
+    local
+        val : str_val,          ! string value generated
+	cnt,			! character count
+	ptr;			! string pointer
+    cnt = 0;                    ! count length of atom
+    ptr = bytptr(atmbuf);
+    while ch$rchar_a(ptr) neq $chnul do cnt = .cnt + 1;
+    val = pceast (.cnt);        ! allocate storage and copy
+    ch$copy (.cnt, bytptr(atmbuf), $chnul, .cnt+1, bytptr(.val[stv_adr]));
+    .val
+    end;
+
+GLOBAL ROUTINE DINCMD =                ! system variable $command
+
+!++
+! Functional description:
+!	Return current contents of command buffer
+!
+! Formal parameters:
+!	None
+!
+! Implicit inputs:
+!	CBUF
+!
+! Implicit outputs:
+!	none
+!
+! Routine value:
+!	string value of command buffer
+!
+! Side effects:
+!	None
+!
+!--
+
+    begin
+    external register z=0;
+    local
+        val : str_val,          ! string value returned
+	cnt;			! character count
+    cnt = ch$diff (.sblock[$cmptr], ch$ptr(cbuf));
+    val = pceast(.cnt);         ! allocate storage
+    ch$copy (.cnt, ch$ptr(cbuf), $chnul, .cnt+1, bytptr(.val[stv_adr]));
+    .val
+    end;
+                                ! [fun36]- Parse: $Xatom, $Command
+
+                                ! [fun38]+ $termlength          
+
+GLOBAL ROUTINE DIVTLN =		! Internal variable $TERMLENGTH
+
+!++
+! Functional description:
+!	Return length of controlling terminal
+!
+! Formal parameters:
+!	None
+!
+! Implicit inputs:
+!	None
+!
+! Implicit outputs:
+!	None
+!
+! Routine value:
+!	Length
+!
+! Side effects:
+!	None
+!
+!--
+
+    begin
+    register r1=1,r2=2,r3=3;
+    r1 = $cttrm;
+    r2 = $morll;
+    jsys(0,mtopr,r1,r2,r3);
+    .r3
+    end;
+                                ! [fun38]- $termlength          
+
+                                ! [fun39]+ Jsys Interface
+
+GLOBAL ROUTINE DINGMM (AP,CNT) =        ! system procedure $get_mem
+
+!++
+! Functional description:
+!       int = $get_mem (12)
+! acquires 12 words in dynamic string space and returns the address of
+! the first location.
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! free string space (pcsfre)
+!
+! Implicit outputs:
+! free string space (pcsfre)
+!
+! Routine Value:
+! location of block of memory acquired
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   len,                         ! length of block requested
+   adr;                         ! address of block acquired
+
+if .cnt neq 1 then
+   error ('Bad argument to $get_mem');
+if .len lss 0 then
+   error ('$get_mem requests negative # of words');
+len = pcegop(.(.ap),ste_typ_int);
+adr = pcmgmm(.len, pcsfre);
+incra i from .adr to .adr+.len-1 do
+   .i = 0;
+.adr
+end;
+
+
+GLOBAL ROUTINE DINRMM (AP,CNT) : novalue =      ! procedure $ret_mem
+
+!++
+! Functional description:
+!       call $ret_mem (location,12)
+! returns a block of 12 words starting at "location" (acquired by
+! location = $get_mem (12)).
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! free string space (pcsfre)
+!
+! Implicit outputs:
+! free string space (pcsfre)
+!
+! Routine Value:
+! none
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+
+if .cnt neq 2 then
+   error ('Bad arguments to $ret_mem');
+                                ! [fun62]+
+retmem ( pcegop (.(.ap+1),ste_typ_int),
+         pcegop(.(.ap),ste_typ_int),
+         pcsfre);
+                                ! [fun62]-
+end;
+
+
+GLOBAL ROUTINE DINIPM (AP,CNT) : NOVALUE =      ! system procedure $iput
+
+!++
+! Functional description:
+!       call $iput (value, location [,index [,count]])
+! sets the addresses (location+index) thru (location+index+count-1) to
+! the integer "value". This is used to set addresses acquired thru $get_mem
+!   index defaults to 0
+!   count defaults to 1
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! none
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   index,                       ! integer offset from location
+   top,                         ! offset of highest location to set
+                                ! relative to base address + index
+   value,                       ! value to set
+   base;                        ! address (location+index)
+if .cnt lss 2 or .cnt gtr 4 then error ('Bad arguments to $iput');
+index = 0;
+top = 0;
+if .cnt eql 4 then begin
+   top = pcegop (.(.ap+3),ste_typ_int) - 1;
+   if .top lss 0 then top = 0;
+   end;
+if .cnt geq 3 then begin
+   index = pcegop (.(.ap+2),ste_typ_int);
+   if .index lss 0 then index = 0;
+   end;
+base = pcegop (.(.ap+1),ste_typ_int) + .index;
+value = pcegop (.(.ap),ste_typ_int);
+incra loc from .base to .base+.top do
+   .loc = .value;
+
+end;
+
+GLOBAL ROUTINE DINIGM (AP,CNT) =        ! integer procedure $iget
+
+!++
+! Functional description:
+!       int = $iget (location [,index])
+! Returns the value stored at location(index). Index is expressed with
+! zero base.
+!    index defaults to 0
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! Integer value at location(index)
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   index;                       ! offset from location
+if .cnt eql 1 then
+   index = 0
+else if .cnt eql 2 then begin
+   index = pcegop(.(.ap+1),ste_typ_int);
+   if .index lss 0 then index = 0;
+   end
+else
+   error ('Bad arguments to $iget');
+.(pcegop(.(.ap),ste_typ_int) + .index)
+
+end;
+
+GLOBAL ROUTINE DINSPM (AP,CNT) : NOVALUE =      ! procedure $sput
+
+!++
+! Functional description:
+!       call $sput (string, location [,index [,charpos]])
+! Stores the asciz string "string" starting at the character in char
+! position "charpos" (counted from 0) at loaction(index)
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! none
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   str : str_val,               ! string vaslue of source
+   ptr,                         ! char ptr to destination
+   index,                       ! index relative to base location
+   charpos;                     ! character position relative to
+                                ! location(index)
+
+if .cnt lss 2 or .cnt gtr 4 then error ('Bad arguments to $sput');
+index = 0;
+charpos = 0;
+if .cnt eql 4 then begin
+   charpos = pcegop (.(.ap+3),ste_typ_int);
+   if .charpos lss 0 then charpos = 0;
+   end;
+if .cnt geq 3 then begin
+   index = pcegop (.(.ap+2),ste_typ_int);
+   if .index lss 0 then index = 0;
+   end;
+ptr = ch$ptr (pcegop(.(.ap+1),ste_typ_int) + .index, .charpos);
+str = pcegop (.(.ap),ste_typ_str);      ! Source ptr
+ch$copy (.str[stv_len], ch$ptr(.str[stv_adr]), $chnul,
+         .str[stv_len]+1, .ptr);
+if .(.ap) eql opn_tmp_str then pcefst(.str);
+
+
+end;
+
+GLOBAL ROUTINE DINSGM (AP,CNT) =        ! string procedure $sget
+
+!++
+! Functional description:
+!       str = $sget (location [,index [,charpos]])
+! returns the asciz string stored at location(index) + "charpos" characters
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! string value of newly consed asciz string
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   len,                         ! length of string (excluding final
+                                ! null)
+   ptr,ptr1,                    ! char pointers
+   index,charpos,               ! word and character offsets
+   str: str_val;                ! string value for returned string
+
+if .cnt lss 1 or .cnt gtr 3 then error ('Bad arguments to $sget');
+index = 0;
+charpos = 0;
+if .cnt eql 3 then begin
+   charpos = pcegop (.(.ap+2),ste_typ_int);
+   if .charpos lss 0 then charpos = 0;
+   end;
+if .cnt geq 2 then begin
+   index = pcegop(.(.ap+1),ste_typ_int);
+   if .index lss 0 then index = 0;
+   end;
+                                ! make ptr to location(index) + charpos chars
+ptr1 = ptr = ch$ptr (pcegop(.(.ap),ste_typ_int) + .index, .charpos);
+len = 0;                        ! len = length (excluding final null)
+while ch$rchar_a(ptr1) neq $chnul do len = .len + 1;
+str = pceast (.len);
+ch$copy (.len, .ptr, $chnul, .len+1, ch$ptr(.str[stv_adr]));
+.str
+
+end;
+
+GLOBAL ROUTINE DINJFC (AP,CNT) =        ! integer procedure $jfn
+
+!++
+! Functional description:
+!       int = $jfn (channel)
+! If "channel" is a channel, return the jfn associated with it.
+! If "channel" is < 0 return the Indexable File Handle associated with
+! the parse: if the parse specified "wild" the flag bits are returned
+! in the left half, and the jfn in the right half.
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! parse file list
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! jfn
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   fil,                         ! channel number
+   jfn;                         ! the jfn
+
+if .cnt neq 1 then error ('Bad argument to $jfn');
+fil = pcegop(.(.ap),ste_typ_int);
+jfn = 0;
+if .fil lss 0
+then
+    begin
+    local
+        lst: ref jls_wrd,	! parsed jfn list
+        hlf: hlf_wrd;
+    lst = .pccurc[ecb_pfl];
+    if .lst neq 0
+    then
+        if .lst[jls_wld]
+        then
+            jfn = .lst[jls_jfn]
+        else
+            begin
+            hlf = .lst[jls_jfn];
+            jfn = .hlf[hlf_rgt]
+            end
+    end
+else
+    begin
+    local
+        ent: ref rcl_wrd;
+    ent = .pccurc[ecb_rcl];
+    while .ent neq 0 do
+        if .ent[rcl_chn] eql .fil then exitloop else ent = .ent[rcl_nxt];
+    if .ent neq 0 then jfn = .ent[rcl_jfn]
+    end;
+if .jfn eql 0 then error('requested file channel not in use');
+.jfn
+
+end;
+
+GLOBAL ROUTINE DINJS0 (AP,CNT) =        ! integer procedure $jsys
+
+!++
+! Functional description:
+!    int = $jsys(jsys [,ac1 [,ac2 [,ac3[,ac4]]]])
+! returns 1 for success, and 0 for failure
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! Variables $reg1 to $reg4 are set to contain the ac's after the jsys
+! Variable $jsysok is set to 1 for success, 0 for failure
+!
+! Routine Value:
+! success indicator (1=success, 0=failure)
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+dinjsx (.ap, .cnt)
+end;
+
+GLOBAL ROUTINE DINJS1 (AP,CNT) : NOVALUE =      ! integer procedure $jsys
+
+!++
+! Functional description:
+!    call $jsys(jsys [,ac1 [,ac2 [,ac3[,ac4]]]])
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! Variables $reg1 to $reg4 are set to contain the ac's after the jsys
+! Variable $jsysok is set to 1 for success, 0 for failure
+!
+! Routine Value:
+! none
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+dinjsx (.ap, .cnt);
+end;
+
+GLOBAL ROUTINE DINJSX (AP,CNT) =        ! utility for jsys interface
+
+!++
+! Functional description:
+! Perform the jsys requested (see dinjs0, dinjs1). After execution,
+! set up the variables $reg1 to $reg4 from the ac's. Store 1 for
+! success and 0 for failure in $jsysok, and return same.
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! Set variables $reg1 thru $reg4 from the ac's after execution.
+! Set variable $jsysok (1=success, 0=failure)
+! 
+! Routine Value:
+! success indicator (1=success, 0=failure)
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   vr1,vr2,vr3,vr4,
+   code;                        ! jsys number
+
+if .cnt lss 1 or .cnt gtr 5 then error ('Bad arguments to $jsys');
+vr4 = vr3 = vr2 = vr1 =0;
+if .cnt eql 5 then vr4 = pcegop (.(.ap+4),ste_typ_int);
+if .cnt geq 4 then vr3 = pcegop (.(.ap+3),ste_typ_int);
+if .cnt geq 3 then vr2 = pcegop (.(.ap+2),ste_typ_int);
+if .cnt geq 2 then vr1 = pcegop (.(.ap+1),ste_typ_int);
+code = pcegop(.(.ap),ste_typ_int);
+begin
+   register
+      r1=1, r2=2, r3=3, r4=4;
+   r1=.vr1; r2=.vr2; r3=.vr3; r4=.vr4;
+   pcvjsk = jsys (-1,.code,r1,r2,r3,r4);
+   pcvrg1 = .r1;
+   pcvrg2 = .r2;
+   pcvrg3 = .r3;
+   pcvrg4 = .r4;
+   end;
+.pcvjsk
+
+end;
+
+GLOBAL ROUTINE DINSAD (AP,CNT) =        ! integer procedure $strloc
+
+!++
+! Functional description:
+!       int = $strloc (string)
+! Returns the actual memory address of a string primary (constant or
+! variable). 
+! RESTRICTION: may not be used for string expressions or calls to
+! string procedures: $strloc($connecteddirectory) or $strloc(str+".")
+! return addresses on the stack of string, hence usually totally
+! invalid.
+!
+! Formal parameters:
+! Usual for system procedure
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! none
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   str : str_val;               ! string argument
+
+if .cnt neq 1 then error ('Bad argument to $strloc');
+str = pcegop(.(.ap), ste_typ_str);
+.str[stv_adr]
+
+end;
+                                ! [fun39]-
+
+                                ! [fun48]+ $isfile(string) says if the file
+                                ! does exist
+
+GLOBAL ROUTINE DINISF (AP,CNT) =
+
+!++
+! Functional description:
+!       int = $isfile ("filename"); yelds 1 if file exists, 0 otherwise
+!
+! Input Formals:
+! Usual for system procedure
+!
+! Output Formals:
+! none
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! 1 if file does exist, 0 otherwise
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register z=0;
+local
+   ok,                          ! Store success (1) or failure (0)
+   str: str_val;                ! string argument value
+
+if .cnt neq 1 then error ('Bad argument to $isfile');
+str = pcegop (.(.ap),ste_typ_str);
+begin
+   register
+      r1=1, r2=2;
+   r1 = gj_sht+gj_old;
+   r2 = bytptr(.str[stv_adr]);
+   ok = jsys (-1, gtjfn, r1,r2);
+   if .ok then
+      jsys (-1,rljfn,r1);
+   end;
+if .(.ap) eql opn_tmp_str then pcefst(.str);
+
+.ok                             ! Return result
+
+end;
+                                ! [fun49]
+
+                                ! [fun65]+ Add $strfix function
+GLOBAL ROUTINE DINSFX (AP,CNT) =
+
+!++
+! Functional description:
+! 	mystr = $strfix (address)
+! converts the asciz found at address into a PCL string.
+!
+! Input Formals:
+! - Address of asciz string.
+!
+! Output Formals:
+! none
+!
+! Implicit inputs:
+! none
+!
+! Implicit outputs:
+! none
+!
+! Routine Value:
+! String value.
+!
+! Side effects:
+! none
+!
+!--
+
+begin
+external register
+  z=0;
+
+local
+   ptr,                         ! character pointer
+   stv : str_val;               ! string value for result
+
+stv[stv_adr] = pcegop(.(.ap),ste_typ_int);      ! address
+ptr = ch$ptr(.stv[stv_adr]);            ! pointer
+stv[stv_len] = 0;
+while ch$rchar_a(ptr) neq 0 do stv[stv_len] = .stv[stv_len] + 1;
+pcecst(.stv)                    ! make PCL string and return it
+
+end;
+                                ! [fun65]- Add $strfix function
+
+end
+eludom
+  

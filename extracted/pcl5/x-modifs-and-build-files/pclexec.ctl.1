@@ -1,0 +1,48 @@
+;
+; PCLEXEC.CTL - A control file which demonstrates the procedure used
+;		to build the PCL Exec's included in the distribution
+;		from the files included on the tape.
+;
+
+;Define where to find the files:
+;
+@define EXEC: DSK:
+
+;Compile the configuration-dependent files.  This step should be skipped
+;at sites that don't have Exec sources:
+;
+@Compile Execf3+Execca.Mac Execc3.Rel		;PCL only
+@Compile Execf2+Execca.Mac Execc2.Rel		;PCL and multi-forking
+
+;Compile the PCL modules.  This step should be skipped if it is desired
+;to use the PCL REL files off of the distribution tape or doesn't have
+;Bliss-36:
+;
+@Bliss Execpd.B36 /Library
+@Bliss Execpc.B36 /List /NoHeader /Format:Assembly /Format:NoBinary -
+@		  /Format:NoCommentary
+@Bliss Execpi.B36 /List /NoHeader /Format:Assembly /Format:NoBinary -
+@		  /Format:NoCommentary
+@Bliss Execpx.B36 /List /NoHeader /Format:Assembly /Format:NoBinary -
+@		  /Format:NoCommentary
+@Bliss Execpu.B36 /List /NoHeader /Format:Assembly /Format:NoBinary -
+@		  /Format:NoCommentary
+@Bliss Execpn.B36 /List /NoHeader /Format:Assembly /Format:NoBinary -
+@		  /Format:NoCommentary
+@Compile Execpm.Mac
+@Compile Execps.Mac
+
+;Build an Exec with PCL but without multi-forking:
+;
+@Execute @Loexec3.Cmd
+*Y
+@Rename Exec.Exe.0 Exec-without-multi-forking.Exe
+
+;Build an Exec with PCL and multi-forking:
+;
+@Execute @Loexec2.Cmd
+*Y
+
+;Delete the scratch file:
+;
+@Delete Pexec.Exe

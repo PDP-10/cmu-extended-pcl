@@ -1,0 +1,474 @@
+
+! <PCL>PCL.PCL.11, 18-Jan-83 10:18:23, Edit by DEBAR
+
+!{+!==================================================================
+L PCL:	Commands to Hack PCL files
+
+This library contains commands to recompile PCL source files, document
+them automatically, etc.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+
+!{+!==================================================================
+C CPCL:	Compile PCL environment(s)
+
+	@CPCL (Pcl Files to Compile) [ /compile ] filelist
+
+This invokes the system: exec and creates environments for all the PCL
+files specified. Defaults  are dsk:*.pcl.highest-gen. The  environment
+will be saved in the same directory as the source.
+
+By default, the compilation is done only iof the environment does  not
+exist, or is older the source. The /compile switch forces compilation.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+command cpcl;
+begin
+
+integer
+   doit,
+   compile;			! 1=force recompilation
+
+string
+   fl, source, env, temp;
+
+external integer procedure
+   is_older;
+
+compile =0;
+guide "compile PCL environment from";
+prse:
+   parse begin
+      switch (help "List of files to compile, or switch", stdhelp,
+              default "dsk:",
+              words (compile:1))
+         : {
+	 compile = 1;
+	 goto prse
+	 };
+      eol: abort "Needs file specs";
+      otherwise:
+         parse filelist (default_dev "dsk", default_nam "*",
+	    default_ext "pcl", default_gen 0);
+      end;
+
+invoke "system:exec.exe";
+
+do {
+   typein "undeclare all";
+   source = $filel;
+   env = $file_dev($parse) + ":<" + $File_dir($parse)
+            + ">" + $file_nam($parse) + ".ENV";
+   doit = compile;
+   if doit eql 0 then doit = is_older (env, source);
+   if doit neq 0 then {
+      typein "decl /noconfirm pcl " + source;
+      cleartypeout;
+      typein "preserve environment " + env;
+      gettypeout temp;
+      display temp;
+      }
+   }
+until $nextfile eql 0;
+end;
+
+
+!{+!==================================================================
+C PCL-DOC: Build documentation from PCL source files
+
+Construct automatically  PCL  libraries  and  commands  documentation.
+Each PCL  File is  seen as  a Library,  containing eventually  several
+commands and procedures.
+
+Documenting a Pcl Library from the source file:
+-----------------------------------------------
+	@pcl-doc library
+           [ /compile ] 
+	      filelist
+
+By default, the documentation is produced only if there is no doc file
+corresponding to the file treated, or if it is older that the  source.
+The /COMPILE switch forces the production of the documentation.
+
+The documentation is made up of Documentation Paragraphs, of the form:
+
+	!{+
+	X name: one line description
+
+	Long description.
+	....
+	-}!
+
+where X is is one of:
+   L for a Library Description Paragraph
+   P for a Procedure Description Paragraph
+   C for a Command Description Paragraph
+
+Note that "!{+", "-}!" and  X must start on  the first character of  a
+line.
+
+A library description paragraph  is not needed.  It should be  present
+only if more than one command or procedure is documented. If  present,
+it will create  a file  NAME.DOC containing  the text  of the  library
+paragraph,  and  the   first  line  of   each  following   description
+paragraphs. The name MUST  be the same  as the name  of the PCL  file.
+The library description will contain all the procedures description.
+
+A command or  procedure paragraph  describes a  command or  procedure.
+Name should be the name of the function documented. It creates a  file
+NAME.HLP describing the command.
+
+Example:
+    This file  contains  only  one  command  description.  Utility.PCL
+usually contains  both a  library description  (see utility.doc),  and
+command descriptions (see temp_file.hlp).
+
+
+Making a Short summary of all libraries from their .DOC files:
+--------------------------------------------------------------
+
+	@pcl-doc short filelist
+
+This scans a list of PCL source files. For each file it tries to  find
+a .doc or a .hlp  file. If they are not  found, or are older than  the
+source, it runs @pcl-doc library  on the source to produce/update  the
+documentation. It then  extracts from the  .doc file (or  the .hlp  if
+there is no .doc) the  summary of the library  and of the commands  it
+contains.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+command pcl_doc;
+begin
+
+integer
+   i,
+   compile,			! 1 if /compile
+   doit,			! temp for compile value
+   paragraph,			! 1=librarry, 2=command/procedure
+   gotone,			! 1=found a documentation paragraph
+   fileid,			! tempory channel number
+   FullFileId,			! channel of temp file accumulating
+				! paragraphs to append to doc file (0
+				! if none)
+   InFileId,			! channel of input file
+   OutFileId,
+   DocFileId,			! channel of doc file (0 if none)
+   HlpFileId;			! channel of help file (0 if none)
+
+string
+   in_file,
+   out_file,
+   hlp_file,
+   doc_file,
+   full_file,
+   name,
+   record;
+
+external procedure
+   pcl_doc_files,		! build names of .doc, .hlp files
+   pcl_doc_x,			! error exit
+   write_st;			! write a string to a file n times
+
+external integer procedure
+   find_beg_doc;		! find next documentation paragraph
+
+external string procedure
+   temp_file;			! get a temp file name
+ 
+guide "document PCL";
+parse keyword (words ("library":1, "short":2)) : begin
+   case $value from 1 to 2 of begin
+      1: goto pcl_doc_library;
+      2: goto pcl_doc_short;
+      end;
+   end;
+
+
+				! CODE FOR DOCUMENTING A LIBRARY
+				! ******************************
+pcl_doc_library:
+				! PARSE FILE NAMES
+guide "From Source Files";
+prslib:
+parse begin
+   switch (words ("compile":1),
+           help "List of files to document, or switch", stdhelp,
+	   default "dsk:")
+      : {
+      compile = 1;
+      goto prslib
+      };
+   eol: abort "Needs file specs";
+   otherwise:
+      parse filelist 
+            (default_dev "dsk", default_nam "*", default_ext "pcl",
+	    input, help "list of files");
+   end;
+				! LOOP ON ALL SOURCE FILES
+do begin			! Until $Nextfile = 0
+				! DO WE NEED TO PROCESS THIS FILE ?
+   call pcl_doc_files (doc_file, hlp_file, in_file, doit);
+   if compile eql 1 then doit = 1;
+   if doit eql 0 then
+      goto nextlib ;
+				! PROCESS THIS FILE
+   DocFileId = 0;		! No doc file yet
+   InFileId = $Open ($FILEL,$Input);
+   display "Documenting	" + $FileL;
+   gotone = 0;
+				! LOOP ON ALL PARAGRAPHS WITHIN FILE
+   while find_beg_doc(infileid,record) neq 0 do begin
+				! Find out paragraph name
+      record = $read(infileid);
+      i = $search(record, ":");
+      if i leq 3 then i = 0;
+      if i eql 0 then
+         call pcl_doc_x
+          ("Invalid Name in first line of documentation paragraph",
+	  record, $filel);
+      name = record[3:i-3];
+				! Find type of paragraph
+      select record[1:2] of begin
+				! Library Description
+      "l ","L ": {
+         paragraph = 1;
+	 if DocFileId neq 0 then
+	    call pcl_doc_x ("Already found L documentation",
+	                    record,$filel);
+	 if $file_nam($parse) neq name then
+	    call pcl_doc_x ("L Name and file name do not agree",
+	                    record, $filel);
+         DocFileId = $open (doc_file, $output);
+	 call write_st (DocFileId, "=", 70);
+	 call $write (DocFileId, record[3:*] + $crlf + $crlf +
+	               "PclDoc for Library " + $fileL + $crlf +
+		       $date + "  " + $time );
+         full_file = temp_file;
+	 FullFileId = $open (full_file, $output);
+	 fileid = DocFileId
+	 };
+				! Command description
+      "c ","C ","p ","P ": {
+         paragraph = 2;
+	 hlp_file = $File_Dev($Parse) + ":<" + $File_Dir($Parse) +
+		     ">" + name + ".HLP" +
+		     "." + $File_Gen($parse);
+	 HlpFileId = $open (hlp_file, $output);
+				   ! Write first line
+	 call write_st (HlpFileId, "=", 70);
+	 call $write (HlpFileId, record[3:*] + $crlf + $crlf +
+                      "PclDoc from Library " + $filel + $crlf +
+                      $date + "  " + $time);
+	 call write_st (HlpFileId, "=", 70);
+
+	 if DocFileId gtr 0 then
+	    call $write (DocFileId, record);
+	 if FullFileId gtr 0 then {
+	    call $write (FullFileId, $crlf);
+	    call write_st (FullFileId, "=", 70);
+	    call $write (FullFileId, record)
+	    };
+	 fileid = HlpFileId
+	 };
+				! Unknown paragraph type
+      Otherwise:
+	 call pcl_doc_x ("Unknown documentation paragraph",
+	                 record, $FileL)
+
+      end; ! select record [1:2]
+
+      gotone = 1;		! Got something
+
+				! Copy rest of documentation paragraph
+   coplin:			! until -}! line
+      record = $Read(InFileId); 
+      if $eof (infileid) neq 0 then {
+	 display "Missing -}! line";
+	 goto endlin
+	 };
+      if record[1:3] eql "-}!" then goto endlin;
+      call $Write (FileId, record);
+      if paragraph = 2 then
+         if FullFileId gtr 0 then
+	    call $write (FullFileId, record);
+      goto coplin;
+   endlin:
+     
+      if paragraph eql 1 then {
+         call write_st (DocFileId, "=", 70);
+	 call $write (DocFileId, "
+= Summary of Commands and Procedures");
+	 call write_st (docfileid,"=",36); 
+	 };
+
+				! Close help file
+      if HlpFileId gtr 0 then {
+         display "Help File	" + hlp_file;
+	 call $close (HlpFileId);
+	 HlpFileId = 0;
+	 }
+
+      end; ! LOOP ON DOCUMENTATION PARAGRAPHS
+
+   if gotone eql 0 then
+      call pcl_doc_x ("Could not find documentation", "At EOF",
+                      $FileL);
+				! APPEND HELP FILES TO DOC FILE
+   if DocFileId gtr 0 then {
+      display "Doc  File	" + doc_file ;
+      call $close (DocFileId);
+      DocFileId = 0;
+      if FullFileId gtr 0 then {
+         call $close (FullFileId);
+	 FullFileId = 0;
+	 docommand original "append " + full_file + " " + doc_file to $nul;
+	 docommand original "delete " + full_file to $nul
+	 }
+      };
+				! CLOSE FILES
+   call $close (infileid);
+   infileid = 0;
+
+nextlib:
+   end				! LOOP ON ALL PCL SOURCE FILES
+until $Nextfile eql 0;
+
+exit;				! END CODE DOCUMENTING LIBRARY
+
+
+
+				! CODE FOR MAKING SHORT RESUME OF ALL DOC
+				! ***************************************
+
+pcl_doc_short:
+
+out_file = "pcl-libraries.short";
+
+guide "From Source Files";
+prssht:
+parse begin
+   switch (words ("output"::1),
+	   help "List of files to document, or switch", stdhelp,
+	   default "dsk:")
+      : {
+      parse outputfile;
+      out_file = $FileL;
+      goto prssht
+      };
+   eol: abort "Needs file specs";
+   otherwise:
+      parse filelist 
+	    (default_dev "dsk", default_nam "*", default_ext "pcl",
+	    input, help "list of files");
+   end;
+
+outfileid = $open (out_file, $output);
+call $write (outfileid, "Documentation for PCL Libraries" + $crlf
+   + $date + " " + $time + $crlf);
+
+			     ! LOOP ON ALL INPUT FILES
+do begin			! until $nextfile eql 0
+   call pcl_doc_files (doc_file, hlp_file, in_file, doit);
+   if doit eql 1 then
+      docommand "pcl-doc library " + $FileL;
+   in_file = doc_file;
+   if $isfile(doc_file) eql 0 then
+      if $isfile(hlp_file) eql 1 then
+	 in_file = hlp_file
+      else
+	 abort "No Documentation for " + $FileL;
+   infileid = $open(in_file, $input);
+
+			     ! Extract summary line
+   record = $read (infileid);
+   record = $read (infileid);
+   call write_st (outfileid, "=", 70);
+   call $write (outfileid, "Library " + $FileL);
+   call $write (outfileid, record + $crlf);
+   if in_file eql hlp_file then
+      goto nextsht;
+			     ! Find Summary lines
+   do {
+      record = $read (infileid);
+      if $eof(infileid) neq 0 then
+	 call pcl_doc_x ("Can't Find Summary", record, in_file)
+      }
+   until record[1:6] eql "= Summ";
+   $nul = $read(infileid);
+			     ! Copy Summary lines
+   copsu: {
+      record = $read (infileid);
+      if $eof(infileid) neq 0 then
+	 goto nextsht;
+      if record eql "" then
+	 goto nextsht;
+      call $write (outfileid, record);
+      goto copsu
+      };
+
+nextsht:
+   call $close(infileid);
+   display "Abstracted	" + $FileL;
+
+   end
+until			! END LOOP ON ALL FILEs
+   $nextfile eql 0;
+
+			     ! Close output files
+call $close (outfileid);
+display "Short File	" + out_file;
+
+exit				! END OF CODE FOR SHORT DOCUMENTATION
+
+end
+
+
+				! FIND BEG OF A DOCUMENTATION PARAGRAPH
+integer procedure find_beg_doc (integer fil; string record);
+begin
+loop:
+      record = $read(fil);
+      IF $EOF(fil) neq 0 then
+         return 0;
+      if record[1:3] eql "!{+" then
+         return 1;
+      goto loop
+end
+
+				! BUILD DOC AND HLP FILE NAMES, and
+				! set doit to 1 if they are older than
+				! the source, or do not exist.
+				! The source is defined by $Parse.
+				! Infile is set to the "main" file:
+				! .doc if present, else .hlp
+procedure pcl_doc_files (string doc_file, hlp_file, in_file; integer doit);
+begin
+   external integer procedure
+      is_older;
+
+   doc_file = $file_dev($parse) + ":<" + $file_dir($parse) + ">" +
+      $file_nam($parse) + ".DOC";
+   hlp_file = $file_dev($parse) + ":<" + $file_dir($parse) + ">" +
+      $file_nam($parse) + ".HLP";
+   in_file = doc_file;
+   if $isfile(doc_file) eql 0 then
+      if $isfile(hlp_file) eql 1 then
+	 in_file = hlp_file;
+   doit = is_older(in_file, $FileL) ;
+   end;
+
+				! ERROR EXIT
+
+procedure pcl_doc_x (string msg, record, file);
+   abort "Error: " + msg + $crlf +
+         "In file " + file + $crlf +
+         "At line:" + $crlf + record;
+
+
+    

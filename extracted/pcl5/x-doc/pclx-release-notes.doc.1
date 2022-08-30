@@ -1,0 +1,157 @@
+
+
+
+
+
+
+
+
+
+
+
+                                    TOPS-20
+                    Extended PROGRAMMABLE COMMAND LANGUAGE
+
+                                 Release Notes
+
+                                12 January 1983
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+           Copyright (C) 1983 FNDP Computing Centre, Namur - Belgium
+  The  PCL  distribution you are getting with this letter contains two versions
+of PCL:
+
+   1. the original official PCL  for  version  5  of  Tops20,  PCL  5(100)
+      distributed by Carnegie Mellon University,
+
+   2. an extended version from:  
+              Michel E DEBAR
+              FNDP Computing Centre
+              Rue GRandgagnage, 21
+              B 5OOO Namur Belgium
+
+              phone:  +32.81.22-06-31
+              telex:  59.222 Fac.Nam.B.
+
+  Read PCL-RELEASE-NOTES.DOC for information on distribution of PCL by Carnegie
+Mellon.  If  you  wish  to get the extended version from FNDP, please send us a
+letter saying so with a cheque drawn on a Belgian bank for 2 500 Belgian Francs
+(approx $ 50.00), payable to "Facultes Universitaires N-D de la Paix, Namur".
+
+  You should read the following documentation files:
+
+<PCL5.X-DOC>PCLX-RELEASE-NOTES.DOC
+                this letter
+
+<PCL5.DOC>PCL-RELEASE-NOTES.DOC
+                the release notes for the official PCL, entirely applicable  to
+                the extended version, mutatis mutandis
+
+<PCL5.DOC>PCL.LPT
+                the original PCL manual
+
+<PCL5.X-DOC>PCLX.LPT
+                a slightly different manual, describing the extended version of
+                PCL
+
+  The  extended  version is put on the tape in a manner totally parallel to the
+original version. The distribution now contains 10 savesets instead of 5:
+Original PCL:
+        PS:<PCL5.BINARY-AND-BUILD-FILES>
+        PS:<PCL5.DOC>
+        PS:<PCL5.EXE>
+        PS:<PCL5.MODIFS-AND-BUILD-FILES>
+        PS:<PCL5.SOURCES>
+Extended PCL:
+        PS:<PCL5.X-BINARY-AND-BUILD-FILES>
+        PS:<PCL5.X-DOC>
+        PS:<PCL5.X-EXE>
+        PS:<PCL5.X-MODIFS-AND-BUILD-FILES>
+        PS:<PCL5.X-SOURCES>
+
+  The major extensions are:
+
+   - WILD option allowed for FILE,  DIRECTORY  and  USERNAME  parse  field
+     types.  $NEXTFILE working after PARSE (FILE (WILD)).
+
+   - DIRECTORYLIST   and   USERLIST  parse  field  type,  with  associated
+     variables  and  procedures  $DIRECTORY,  $USER,  $NEXTDIRECTORY   and
+     $NEXTUSER.
+
+   - Based numbers of the form base%number.
+
+   - $Getfield and $Setfield to manipulate bit fields within integers.
+
+   - $and and $or to provide logical and/or of integers.
+
+   - $DirectoryInfo_I  and  $DirectoryInfo_s read the information returned
+     by the GTDIR and GTDAL JSYS's.
+
+   - $FileInfo_I, $FileInfo_S, $FileSet  accept  mnemonic  codes  for  the
+     information  desired.  They  also  accept  the  file name as a string
+     argument in addition to the usual $parse or channel number.
+
+   - $FileSet sets individual entries in the FDB.
+
+   - $xatom and $command, return the last atom parsed and the last command
+     parsed.
+
+   - $termlength returns the length of the controlling terminal.
+
+   - A jsys interface is provided with the routines:
+
+     $get_men and $Ret_mem
+                     to acquire and release memory
+
+     $iput and $iget to set/read integers in memory
+
+     $sput and $sget do the same for strings
+
+     $jfn            returns the jfn associated with a channel
+
+     $strloc         returns the address in memory of a string
+
+     $jsys, $Jsys1   execute a Jsys
+
+     $ac1 to $ac4    return the accumulators 1 to 4 after $jsys or $jsys1
+
+     $jsysok         indicates the success or failure of the last $jsys or
+                     $jsys1
+
+   - Inline comments of the  form  !{...}!  are  allowed.  They  may  span
+     several lines and may be nested.
+
+   - {...} may serve as a substitute to Begin...End.
+
+   - Case  and Select may have multiple tags in each case; each tag may be
+     of the form Value1 TO Value2.
+
+   - The SelectAll statement implements a select that "falls through"  and
+     goes on matching (it is to Select in PCL as Select is to Selectone in
+     Bliss).
+
+   - The WORDS option allows quoted strings:  
+
+        (WORDS ("68_cobol":1, ...))
+
+   - $Isfile (Filename) returns 1 if a file exists, else 0.
+
+   - In  $string  if  the  radix  is other than 10 the number is output in
+     magnitude form, ignoring the sign bit.

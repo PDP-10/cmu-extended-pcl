@@ -1,0 +1,28 @@
+======================================================================
+IS_OLDER:	 Integer Procedure to compare write date of two files.
+
+PclDoc from Library PS:<PCL>UTILITY.PCL.23
+10-Feb-83  12:38:29
+======================================================================
+
+Is_Older (filea, fileb) checks if filea is older than fileb.
+
+Usage:
+	integer = Is_Older (filea,fileb);
+
+Inputs:
+filea	first file,
+fileb	second file. Filea and Fileb are file names.
+
+Result:
+	1 if filea is oldeò than filåb, else 0
+
+Remarks:
+	The age of  the files  is taken from  the date  the user  last
+wrote the file ($fbwrt), not taking  into account an eventual date  at
+which the file was òestored bù dumper.
+	If filea does not åxist¬ alwáys råturn 1 (oìder)®
+	If filea  exists, but  fileb does  not, always  return 0  (not
+older).
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31

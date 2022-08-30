@@ -1,0 +1,180 @@
+COMMAND DAVE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute DAVE - the University of Colorado FORTRAN data flow
+!	analysis utility.
+!
+! Usage:
+!	DAVE inputfile [listingfile]
+!
+! Remarks:
+!	The default extension for the inputfile is ".FOR", for the
+!	listingfile, ".LST".  The listing file contains FORTRAN
+!	carriage-control characters in column 1, and should 
+!	therefore be run through the FORPTX utility before 
+!	printing.  It is formatted to use no more than 80
+!	characters per line.
+!
+!	Until PCL is given the ability to test for the existence
+!	of arbitrary files, DAVE will receive its options from
+!	a file "LOCAL:DAVE.DEF" which contains the option SI=ON,
+!	forcing continuation even if there are missing routines.
+!	The user may provide alternate options in a file of the
+!	same name on the connected directory, provided the logical
+!	name LOCAL: is redefined to be DSK:,LOCAL:.
+!
+!	DAVE creates temporary files with the names FORnn.DAT in
+!	the connected directory, where nn = 01..13, as well as files
+!	named PAGEI.DAV, PAGEM.DAV, and ROLL.DAV; these are deleted
+!	at normal termination, but might be left if DAVE is aborted.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+EXTERNAL STRING PROCEDURE systemlog;
+INTEGER
+	InFileId,
+	OutFileId;
+
+STRING
+	command_echo,
+	default_device,
+	empty_file,
+	file_name,
+	input_file,
+	listing_file,
+	option_file,
+	record;
+
+empty_file = "PS:<TEMP>" + $STRING($TERMNUMBER) + "-DAVE.TMP;T";
+OutFileId = $Open (empty_file,$Output);
+CALL $Close (OutFileId);
+
+input_file = "";
+listing_file = "";
+option_file = "LOCAL:DAVE.DEF";
+
+GUIDE "FORTRAN data flow analysis";
+
+PARSE (
+FILE	(HELP "input FORTRAN source file",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_EXT "FOR") : input_file = $FILEL);
+
+file_name = $File_Nam($Parse);
+default_device = $File_Dev($Parse);
+
+PARSE (
+FILE	(HELP "listing file",
+	OUTPUT,
+	DEFAULT_DEV default_device,
+	DEFAULT_NAM file_name,
+	DEFAULT_EXT "LST") : listing_file = $FILEL;
+
+EOL	: NOP);
+
+IF listing_file = "" 
+THEN listing_file = $File_Dev($Parse) + ":<" + $File_Dir($Parse) + ">" +
+		$File_Nam($Parse) + "." + ".LST";
+!
+! Define logical names.
+!
+DOCOMMAND ORIGINAL "DEFINE	1:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	2:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	3:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	4:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	5:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	6:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	7:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	8:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	9:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	10:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	11:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	12:	DSK:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	13:	DSK:" TO command_echo;
+!
+! Prepare option and input files, and delete any listing file.
+!
+DOCOMMAND ORIGINAL "COPY " + option_file + " FOR01.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "COPY " + input_file + " FOR05.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "DELETE " + listing_file TO command_echo;
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT" TO command_echo;
+!
+! Log the use of DAVE.
+!
+record = systemlog("PS:<SUBSYS.UTAH>DAVE.USERS");
+!
+! Strip line numbers from the input file.
+!
+INVOKE "SYS:EMACS";
+TYPEIN "FOR05.DAT";
+TYPEIN "XStrip";
+TYPEIN "";
+!
+! PHASE 0
+!
+DOCOMMAND ORIGINAL "SYS:DAVE-PHASE0" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND " + empty_file + " FOR06.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT " + listing_file TO command_echo;
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT" TO command_echo;
+!
+! PHASE 1
+!
+DOCOMMAND ORIGINAL "COPY SYS:DAVE-DATA-BASE.DAT FOR01.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "SYS:DAVE-PHASE1" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND " + empty_file + " FOR06.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT " + listing_file TO command_echo;
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT" TO command_echo;
+!
+! PHASE 2
+!
+DOCOMMAND ORIGINAL "SYS:DAVE-PHASE2" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND " + empty_file + " FOR06.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT " + listing_file TO command_echo;
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT" TO command_echo;
+!
+! PHASE 3
+!
+DOCOMMAND ORIGINAL "SYS:DAVE-PHASE3" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND " + empty_file + " FOR06.DAT" TO command_echo;
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT " + listing_file TO command_echo;
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT" TO command_echo;
+!
+! Reset logical names.
+!
+DOCOMMAND ORIGINAL "DEFINE	1:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	2:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	3:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	4:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	5:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	6:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	7:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	8:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	9:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	10:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	11:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	12:" TO command_echo;
+DOCOMMAND ORIGINAL "DEFINE	13:" TO command_echo;
+!
+! Format the listing file for printing.
+!
+!DOCOMMAND ORIGINAL "COPY " + listing_file + " FOR01.DAT" TO command_echo;
+!INVOKE "SYS:FORPTX";
+!TYPEIN "FOR01.DAT";
+!TYPEIN "FOR01.DAT";
+!DOCOMMAND ORIGINAL "RENAME FOR01.DAT " + listing_file TO command_echo;
+!
+! Delete all temporary files.
+!
+DOCOMMAND ORIGINAL "DELETE FOR0%.DAT," +
+	"FOR10.DAT,FOR11.DAT,FOR12.DAT,FOR13.DAT," + 
+	empty_file TO command_echo;
+
+END; !DAVE

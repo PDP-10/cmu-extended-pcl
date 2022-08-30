@@ -1,0 +1,17 @@
+================================================================½====½
+PUSH_EXEC:	Push to a kept exec, start it if needed
+
+PclDoc from Library PS:<PCL>UTILITY.PCL.23
+10-Feb-83  12:38:34
+======================================================================
+
+Allows frïm wiôhin á PCL  command ôo puóh to an  åxec. If tèere és  nï
+Exec for  PCL,  one  is  started,  and the  fork  is  kept  and  named
+pcl-push-exec. Mind that  if the user  resets that fork  a later  push
+will fail. This may be remedied by:
+	@set integer-variable push_exec_ok -1
+
+Usage:
+	call push_exec;
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31

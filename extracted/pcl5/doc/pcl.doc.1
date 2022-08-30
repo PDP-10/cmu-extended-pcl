@@ -1,0 +1,3041 @@
+
+
+
+
+
+
+
+
+
+
+
+
+                                   TOPS-20
+
+                        PROGRAMMABLE COMMAND LANGUAGE
+
+                                 USER'S GUIDE
+
+                                     AND
+
+                               REFERENCE MANUAL
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       Copyright (C) 1982 Carnegie Mellon University Computation Center
+
+
+
+1. Introduction
+
+1.1. Programmable Command Language
+  The  PCL Extension to the TOPS-20 EXEC puts a language and executor into the
+TOPS-20 EXEC.  With this high level language and  its  extensions,  users  can
+easily to write their own PCL programs which will will look like existing TOPS
+commands complete with parameter substitution and TOPS-20 style recognition.
+
+1.2. PCL Uses
+  PCL  may  used  in  a variety of different ways.  Users might write friendly
+front ends to existing programs.  The command parsing with recognition makes a
+very easy way to do parameter passing to a program.   Periodic  or  repetitive
+tasks  can  be  coded  in PCL routines which would reduce the amount of typing
+needed to accurately execute all the steps necessary to complete  a  piece  of
+production.
+
+  PCL  also  will  provide  a  means for implementing completely new functions
+which are not possible in the current EXEC.  For example, if the  user  has  a
+graphics  terminal which takes special support then PCL can be used to provide
+new support commands.
+
+  System administrators can tailor their EXEC to provide local  commands  that
+override the function of standard commands.  For example, an administrator may
+wish to eliminate the PLOT command if there is no plotter on the system.
+
+1.3. PCL Features
+  The main features of PCL are:
+
+   - ALGOL-like language constructs
+
+   - string manipulation
+
+   - callable procedures with parameters
+
+   - system services
+
+   - flexible user interface
+
+   - program interface
+
+   - input/output capabilities
+
+
+
+2. EXEC Interface
+  PCL  commands  can  be  written  with any text editor.  The source for these
+commands is stored in files with  the  default  type  PCL.  Source  files  are
+compiled  into a command by the new EXEC command DECLARE.  Once the command is
+successfully compiled, it is stored in the EXEC and becomes a part of the list
+of commands that the user has available during  that  job.    If  the  DECLARE
+command  detects an error in the PCL source, an error message will be typed on
+the terminal along with the line in error and a pointer indicating about where
+the error occurred.  Once an error is detected the compilation stops  at  that
+point.
+
+  Any user command which has the same name as an existing command overlays the
+existing command.  The new EXEC command ORIGINAL may be used to execute any of
+the  standard  EXEC  commands.  Commands  may  be  removed  with the UNDECLARE
+command.
+
+  In addition to declaring PCL commands, the user may use the DECLARE  command
+to  declare  procedures  which  may  be  called  from  user  commands,  string
+variables, and integer variables.   One  PCL  source  file  may  contain  many
+command,  procedure,  and  variable  declarations.  The variables may be given
+values by using the SET command with the new options STRING or INTEGER.    For
+example:
+
+    SET STRING myname (TO) scott
+
+The  string  variable  myname  may  be  accessed  from any declared command or
+procedure.
+
+  A new option to the INFORMATION command, the PCL-OBJECTS option,  will  show
+the user all user defined commands, procedures, and variables.
+
+            @INFORMATION (ABOUT) PCL-OBJECTS
+             Commands: DRP, REMIND, NETMAILCHECK, DIALUPLINE, COURIER
+             Procedures: MATCH
+             Variables: String MYNAME, Integer MYJOB
+
+Once the user has a set of procedures and commands defined, these may be saved
+in  an  ENVIRONMENT  using the ENVIRONMENT option to the new PRESERVE command.
+To recall an environment, use the DECLARE command with the ENVIRONMENT option.
+Commands and procedures in environment files are stored in an internal format,
+so they are not recompiled when they are  declared.    The  user  may  declare
+multiple  environment  files  and  the  commands from each environment will be
+added to the user's EXEC command list.
+
+
+
+3. The PCL Language
+
+3.1. General Command Format
+  The simple definition of a command is:
+
+    COMMAND name;
+            PCL statement
+
+A simple example would be:
+
+            COMMAND simple;
+            Display "This is a simple command"
+
+If the above 2 lines were in the file simple.pcl then
+
+            @DECLARE PCL simple.pcl
+
+would enter the command simple into the users EXEC.  If the user types:
+
+            SIMPLE
+
+at the "@" prompt then 
+
+           This is a simple command
+
+would be typed on the user's terminal.
+
+  A more general (and useful) simple definition of a command is:
+
+            COMMAND name;
+               Begin
+                 ...;
+                 ...
+               End
+
+where any number of PCL statements separated by semi-colons may be between the
+BEGIN-END  pair.    Statement  labels  may be up to 40 characters long and are
+terminated with a colon.  Comments may be placed anywhere in PCL source files.
+A comment should begin with an exclamation mark.
+
+            COMMAND simple;
+            BEGIN
+             ...;
+            LAB1:
+             !The above line is a label
+             Display "Hi"  !This is a comment
+            End
+
+3.2. PCL Variables
+  The PCL language provides for integer and string variables,  which  must  be
+declared at the beginning of a routine.  For example:
+
+            COMMAND simple;
+            BEGIN
+             STRING name_in_full;
+             INTEGER count;
+              ...
+            END
+
+would  define  an  integer  and  a string variable.  Variable names may be any
+combination of letters, numbers, and the under-score character.  Names may  be
+up to 40 characters in length.
+
+  Variables may be assigned values using the assignment statement.
+
+            COMMAND simple;
+            BEGIN
+             STRING name_in_full;
+             INTEGER count;
+             count = 3;
+             name in full = "J. Ray Scott";
+              ...
+            END
+
+3.3. String Manipulation
+  Strings may be concatenated using simple addition statements.
+
+    conc_string = "Welcome " + name_in_full
+
+  Substrings may be extracted from strings:  
+
+           extr_string = conc_string[n:m]
+
+where  n is the starting character number and m is the number of characters to
+extract.  The leftmost character is character position 1.  The  user  may  use
+                           th
+[n:*] to extract from the n   character to the end of the string.
+
+  The length of a string may be obtained using the $LENGTH system service.  
+
+           count = $LENGTH(conc_string)
+
+would  assign  the  length  of  the string conc string to the integer variable
+count.
+
+  The PCL routine may search for a substring of a string by using the  $SEARCH
+system service.  
+
+           count = $SEARCH(conc_string,"SCOTT")
+
+would  assign  the  starting  location  of the string SCOTT to count if it was
+found in the string conc string).
+
+3.4. Procedures
+  The format of a procedure definition in a source file is the same at that of
+a command definition except that the word COMMAND is replaced  with  the  word
+PROCEDURE.  A Return statement will return to the calling PCL routine.
+
+            PROCEDURE doit;
+            Begin
+             ...
+            Return
+            End
+
+  To use the procedure DOIT in a command it must be declared and then called.
+
+            COMMAND callit;
+            Begin
+             EXTERNAL PROCEDURE doit;
+             ...
+             CALL doit;
+             ...
+            End
+
+  Parameters  to  procedures are declared by placing the list of parameters in
+parenthesis after the procedure name.  The parameters  must  be  typed,  i.e.,
+they must be specified as being either integers or strings.
+
+            PROCEDURE doit (INTEGER para_1,para_2; STRING para_1);
+
+  Procedures  may  have  a  type  and  thus  return  a value.  To have a typed
+procedure the word INTEGER or STRING is  placed  in  front  of  the  PROCEDURE
+keyword  in  the  source  file.   The value to be returned is placed after the
+RETURN.  This may be any expression of the appropriate type.
+
+            INTEGER PROCEDURE upone (INTEGER in);
+            RETURN in+1
+
+3.5. PCL Flow Control
+  PCL provides several ways to control the sequence of execution.
+
+   - DO WHILE UNTIL
+
+   - IF ... THEN ... ELSE
+
+   - CASE
+
+   - SELECT
+
+   - GOTO
+
+
+
+3.5.1. DO, WHILE
+  DO and WHILE are available for program loops.  These  may  be  used  in  the
+following combinations:
+
+   1. DO PCL statement WHILE logical expression
+
+   2. WHILE logical expression DO PCL statement
+
+
+
+3.5.2. IF
+  The  IF statement will execute a PCL statement if the condition is true.  IF
+may have an ELSE clause.
+
+            IF str_val = "xyz"
+            THEN
+                PCL statement
+            ELSE
+                PCL statement
+
+
+
+3.5.3. CASE
+  The CASE statement provides a method of choosing among integer values  in  a
+specified range.  The user may also execute a PCL statement if the value is in
+the specified range.
+
+            CASE count FROM 1 to 5 of
+                BEGIN
+                1:        BEGIN ... END;
+                2:        BEGIN ... END;
+                5:        BEGIN ... END;
+                INRANGE:  BEGIN ... END;
+                OUTRANGE: BEGIN ... END
+                END
+
+
+
+3.5.4. SELECT
+  The  SELECT statement is similar to the CASE statement.  Instead of choosing
+among a set of integer values in  a  range,  SELECT  chooses  among  arbitrary
+expressions.    The  expression  and the test values must be of the same type,
+either integer or string.
+            SELECT str_var of
+                BEGIN
+                "abc":     BEGIN ... END;
+                "xyz":     BEGIN ... END;
+                OTHERWISE: Display "Not found"
+                END
+
+  In  the  above  example.    If  str var  contains  the  string  abc then the
+statements in the BEGIN-END pair after the ["abc"] : will  be  executed.    If
+str var  is neither abc nor xyz then the OTHERWISE clause will be executed, in
+this case it will display 
+
+           Not found
+
+on the terminal and proceed  to  the  next  PCL  statement  after  the  SELECT
+statement.
+
+
+
+3.5.5. GOTO
+  The GOTO PCL statement causes an unconditional transfer to a label.
+
+            COMMAND xfer;
+             BEGIN
+             ...;
+             loop1:
+             ...;
+             GOTO loop1;
+             ...
+            END
+
+
+
+4. User Interface
+  Parameters  are often passed to commands from the terminal, just like normal
+Exec commands.  PCL allows the user to specify such  parameter  parsing  using
+the  same monitor call as the Exec uses, so the user is able to write commands
+which look like standard Exec commands.
+
+  When creating commands, it is easiest first to parse all the parameters  and
+to  store  them in appropriate variables, then to parse the end of the line to
+allow the user to confirm the command, and only then to  perform  the  actions
+which  comprise  the  command.  It is possible, using the COMND% JSYS, to make
+programs which parse a few arguments, do some  irreversible  action  (such  as
+deleting  a  file),  and  then parse a few more arguments; such programs upset
+users who, for instance, type ^U while entering those last  parameters,  since
+the  program  has  already  deleted the file.  PCL enforces and encourages the
+more desirable mode of operation, in part by performing an assumed End-of-line
+Parse before performing major actions such as DoCommand.
+
+  Command parsing is done a line at a time, where the user types  a  line  and
+the program parses it.  This means that once a line has been confirmed with an
+End-of-line  Parse,  no  more  fields  can be parsed with the Parse statement,
+since there is no command line to parse from.  The  Prompt  statement  can  be
+used  to allow the user to enter another line to be parsed; see Prompt on page
+36.
+
+  If a PCL command contains none of the three forms of command parsing, it  is
+built as if it started off with an End-of-line Parse.
+
+4.1. Parse formats
+  There are three ways to cause PCL to parse such parameters; in each case the
+user  specifies what type of parameter is expected, and PCL parses it from the
+command line and delivers it to the PCL command.
+
+
+
+4.1.1. Simple PARSE
+  The simple PARSE statement may be placed anywhere within the command.
+
+            COMMAND getarg;
+            BEGIN
+            INTEGER repeat_count;
+             ...;
+            PARSE NUMBER;
+            repeat_count = $VALUE;
+             ...;
+            PARSE EOL;
+             ...
+            END
+
+would parse for a number, store it in a variable for use,  execute  some  more
+PCL  statements,  and  then  parse for a carriage return.  The PARSE statement
+would store the value that the user entered in the system variable $VALUE.
+
+
+
+4.1.2. Complex PARSE
+  The complex parse provides a way for one PARSE statement to  parse  for  any
+one  of several parse types.  The syntax of this form of PARSE looks very much
+like the SELECT verb.
+
+            COMMAND CMPLX;
+            BEGIN
+             ...;
+            PARSE
+                BEGIN
+                NUMBER: BEGIN ... END;
+                EOL   : BEGIN ... END
+                END;
+             ...
+            END
+
+This would allow the user to enter either a number or a carriage  return;  the
+corresponding statements (enclosed in BEGIN - END) would be executed depending
+on which field type matched the user's input.  In either case more information
+would be available from variables like $VALUE.
+
+
+
+4.1.3. Command Arguments
+  The easiest way to specify the arguments is to use command arguments.  These
+must  be  specified in the command declaration (the statement with the keyword
+COMMAND and the name of  the  command).    The  user  specifies  the  type  of
+parameter  to  be  parsed  and  the  variable  to  store the result into.  The
+variable must not  be  declared  later;  the  use  in  the  command  arguments
+completely declares the variable.
+
+            COMMAND AllAtOnce (NUMBER:count);
+            BEGIN
+            !No INTEGER declaration necessary
+            DISPLAY $STRING(count)
+            END
+
+4.2. Parse Options
+  In  each of these 3 methods, the user may specify options to the parse type.
+Parse options are enclosed in parentheses immediately after  the  parse  type.
+There  are  many options that the user can specify, e.g., the default value to
+use if the user skips this parameter, or a help message to type  if  the  user
+enters  a  question  mark  at the parameter.  The parse options available vary
+with the parse type.
+
+            COMMAND optn
+            BEGIN
+            ...;
+            PARSE NUMBER(Help "Value of count",Default "2");
+            ...
+            END
+
+If the user DECLARES this command and then types:  
+
+           optn ?
+
+at the "@" prompt, the system will respond:  
+
+           Value of count
+
+as it would in any EXEC command.  If the user skips the field by typing:  
+
+           optn<return>
+
+at the "@" prompt or if the user uses ESCAPE to complete the command then  the
+PARSE will return the default value, in this case 2.
+
+4.3. FILELIST
+  One powerful extension to the parse system is the FILELIST.  This allows the
+user  to  parse  for  file names which may contain wild cards, be separated by
+commas, or both.  The name of the first file which matches  the  specification
+that  the  user  entered  is  returned  in the usual system variables ($FileL,
+$FileN, etc.) and successive file names may be returned by using the $NEXTFILE
+system service procedure.
+
+            COMMAND allfiles;
+            BEGIN
+             ...;
+            PARSE FILELIST;
+             ...;
+            IF $NEXTFILE = 0 THEN EXIT;
+             ...
+            END
+
+The user may type:  
+
+           allfiles ABC.*,XYZ%Y.*,A.Z
+
+The first file that matches the specification of ABC.* will be returned.   For
+each  call  to $NEXTFILE the system will return file names that match the wild
+cards until all that match ABC.* have been exhausted .  Next, it will look for
+files that match XYZ%Y.*.  Finally, it will return the file name A.Z.
+
+  The FILELIST may only be specified once per command and it may only be in  a
+simple parse.
+
+4.4. Parse error handling
+  Errors  found during parsing are handled differently depending on which type
+of parse was executed.  In command arguments, the user can specify a label  to
+branch to by using the ERROR parse option.  This is only available for command
+arguments.  The command will begin execution at that label if the user entered
+something which was not legal for the specified parse type.
+
+            COMMAND oops (NUMBER(ERROR notnum) : count);
+             ...;
+            notnum:
+             ...
+
+  In  simple parsing, the command is terminated and the standard error message
+for that parse type is displayed at the terminal.   In  complex  parsing,  the
+user  may  have  an OTHERWISE parse option which will be executed if the parse
+fails.
+
+            COMMAND CMPLX;
+            BEGIN
+             ...
+            PARSE
+                BEGIN
+                NUMBER:    BEGIN ... END;
+                EOL:       BEGIN ... END;
+                OTHERWISE: BEGIN
+                           Display "Error in parameter";
+                           Exit
+                           END
+                END;
+             ...
+            END
+
+
+
+5. Program and Command Interface
+
+5.1. Running Programs
+  The  INVOKE PCL statement runs a program much like the EXEC run command does
+now.  The PCL command continues to execute when the program has started.    If
+the  PCL  routine  exits,  the  program is left in a ^C state.  The TYPEIN PCL
+statement "types" characters into the program.  TYPEIN takes a string argument
+which contains the name of the program to run.  When a TYPEIN is executed, the
+PCL command will wait until the program goes into terminal  input  wait.    It
+will  then  send  the  characters  to  the program and continue to execute PCL
+statements.  The GETTYPEOUT statement is used to  return  the  data  that  the
+program  would  have  typed on the terminal, placing it in the string that the
+user specifies; the GETTYPEOUT will get all characters  since  the  INVOKE  or
+since  the  last  GETTYPEOUT.    The PASSOUTPUT option to the INVOKE statement
+causes all of the data from the program to go  to  the  controlling  terminal.
+The  CLEARTYPEOUT  command  will  throw away all the program type out that has
+accumulated.  This may be used in place of a GETTYPEOUT to get rid of unwanted
+startup messages from programs.
+
+            COMMAND prog;
+            BEGIN
+             STRING prog_data;
+              ...;
+             INVOKE "payrol.exe";
+             CLEARTYPEOUT;
+             TYPEIN "update";
+             GETTYPEOUT prog_data;
+             DISPLAY prog_data;
+              ...
+            END
+
+5.2. Executing EXEC Commands
+  The DOCOMMAND PCL statement takes a string argument and  performs  the  EXEC
+command that is in the string.
+
+            COMMAND whome;
+            DOCOMMAND "systat " + $UserName
+
+After typing whome at the "@" prompt the user would see:
+
+             Job  Line Program  User
+              30*   44  SYSTAT  JS5A
+
+at  the  terminal.    The output from the command is displayed on the terminal
+unless the optional TO parameter is specified.  In this case the type out from
+the command is placed in the string.  
+
+    DOCOMMAND "systat all" TO exec_string
+
+To execute a command and ignore the output, do 
+
+    DOCOMMAND command TO $NUL
+
+
+
+6. Input/Output
+  PCL  provides  simple  file  manipulation facilities.  Up to 36 files may be
+open in input, output, or append mode.  Only record level reads and writes are
+possible; a record is terminated by a carriage return/line  feed  pair.    The
+$OPEN system service takes the name of the file and whether it is to be opened
+for  input,  output, or append access; $OPEN returns the PCL channel number to
+be associated with the file.
+
+            channel = $OPEN("mail.txt",$INPUT)
+
+The $READ service is a string procedure  which  takes  a  channel  number  and
+returns  the  next  record  in  the file.  $WRITE takes a channel number and a
+string and writes the string to the file.
+
+            In_record = $READ(channel);
+            Call $WRITE(channel,in_record);
+
+  The user may test for end of file by calling the $EOF system procedure.   If
+a  $READ  reaches the end of file, then $EOF will return non-zero.  $EOF takes
+the channel number of the file as an argument.
+
+  Files may be closed with the $CLOSE call.  $CLOSE takes the  channel  number
+of  the file to close.  It may not be necessary to close files open for input,
+as they will be closed automatically at the end of the PCL command.
+
+
+
+7. Reference
+
+                                 EXPRESSIONS
+
+7.1. Expressions
+  Expressions  are the fundamental arithmetic, string, and logical entities of
+the PCL language.
+
+
+
+7.1.1. Integer expressions
+  Integer expressions are composed of integer  constants,  integer  variables,
+and integer procedure calls, operated on by arithmetic operators.  PCL has the
+usual  operators for addition, subtraction, multiplication, and division, with
+the usual precedence rules, and allowing the use of parentheses to add to  the
+default precedence.
+
+            count*(shift+1) + offset(commandstring)
+
+
+
+7.1.2. String expressions
+  String  expressions  and  likewise  composed  of  string  variables,  string
+constants, and string procedure calls, operated on by operators.   The  string
+operators  are  concatenation  (indicated  by  the  "+"  symbol) and substring
+extraction (indicated by square brackets).  Concatenation  takes  two  strings
+and generates a new string from them.  Substring extraction looks like 
+
+    substring = str[start:count]
+
+where  start  is  the location of the first character to extract, and count is
+the number of characters to extract.  An asterisk can be used for the count to
+extract to the end of the string.
+
+
+
+7.1.3. Logical expressions
+  Logical expressions are only used to control conditional  statements;  there
+are  no  logical  variables.    Logical  expressions  are generated from typed
+variables, constants, or procedure calls (either integer or string),  compared
+with relational operators:  "<", "<=", "=", "<>", ">=", and ">".
+
+                                  STATEMENTS
+
+7.2. Statements
+  Statements are the fundamental execution entities of the PCL language.  They
+may  be  grouped together to form a compound statement, by enclosing them in a
+BEGIN/END pair,  and  separating  them  by  semicolons.    Anywhere  that  the
+documentation  for  a  statement says that a statement may be used, a compound
+statement may be used just as well.  
+
+            IF i EQL 0
+            THEN
+                BEGIN
+                j=6;
+                k=10
+                END
+            ELSE
+                j=0
+
+                                    ABORT
+
+7.3. Abort
+
+Function
+
+  The  ABORT  PCL  statement  will abort a PCL execution with an error message
+typed to the user.
+
+
+Format
+
+            ABORT string
+
+
+
+Notes
+
+   1. The string error message will be typed on the terminal.
+
+Example
+
+            COMMAND ohdear;
+            BEGIN
+            ...;
+            IF $LENGTH(input_line) > 120
+            THEN
+                ABORT "Line too long";
+            ...
+            END
+
+Related
+
+ EXIT - page 22
+ RETURN - page 37
+
+                                  ASSIGNMENT
+
+7.4. Assignment
+
+Function
+
+  The assignment statement generates a value and deposits it in a variable.
+
+
+Format
+
+    variable name = expression
+
+
+
+Notes
+
+   1. The  expression  must be either integer or string, depending on the
+      type of the variable.
+
+Example
+
+            COMMAND look;
+            BEGIN
+            ...;
+            target_user = $Atom;
+            ...
+            END
+
+Related
+
+ Expressions - page 9
+
+                                    BEGIN
+
+7.5. Begin
+
+Function
+
+  BEGIN  is  paired  with  an  END  to  group  several PCL statements into one
+statement.
+
+
+Format
+
+    BEGIN
+     PCL statement; . . .
+    END
+
+
+
+Notes
+
+   1. Every BEGIN must have a corresponding END.
+
+   2. A  BEGIN/END  pair  may  enclose  any  number  of  PCL  statements.
+      Anywhere a PCL statement is called for, a BEGIN/END grouping may be
+      substitued.
+
+   3. It  is  not  necessary to have a semi-colon following the final PCL
+      statement before the END.  If present, a null statement  is  formed
+      which will not affect the execution of the PCL command.
+
+Example
+
+    IF $JOBNO > 6
+    THEN
+        BEGIN
+        Display "Job number greater than 6";
+        A = 5;
+        name = "Scott";
+        END
+
+Related
+
+ END
+
+                                     CALL
+
+7.6. Call
+
+Function
+
+  The CALL PCL statement will call a previously declared procedure.
+
+
+Format
+
+    Format 1.
+            CALL procedure name
+    Format 2.
+            CALL procedure name (argument,argument,argument,...)
+
+
+
+Notes
+
+   1. CALL may call system procedures or user declared procedures.
+
+   2. Arguments  are expressions, either integer or string as expected by
+      the called procedure.  Those arguments which are to be modified  by
+      the procedure must be simple variables.
+
+   3. Parameters are always passed by reference; all accesses made by the
+      called procedure are actually made to the caller's variables.
+
+Example
+
+            COMMAND a_rtn;
+             BEGIN
+              EXTERNAL PROCEDURE match;
+              ...;
+              CALL match;
+              ...
+             END
+
+Related
+
+ EXTERNAL - page 23
+ PROCEDURE - page 35
+
+                                     CASE
+
+7.7. Case
+
+Function
+
+  The  CASE statement provides an orderly way of choosing one of several paths
+to take based on the current value of an integer expression.    The  statement
+tagged with the current value is executed, and all others are ignored.  
+
+Format
+
+            CASE integer expression FROM integer constant
+                    TO integer constant OF
+                BEGIN
+                integer constant : statement;
+                integer constant : statement;
+                ...;
+                INRANGE : statement                 ! Optional
+                OUTRANGE : statement                ! Optional
+                END
+
+
+
+Notes
+
+   1. The  FROM  and TO keywords precede integers defining the lowest and
+      highest permissible value of the expression.  If the expression  is
+      outside the limits and an OUTRANGE tag was specified, the statement
+      labelled  by  the  OUTRANGE  tag is executed.  If the expression is
+      outside the limits and no OUTRANGE tag was specified, PCL issues an
+      error.
+
+   2. The INRANGE keyword indicates that the tagged statement  is  to  be
+      executed if the integer expression is within the range allowed, but
+      is not explicitly provided for by any of the other integer constant
+      tags.  The INRANGE tag must be the last in the list.
+
+   3. If  the  integer expression is within the FROM-TO limits, but there
+      is no statement tagged with that value, and  there  is  no  INRANGE
+      tag,  then  nothing  is  done  and  execution  continues  with  the
+      statement following the CASE.
+
+Example
+
+    COMMAND casetest(NUMBER:theswitch);
+    BEGIN
+    CASE theswitch FROM 1 TO 4 OF
+        BEGIN
+        1:       DISPLAY "a 1 was entered";
+        4:       DISPLAY "a 4 was entered";
+        INRANGE: DISPLAY "something else in the range was entered"
+        END
+    END
+
+Related
+
+ Expressions - page 9
+ SELECT - page 38
+
+                                 CLEARTYPEOUT
+
+7.8. ClearTypeOut
+
+Function
+
+  The  CLEARTYPEOUT  PCL  statement  will  discard  type  out  from an INVOKED
+program.
+
+
+Format
+
+            CLEARTYPEOUT
+
+
+
+Notes
+
+   1. The CLEARTYPEOUT  PCL  statement  is  useful  for  getting  rid  of
+      unwanted text from a program such as startup messages.
+
+   2. CLEARTYPEOUT is more efficient than doing a GETTYPEOUT and then not
+      using the returned data.
+
+Example
+
+            COMMAND runprog (text (help "program to run):prog_to_run);
+            BEGIN
+            STRING program_text;
+            ...;
+            INVOKE prog_to_run;
+            ...;
+            CLEARTYPEOUT;
+            ...;
+            TYPEIN "week";
+            ...
+            END
+
+Related
+
+ GETTYPEOUT - page 24
+ INVOKE - page 29
+ KILLPROGRAM - page 30
+ TYPEIN - page 40
+
+                                   COMMAND
+
+7.9. Command
+
+Function
+
+  A COMMAND definition in a PCL source file creates a command.
+
+
+Format
+
+    Format 1.
+            COMMAND name [ (command arguments) ] ;
+            PCL statement
+    Format 2.
+            COMMAND name [ (command arguments) ] ;
+            BEGIN
+            [ variable declarations; ]
+            statement;
+            statement;
+            ...;
+            statement
+            END
+
+    where command arguments are
+            field type [(options)] : variable name;
+            ...;
+            field type( [(options] : variable name
+
+    and variable declarations are
+            type name,name,name,...;
+            ...;
+            type name,name,name,...;
+
+    and the types are INTEGER and STRING.
+
+
+
+Notes
+
+   1. The COMMAND keyword must be the first word in a command definition.
+
+   2. The  command  will be called name.  It may contain any alphanumeric
+      characters, including the underscore which will be converted  to  a
+      hyphen when it is entered into the Exec's command table.
+
+   3. The  use  of command arguments allows the parameters to the command
+      to be specified on the command declaration line.  In this case  the
+      command may not do any Parse statements unless it uses subcommands.
+      See PROMPT on page 36.
+
+Example
+
+            COMMAND newone;
+            ...
+
+            COMMAND more (NUMBER:job_val;TEXT:entry_type);
+            ...
+
+Related
+
+ PROCEDURE - page 35
+ Statements - page 10
+
+                                   DECLARE
+
+7.10. Declare
+
+Function
+
+  EXEC  command  to merge user written commands, procedures, or variables into
+the EXEC.
+
+
+Format
+
+    DECLARE (for PCL)
+            /Confirm     ENVIRONMENT (from files) FileName1, ...
+            /NoConfirm   INTEGER-VARIABLE (named) string1
+                         PCL-ROUTINES (from files) [FileName2, ...]
+                         STRING-VARIABLE (named) string2
+
+
+
+Notes
+
+   1. The DECLARE command will confirm its action with a message typed to
+      the user's terminal.    The  user  may  alter  this  default  on  a
+      permanent  basis  with  a SET DEFAULT DECLARE command.  To override
+      the  default,  the  user  may  specify  the  Confirm  or  NoConfirm
+      switches.
+
+   2. When  PCL  routines are declared, the source files specified by the
+      FileName2 list are read, compiled  into  an  internal  format,  and
+      stored in the EXEC.  The source file may contain any combination of
+      procedures,  commands,  and variable definitions.  If the user does
+      not specify a FileName2 then the source  input  is  read  from  the
+      terminal.    For  procedures  which  will  be  used often, the EXEC
+      environment should be saved using the  ENVIRONMENT  switch  of  the
+      SAVE  command.    This  environment  may  then be recalled with the
+      DECLARE ENVIRONMENT command.  The user may declare a  command  with
+      the  same  name  as  a  predefined  command.  If the user wishes to
+      execute the predefined command then the ORIGINAL command should  be
+      used.
+
+   3. The  PCL  environment  is  the  entire  collection  of user defined
+      objects, which must have unique names.  This includes commands  and
+      variables.  The user may save the PCL environment at any time using
+      the  SAVE  command.  To re-establish a previous environment use the
+      ENVIRONMENT option of the DECLARE command.  The default  file  name
+      is  EXEC.ENV.    A  list  of  files  containing environments may be
+      specified.  The requested environment is merged into  the  existing
+      environment  so  all  commands  and variables already declared will
+      remain.
+
+   4. The INTEGER-VARIABLE and STRING-VARIABLE  options  to  the  DECLARE
+      command  will  create variables in the EXEC which may be referenced
+      by user written commands or procedures.  This provides a  mechanism
+      for  one  command to pass data to another command or for one global
+      value that many commands may reference.   These  variables  may  be
+      assigned values by using the SET command if at the EXEC level or by
+      the  a  simple  assignment statement if in a command.  The user may
+      view the current value of  these  global  variables  by  using  the
+      INFORMATION VARIABLE command.
+
+Example
+
+            @DECLARE PCL-ROUTINE new-commands.pcl
+            [Command GIGI defined]
+            [Command GAPL defined]
+            [Command GTYPE defined]
+            [Command SAVE defined, old definition replaced]
+            [Command GCOLOR defined]
+
+            @DECLARE STRING-VARIABLE message
+
+Related
+
+ INFORMATION - page 28
+ ORIGINAL - page 31
+ SAVE - page 34
+ SET - page 39
+
+                                   DISPLAY
+
+7.11. Display
+
+Function
+
+  The DISPLAY statement will type its argument on the terminal.
+
+
+Format
+
+            DISPLAY [NORETURN] [BINARY] expression
+
+
+
+Notes
+
+   1. By  default, DISPLAY will type out the string or number in ordinary
+      character mode with a carriage return added.
+
+   2. With the NORETURN option, it will not type out the carriage return.
+
+   3. With the BINARY option,  it  will  display  without  any  character
+      conversion.    This  is  useful for controlling display or graphics
+      terminals.
+
+Example
+
+            COMMAND showoff;
+            BEGIN
+            STRING status;
+            INTEGER value;
+            ...;
+            DISPLAY "starting";
+            ...;
+            DISPLAY status;
+            ...;
+            DISPLAY value * 37;
+            ...;
+            DISPLAY BINARY "$H$J";
+            ...
+            END
+
+                                      DO
+
+7.12. Do
+
+Function
+
+  The DO PCL statement provides loop control within PCL commands.
+
+
+Format
+
+    DO PCL statement WHILE logical expression
+
+
+
+Notes
+
+   1. PCL  statement  may  be  any  legal  PCL statement, either a single
+      statement or a compound statement enclosed in a BEGIN/END pair.
+
+   2. The DO statement will loop as long as the logical expression  after
+      the  WHILE is true.  Presumably some statement in the PCL statement
+      will  alter  something  that  is  being  tested  in   the   logical
+      expression.    Otherwise  the  DO  may  loop  forever.  There is no
+      ENDLOOP or ESCAPE command.  The user may wish to GOTO  out  of  the
+      loop but this is not recommended.
+
+   3. The  PCL  statement  will  always  be  executed at least once.  The
+      logical expression is not checked until after the PCL statement has
+      been executed.
+
+Example
+
+    COMMAND DoWhile;
+    BEGIN
+    INTEGER i;
+    i = 5;
+    DO
+        BEGIN
+        DISPLAY $String(i);
+        i = i - 1
+        END
+    WHILE
+        i = 0;
+    EXIT
+    END
+
+    Execution:
+            @DoWhile
+            5
+            4
+            3
+            2
+            1
+
+Related
+
+ WHILE - page 41
+ Expressions - page 9
+ Statements - page 10
+
+                                  DOCOMMAND
+
+7.13. DoCommand
+
+Function
+
+  The DOCOMMAND PCL statement passes commands to the EXEC.
+
+
+Format
+
+    Format 1.
+            DOCOMMAND [ORIGINAL] string
+    Format 2.
+            DOCOMMAND [ORIGINAL] string 1 TO string 2
+
+
+
+Notes
+
+   1. The  optional  keyword ORIGINAL causes the DOCOMMAND to execute the
+      EXEC's original definition of a command and not the user's declared
+      command.
+
+   2. Format 1 will type the results of the command on the terminal.
+
+   3. Format 2 will place the results of the  command  in  string 2;  the
+      output  will  be formatted as if the Exec were typing to a terminal
+      with a width of zero, since this is most easily parsed by programs.
+
+   4. A carriage return will be added to the end of the string containing
+      the command.
+
+   5. The DoCommand statement can be abbreviated DCM.
+
+Example
+
+            COMMAND bigeez;
+            DOCOMMAND "vdir,
+                            larger 100
+
+                            "
+
+                                     EXIT
+
+7.14. Exit
+
+Function
+
+  The EXIT PCL statement will cause the PCL command to return to the EXEC.
+
+
+Format
+
+    Format 1.
+            EXIT
+    Format 2.
+            EXIT SAVE
+    Format 3.
+            EXIT TOPROGRAM
+
+
+
+Notes
+
+   1. EXIT  will  always  go  back  to the EXEC even if executed within a
+      procedure.
+
+   2. If the PCL command executes to the END of the command, an EXIT will
+      be simulated.
+
+   3. It is permissable to have more than one exit in a  PCL  command  or
+      procedure.
+
+   4. Formats 2 and 3 assume a program has been invoked.
+
+   5. When  a  PCL  command exits, any invoked programs are killed during
+      the cleanup.  The SAVE option will prevent the invoked program from
+      being killed.
+
+   6. Format 3 will exit the PCL command and then do a  CONTINUE  command
+      for the invoked program.
+
+Example
+
+            COMMAND checkvalue;
+            BEGIN
+             INTEGER count;
+             ...;
+             IF count > 6 THEN EXIT;
+             ...;
+             EXIT
+            END
+
+Related
+
+ ABORT - page 11
+ RETURN - page 37
+ INVOKE - page 29
+
+                                   EXTERNAL
+
+7.15. External
+
+Function
+
+  The EXTERNAL PCL option allows commands to use externally defined procedures
+and global variables.
+
+
+Format
+
+    Format 1.
+            EXTERNAL type name, ...
+    Format 2.
+            EXTERNAL PROCEDURE name, ...
+    Format 3.
+            EXTERNAL type PROCEDURE name, ...
+
+
+
+Notes
+
+   1. Format  1  allows a PCL command to reference a variable declared at
+      the EXEC level with the DECLARE command.
+
+   2. Formats 2 and 3 are necessary for any PCL command  to  be  able  to
+      CALL PCL procedures.
+
+   3. Format  3  is  used to declare external typed procedures.  The TYPE
+      may be either STRING or INTEGER.
+
+Example
+
+            COMMAND outside;
+            BEGIN
+             EXTERNAL STRING message;
+             EXTERNAL INTEGER job_number;
+             EXTERNAL INTEGER PROCEDURE finger;
+             ...
+            END
+
+Related
+
+ CALL - page 14
+ DECLARE - page 18
+ PROCEDURE - page 35
+
+                                  GETTYPEOUT
+
+7.16. GetTypeOut
+
+Function
+
+  The  PCL statement GETTYPEOUT will place the terminal output from an invoked
+program into a string.
+
+
+Format
+
+            GETTYPEOUT string
+
+
+
+Notes
+
+   1. When a  GETTYPEOUT  statement  is  excuted,  PCL  will  gather  all
+      terminal  output from the invoked program since the INVOKE or since
+      the last GETTYPEOUT and put it in the string.    When  the  invoked
+      program  goes  into terminal input wait, the GETTYPEOUT will return
+      with the type out in the string.
+
+   2. A CLEARTYPEOUT  PCL  statement  is  more  efficient  that  doing  a
+      GETTYPEOUT and then not using the returned data.
+
+Example
+
+            COMMAND runprog (text (help "program to run):prog_to_run);
+            BEGIN
+            STRING program_text;
+            ...;
+            INVOKE prog_to_run;
+            ...;
+            GETTYPEOUT program_text;
+            ...
+            END
+
+Related
+
+ INVOKE - page 29
+ TYPEIN - page 40
+ CLEARTYPEOUT - page 16
+ KILLPROGRAM - page 30
+
+                                     GOTO
+
+7.17. GoTo
+
+Function
+
+  The GOTO statement alters the flow of execution of PCL.  It causes execution
+to  jump directly to a labeled statement.  Its use should be minimized because
+of the great possibility of confusion, but at times it may be essential.
+
+
+Format
+
+            GOTO label
+
+
+
+Notes
+
+  The label must be defined somewhere in the command or procedure.
+
+                                    GUIDE
+
+7.18. Guide
+
+Function
+
+  The  GUIDE  statement can be used in conjunction with the PARSE statement to
+provide a pleasing user interface.  It tells  the  system  that  a  particular
+guide  word  is  to be displayed if the user requests it by hitting the Escape
+key.
+
+
+Format
+
+    GUIDE string constant
+
+
+
+Notes
+
+   1. The  GUIDE  statement  has  the  same  restrictions  as  the  PARSE
+      statement:  It can not be used except where a command line is being
+      parsed.
+
+   2. The  GUIDE  statement  is actually a PARSE statement with the NOISE
+      field-type.
+
+Example
+
+            COMMAND rewind;
+            BEGIN
+            STRING devname;
+            GUIDE "device";
+            PARSE DEVICE;
+            ...
+            END
+
+Related
+
+ PARSE - page 32
+
+                                      IF
+
+7.19. If
+
+Function
+
+  The IF statement provides for conditional execution of PCL statements.
+
+
+Format
+
+    Format 1.
+            IF logical expression
+            THEN
+                PCL statement
+    Format 2.
+            IF logical expression
+            THEN
+                PCL statement
+            ELSE
+                PCL statement
+
+
+
+Notes
+
+   1. Format  1  will execute the statement if the expression is true; if
+      it is false execution will continue to the next statement.
+
+   2. Format 2 will execute the first  statement  if  the  expression  is
+      true, otherwise it will execute the second statement.
+
+Example
+
+    COMMAND loop;
+    BEGIN
+    ...
+    IF i GTR 10
+    THEN
+        ABORT "too much"
+    ELSE
+        CALL APPEND(str,i);
+    ...
+    END
+
+Related
+
+ Expressions - page 9
+ Statements - page 10
+ DO - page 20
+
+                                 INFORMATION
+
+7.20. Information
+
+Function
+
+
+  New  options  to  the EXEC INFORMATION command to give information about the
+current PCL environment.  
+
+Format
+
+            INFORMATION (ABOUT) DEFAULTS (FOR) DECLARE
+
+            INFORMATION (ABOUT) PCL-OBJECTS
+
+            INFORMATION (ABOUT) VARIABLE name
+
+
+
+Notes
+
+   1. The DEFAULTS DECLARE option lists  the  defaults  for  the  DECLARE
+      command.    The defaults for the DECLARE command are also listed by
+      INFORMATION DEFAULTS ALL.
+
+   2. The PCL-OBJECTS  option  lists  the  names  of  all  the  commands,
+      procedures, and variables that are currently declared in the user's
+      EXEC.    This  provides  a  way  for  the  user to see exactly what
+      commands have  been  established  and  avoid  any  confusion  about
+      redefined commands.
+
+   3. The  VARIABLE  option will display the current value of a string or
+      integer variable which was declared by the DECLARE  STRING  or  the
+      DECLARE INTEGER commands.  It does not display values for variables
+      declared inside commands or procedures.
+
+Example
+
+     @INFORMATION (ABOUT) PCL
+     Commands: DRP, REMIND, NETMAILCHECK, DIALUPLINE, COURIER
+     Procedures: MATCH
+     Variables: String MESSAGE
+     @
+
+     @set string message (TO) grades are due today
+     @info var message
+     grades are due today
+
+
+Related
+
+ DECLARE - page 18
+ SET - page 39
+
+                                    INVOKE
+
+7.21. Invoke
+
+Function
+
+  The PCL statement INVOKE will start a program running in a lower fork.  This
+provides  the  program with only a simple form of terminal I/O; it is possible
+to make programs which expect more advanced  terminal  control  than  PCL  can
+provide.
+
+
+Format
+
+    Format 1.
+            INVOKE string
+    Format 2.
+            INVOKE PASSOUTPUT string
+
+
+
+Notes
+
+   1. The  INVOKE should be used when the user wishes to control the type
+      in and type out of the invoked program.
+
+   2. After PCL starts the program, it waits for the  program  to  either
+      halt or wait for terminal input.
+
+   3. Data  may  be sent to the invoked program using the TYPEIN command.
+      Type out from the program may  be  retrieved  with  the  GETTYPEOUT
+      command.
+
+   4. Format 2 eliminates the need to do a GETTYPEOUT and a DISPLAY.  All
+      output from the program is sent directly to the terminal.
+
+   5. The PASSOUTPUT option can be abbreviated PASO.
+
+Example
+
+            COMMAND runprog (text (help "program to run):prog_to_run);
+            BEGIN
+            ...;
+            INVOKE prog_to_run;
+            ...
+            END
+
+Related
+
+ GETTYPEOUT - page 24
+ CLEARTYPEOUT - page 16
+ TYPEIN - page 40
+ KILLPROGRAM - page 30
+
+                                 KILLPROGRAM
+
+7.22. KillProgram
+
+Function
+
+  The  KILLPROGRAM PCL statement will terminate an invoked program.  It should
+only rarely be necessary.
+
+
+Format
+
+            KILLPROGRAM
+
+
+
+Notes
+
+   1. KILLPROGRAM will ^C the invoked program and then do a RESET on  the
+      fork.
+
+Example
+
+            COMMAND runprog (text (help "program to run):prog_to_run);
+            BEGIN
+            STRING program_text;
+            ...;
+            INVOKE prog_to_run;
+            ...;
+            GETTYPEOUT program_text;
+            ...;
+            KILLPROGRAM;
+            ...
+            END
+
+
+Related
+
+ INVOKE - page 29
+ GETTYPEOUT - page 24
+ TYPEIN - page 40
+ CLEARTYPEOUT - page 16
+
+                                   ORIGINAL
+
+7.23. Original
+
+Function
+
+  The  new  ORIGINAL  command  allows  users  who have redefined standard Exec
+commands to reference the original versions of those commands.
+
+
+Format
+
+    ORIGINAL command line
+
+
+
+Example
+
+            @DECLARE PCL-ROUTINES mine.pcl
+            [Command FIND defined]
+            [Command SYSTAT defined]
+            @systat
+               This is my own SYSTAT command, which doesn't work
+            @ORIGINAL systat
+             Fri 14-Aug-81 11:20:12  Up 125:17:04
+             39+6 jobs   Load av   2.01   2.77   4.64
+            ...
+
+                                    PARSE
+
+7.24. Parse
+
+Function
+
+  The  PARSE  PCL  statement is used to read command input parameters from the
+terminal.  Specific types of parameters may be requested such  as  numbers  or
+input file specifications.
+
+
+Format
+
+      Format 1.
+        PARSE field type [ ( field option; ... ) ]
+
+      Format 2.
+        PARSE
+            BEGIN
+            field type [(field option; ... ]) : PCL statement;
+            field type [(field option; ... )] : PCL statement;
+            . . .
+            END
+
+
+
+
+
+7.24.1. Field types
+  The  parse field types are a subset of the COMND JSYS function codes for the
+expected field to be parsed.  For a complete description  of  the  actions  of
+these fields, see their corresponding description in the TOPS-20 MONITOR CALLS
+manual.  Legal field types are:
+
+INPUTFILE       allows  the  user to specify a file that already exists.  This
+                field type does not allow any fields of the file specification
+                to be defaulted. (See FILE and FILELIST field types.)
+
+KEYWORD         allows a list of keywords to  be  specified.    The  user  may
+                select  one  of the keywords in the list.  The list is defined
+                by using the WORDS field option (See below).
+
+NOISE string    is mostly used for command arguements.  This field  type  will
+                cause  the  string  to be typed out in parentheses if the user
+                types an escape.  It may be useful in a Parse if you  want  to
+                know whether the noise word was actually typed in or not.
+
+NUMBER          parses  an integer input field.  The RADIX field option allows
+                for numbers in some radix other than 10.
+
+OUTPUTFILE      causes the system to parse for  a  file  name  that  does  not
+                exist.   This field type does not allow any fields of the file
+                specification  to  be  defaulted.    Wild  cards  may  not  be
+                specified.  (See FILE and FILELIST field types.)
+
+SWITCH          is  similar  to  KEYWORD  except that a list of switches (i.e.
+                KEYWORDS preceded by a slash) is parsed.  The list is  defined
+                by using the WORDS field option (See below)
+
+FILE            is  more  general  than  INPUTFILE and OUTPUTFILE.  This field
+                type has  many  more  options  available.    Defaults  may  be
+                specified  for any of the file specification fields.  The user
+                may specify that the field is to be "parse only" which  merely
+                checks  for  a  valid  file specification.  (See field options
+                DEFAULT_DEV,    DEFAULT_DIR,     DEFAULT_EXT,     DEFAULT_GEN,
+                DEFAULT_NAM,  INPUT, OUTPUT, and WILD.)  It is not possible to
+                have more than one FILE field in a single Parse statement.
+
+FIELD           parses an arbitrary parameter delimited by  a  nonalphanumeric
+                character.    No standard help message is available.  (See the
+                HELP field option.)
+
+EOL             parses a carriage return.  If the user is doing simple  parses
+                then  the  command  will continue to execute after each parse.
+                Once a PARSE EOL has been executed the PCL command  cannot  do
+                any  more  PARSE  statements; see PROMPT PCL statement on page
+                36.  It is not necessary, nor is it permitted,  to  specify  a
+                EOL when using command arguments.
+
+DIRECTORY       parses a directory name; this includes the angle brackets.
+
+USERNAME        parses a username.
+
+COMMA           parses  a  comma.    Spaces  may  appear on either side of the
+                comma.
+
+DEVICE          parses a device name.
+
+TEXT            parses all the input up to the carriage return.
+
+DAYTIME         inputs a date and time field.    The  format  is  any  general
+                date/time  format.   Both date and time must be entered unless
+                the date or time parse options are specified.
+
+QUOTEDSTRING    parses a field contained in  double  quotes.    The  field  is
+                returned in $ATOM without the quotes.
+
+TOKEN string    parses a field that exactly matches string.
+
+NODE            parses  a  network node name.  This must be an available node,
+                unless the PARSEONLY option is specified.
+
+FILELIST        allows the user to enter a list of files separated by  commas,
+                a  file  with  wild cards designators, or both.  The $NEXTFILE
+                system procedure allows the PCL command to  loop  through  the
+                files that match the wild cards or are in the list.
+
+OTHERWISE       is  a  special  field-type  which  is  meaningful  only in the
+                complex Parse.  If specified, it must be the last field in the
+                Parse statement.  The Otherwise case  will  be  taken  if  the
+                input available matches none of the field types provided.  The
+                Otherwise  field  type  does  not consume any of the input; it
+                only indicates that it was not recognizable.
+
+
+
+
+
+7.24.2. Field options
+  The above field types may have field  options.    These  options  modify  or
+extend  the  parse  type  of the field.  These are also closely related to the
+COMND JSYS.
+
+DEFAULT string  Provides a default for the  entire  field  if  the  user  hits
+                Escape or Return.
+
+HELP string     If  the  user enters a ? at the field prompt, the help message
+                in string is displayed.
+
+PARSEONLY       For file parses, allows the command to  parse  for  a  validly
+                formatted  file  specification without requiring that the file
+                actually exist.  For Node  parses,  allows  the  node  not  to
+                exist; similarly for Device, Directory, and User.
+
+NOHELP          Turns on the CM%SDH bit in the COMND JSYS. This is unnecessary
+                if HELP is used.
+
+STDHELP         Turns  off  the CM%SDH bit.  The standard help message will be
+                used.
+
+NOINDIRECT      Specifies that an indirect command file may  not  be  used  at
+                this field.  Turns on bit CM%XIF in the COMND JSYS.
+
+INPUT           For  field  types  FILE  and  FILELIST, parses for an existing
+                file. Turns on COMND JSYS bit GJ%OLD.
+
+OUTPUT          For field types FILE and FILELIST,  parses  for  a  new  file.
+                Turns on COMND JSYS bit GJ%FOU.
+
+INVISIBLE       For  field  types  FILE  and FILELIST, parses for an invisible
+                file.  Turns on COMND JSYS bit G1%IIN.
+
+DELETED         For field types FILE and FILELIST, parses for a deleted  file.
+                Turns on COMND JSYS bit GJ%DEL.
+
+WILD            For  FILE  field type, allows the user to specify a wild card.
+                This is useful if only one  file  matches  the  specification.
+                See  FILELIST  field  option for a more general file wild card
+                parsing method.
+
+DEFAULT_DEV string
+
+DEFAULT_DIR string
+
+DEFAULT_NAM string
+
+DEFAULT_EXT string
+
+DEFAULT_GEN code
+                For FILE and FILELIST, specifies defaults for  the  individual
+                fields  of  a  file  specification.   The codes are 0 (highest
+                generation), + (next generation), - (first generation), * (all
+                generations), or a generation number.
+
+RADIX Integer constant
+                For field type NUMBER, specifies that the number typed  in  is
+                in radix integer constant.
+
+WORDS (word 1:integer 1,word 2:integer 2, ...  )
+                For  field  types  KEYWORD  and SWITCH, the words specified by
+                word n are the legal values.   The  integer n)  is  stored  in
+                $VALUE  and  the  actual  word  typed in $ATOM.  The words are
+                alphanumeric strings.
+
+WORDS (word 1::integer 1,word 2::integer 2, ... )
+                For field type SWITCH only, allows parsing values of a switch.
+                This will parse a field of the form /word n):.  Once  this  is
+                parsed,  the  PCL can issue another PARSE statement to get the
+                value of the  switch.    This  cannot  be  used  with  command
+                arguments.
+
+TIME            Parse only the time for field type DAYTIME.
+
+DATE            Parse only the date for field type DAYTIME.
+
+ERROR Label     for command arguements only, branch to label on a parse error.
+Notes
+
+   1. The values for NUMBER, the integer-constant in a KEYWORD or SWITCH,
+      and the internal date and time for DAYTIME are returned in $VALUE.
+
+   2. The  value  for file parses is returned in system variables $FILEN,
+      $FILEL, and $FILES.
+
+   3. The  text  typed  in  for  for   NUMBER,   FIELD,   DEVICE,   TEXT,
+      QUOTEDSTRING,  DIRECTORY,  USERNAME,  KEYWORD,  SWITCH, and NODE is
+      returned in $ATOM.
+
+   4. If the user specifies a HELP field option, then the  standard  help
+      message  is  not  used.   Specifying both a HELP field and a STDHLP
+      field will cause PCL to use both the user message and the  standard
+      message.
+
+   5. PARSE  takes  care of re-parsing and redisplay if the user corrects
+      the command line.  The PCL author should code the command as though
+      the user will never make a mistake or change what was typed in.
+
+   6. Once an EOL has been  parsed,  no  more  PARSE  statements  may  be
+      executed without first doing a PROMPT statement to reinitialize the
+      parsing  system.    Reparsing  will  occur  only  back  to the last
+      executed prompt statement.
+
+   7. A DoCommand statement generates an implicit Parse EOL statement, to
+      require that commands first parse their parameters and then perform
+      their actions.
+
+   8. A single Parse statement may have only one FILE field type; this is
+      a restriction in the COMND JSYS.
+
+Example
+
+            COMMAND getinfo;
+            BEGIN
+            STRING type_in;
+            PARSE text;
+            type_in = $ATOM;
+            DISPLAY "You entered>> " + type_in;
+            PARSE EOL;
+            ...
+            END
+
+            COMMAND choice;
+            BEGIN
+            STRING a_user; INTEGER the_job;
+            PARSE
+                BEGIN
+                username: BEGIN
+                          a_user = $ATOM;
+                          DOCOMMAND "systat  " + a_user
+                          END;
+                number:   BEGIN
+                          the_job = $VALUE;
+                          DOCOMMAND "systat " + $string(the_job)
+                          END
+                END;
+            ...
+            END
+
+  To the user, the above command choice would look like:
+
+            @decl p choice
+            [Command CHOICE defined]
+            @
+            @choice ? user name
+              or decimal number
+            @choice te04
+              14    42  EMACS   TE04
+            @choice 10
+              10    13  OPR     IO00
+            @
+
+The following command defines a keyword to be parsed.
+
+            COMMAND keywd;
+            BEGIN
+             ...;
+             PARSE KEYWORD (WORDS(day:1,week:2,year:3));
+             ...
+            END
+
+To the user, the keywd command would look like:
+
+            @keywd ? one of the following:
+             DAY    WEEK    YEAR
+            @keywd day
+
+Related
+
+ PROMPT - page 36
+
+                                   PRESERVE
+
+7.25. Preserve
+
+Function
+
+  The PRESERVE command allows the user to save the current PCL environment for
+later recall.  It allows system administrators to modify the Exec with PCL and
+then save the entire Exec for use at his or her site.
+
+
+Format
+
+    Format 1.
+            PRESERVE ENVIRONMENT file name
+    Format 2.
+            PRESERVE EXEC file name
+
+
+
+Notes
+
+   1. An  ENVIRONMENT  is all the PCL commands, procedures, and variables
+      that the user has defined.
+
+   2. The ENVIRONMENT file contains the internal, compiled version of the
+      PCL objects.  It will not be recompiled when declared.
+
+   3. The default file name for environments is EXEC.ENV.
+
+   4. Format 2 is for system administrators.  The EXEC  that  is  written
+      may  be  placed  on  <SYSTEM>  for  use  by  the installation.  All
+      commands that have been defined  may  not  be  un-declared  by  the
+      users.
+
+   5. The default file name for PRESERVE EXEC is EXEC.EXE.
+
+Example
+
+            PRESERVE ENVIRONMENT payroll.env
+
+            PRESERVE EXEC exec.exe
+
+Related
+
+ DECLARE - page 18
+ UNDECLARE
+
+                                  PROCEDURE
+
+7.26. Procedure
+
+Function
+
+  A  PROCEDURE  definition  in  a  PCL  source  file creates a procedure.  All
+procedures are declared globally and on the "top level;" there  are  no  inner
+procedures.
+
+
+Format
+
+    Format 1.
+        PROCEDURE name argument-list
+    Format 2.
+        type PROCEDURE name argument-list;
+
+    where an argument-list is either omitted or
+        (type name, name, ...; type name, name, ...; ...)
+
+
+
+Notes
+
+   1. A  PROCEDURE  need  not  have  arguments;  if  it has none then the
+      parentheses are not necessary.
+
+   2. A PROCEDURE may have either INTEGER arguments, STRING arguments, or
+      both.
+
+   3. Format 2 is a typed procedure.  The type may be either  INTEGER  or
+      STRING.  See the RETURN statement on page 37.
+
+   4. Specifying the names of the parameters in the argument list defines
+      them  for  all purposes; they need not be declared again within the
+      body of the procedure.
+
+   5. A typed procedure may be  used  in  place  of  a  variable  in  PCL
+      statements.
+
+Example
+
+            PROCEDURE match (string input string,str match;
+                                integer start point);
+            BEGIN
+            ...;
+            RETURN
+            END
+
+  If  a user has an integer procedure called finger that looks at a SYSTAT and
+returns the job number of the requested user, that procedure could be used:
+
+    COMMAND findem (username:guy);
+            BEGIN
+             EXTERNAL INTEGER PROCEDURE finger;
+             IF finger(guy) neq -1 THEN
+              DISPLAY guy + " is at " + $string(finger(guy))
+             ELSE
+              DISPLAY guy + "not on";
+             EXIT
+            END
+
+The procedure finger would look like:
+
+            INTEGER PROCEDURE FINGER (STRING name);
+            BEGIN
+             STRING gotem;
+             DOCOMMAND "systat " + name TO gotem;
+            IF $length(gotem) = 0 THEN return -1
+            ELSE return $integer(gotem[3:2])
+            END
+
+Related
+
+ CALL - page 14
+ RETURN - page 37
+
+                                    PROMPT
+
+7.27. Prompt
+
+Function
+
+  When  using  PARSE  to  parse  parameters,  it only permits you to parse one
+command line; once the line has been completely parsed, with  PARSE  EOL,  you
+can not use PARSE again, without causing PCL to obtain and begin parsing a new
+command  line.   The PROMPT PCL statement allows the PCL command to prompt for
+more input parameters after a PARSE EOL has been executed.
+
+
+Format
+
+            PROMPT [NOECHO] string constant
+
+
+
+Notes
+
+   1. The  PROMPT  statement  effectively  allows  the   user   to   have
+      subcommands to commands.
+
+   2. The NOECHO option turns off echoing for that entire line of command
+      typein;  this must be done at the Prompt because of the way command
+      typein and echoing is done.
+
+   3. In command parsing, it is permissible for the user  to  type  in  a
+      field and have it recognized by PCL and then to type enough rubouts
+      or  ^W's  to  make  the  entire  field invalid, or even an earlier,
+      already parsed field.  When this happens, the system signals to the
+      Exec that a "reparse" occurred, and that the system will now  reset
+      its internal pointer to the beginning of the command line and start
+      again.    When a reparse happens during basic command line parsing,
+      PCL aborts  the  executing  command  completely  and  restarts  the
+      command  program  from  the  beginning.  During subcommand parsing,
+      this is  undesirable.    Instead,  when  a  reparse  occurs  during
+      subcommand  parsing  (properly  identified  as  such  by  a  PROMPT
+      statement), PCL jumps back to the last-executed Prompt statement as
+      if a GoTo had been performed  and  resumes  execution  of  the  PCL
+      program  from  that  point.  Then, when the user's Parse statements
+      re-execute, they will match the fields which the  system  will  re-
+      present to the program.
+
+Example
+
+            COMMAND subcomm;
+             BEGIN INTEGER a_value;
+             PARSE NUMBER;
+             a_value = $VALUE
+             ...;
+             PARSE EOL;
+             ...;
+             PROMPT "@@";
+             PARSE KEYWORD (Words (first:1,last:2,all:3));
+             ...;
+             PARSE EOL;
+             PROMPT NOECHO "Please enter your password: "
+             PARSE TEXT;
+             ...
+             END
+
+Related
+
+ PARSE - page 32
+
+                                    RETURN
+
+7.28. Return
+
+Function
+
+  The  RETURN  PCL  statement  causes  a  procedure  to  return to the calling
+routine.
+
+
+Format
+
+    Format 1.
+            RETURN
+    Format 2.
+            RETURN expression
+
+
+
+Notes
+
+   1. A RETURN always returns to the calling routine.  If in  a  command,
+      the command returns to the EXEC.
+
+   2. Format  2  is  used  to return the value for typed procedures.  See
+      PROCEDURES on page 35.
+
+Example
+
+            PROCEDURE show;
+             BEGIN
+              display $jobno + " " + $username;
+              RETURN
+             END
+
+            INTEGER PROCEDURE calc;
+            BEGIN
+             INTEGER total;
+             ...;
+             RETURN total + 5
+            END
+
+Related
+
+ ABORT - page 11
+ PROCEDURE - page 35
+
+                                    SELECT
+
+7.29. Select
+
+Function
+
+  The  SELECT  statement  provides  an  orderly way of choosing one of several
+paths to take based on the current value of an integer or  string  expression.
+The  statement  tagged  with the expression having the same value is executed,
+and all others are ignored.  
+
+Format
+
+            SELECT expression OF
+                BEGIN
+                expression : statement;
+                expression : statement;
+                ...;
+    optional:   OTHERWISE :  statement
+    otherwise:  expression : statement
+                END
+
+
+
+Notes
+
+   1. The type of the first expression must match the types  of  all  the
+      tagging  expressions;  they  must be all integer expressions or all
+      string expressions.
+
+   2. Unlike the CASE statement, the  tags  may  be  complex  expressions
+      instead  of constants.  After evaluating the select expression, PCL
+      will evaluate each tagging expression in turn and compare the value
+      to the value of the select expression.   If  they  are  equal,  the
+      corresponding statement will be executed.
+
+   3. The  OTHERWISE keyword indicates that the tagged statement is to be
+      executed if all the preceding tests fail.
+
+   4. If all the tests fail, and there is no  OTHERWISE,  then  execution
+      continues following the SELECT statement.
+
+   5. The  intent of providing SELECT in addition to CASE is that CASE is
+      implemented  with  a  table  of  statement  addresses,  making   it
+      appropriate  for small ranges of the selection expression, say from
+      1 to 10, whereas SELECT is implemented by a series of  tests  which
+      might as well have been coded by user statements like
+
+                  IF x=1 THEN s1 ELSE IF x=58 THEN s2
+                      ELSE IF x=101 THEN s3 ELSE ...
+
+      suitable for a large range in the selection range.
+
+    COMMAND seltest(USERNAME:unam);
+    ...
+    SELECT unam OF
+        BEGIN
+        "OPERATOR":    display "the operator";
+        "DIAGNOSTICS": display "the engineers"
+        END
+    END
+
+Related
+
+ Expressions - page 9
+ CASE - page 15
+
+                                     SET
+
+7.30. Set
+
+Function
+
+  New  options to the EXEC SET command will set the values of global variables
+declared by the DECLARE command.
+
+
+Format
+
+            SET INTEGER-VARIABLE (named) variable (to) value
+
+            SET STRING-VARIABLE (named) variable (to) value
+
+            SET [NO] COMMAND-TRACE (OF GENERATED COMMANDS)
+
+            SET DEFAULT DECLARE /CONFIRM
+                                 /NOCONFIRM
+
+
+
+Notes
+
+   1. The variable must  have  been  previously  declared  by  a  DECLARE
+      command. See page 18.
+
+   2. The  INFORMATION  command  may  be used to display the setting of a
+      global variable. See page 28.
+
+   3. Setting COMMAND-TRACE causes PCL to display  at  the  terminal  all
+      DoCommand statements as they are executed.
+
+   4. Setting  the  default  for  DECLARE  allows  you to say whether the
+      DECLARE command should, by default, confirm its actions.
+
+Example
+
+            @SET integer-variable doneflag 0
+
+            @SET string host TOPS-A
+
+Related
+
+ INFORMATION - page 28
+ DECLARE - page 18
+
+                                    TYPEIN
+
+7.31. TypeIn
+
+Function
+
+  The TYPEIN PCL statement will send a character string to an invoked program.
+
+
+Format
+
+            TYPEIN [NORETURN] string
+
+
+
+Notes
+
+   1. TYPEIN  will  send  string  to the invoked program as though it had
+      been typed on the controlling terminal.  A carriage return will  be
+      added to string, unless the NORETURN option is specified.
+
+   2. Several  lines  may  be sent to the invoked program with one TYPEIN
+      statement.  PCL will strip the extra line  feeds  from  the  string
+      before  sending it, because programs normally expect their terminal
+      input to be terminated by carriage returns only.
+
+                          TYPEIN "tape copytp:
+                                      density 1600
+                                      ssname area backup"
+
+   3. After the string has been passed to the program,  PCL  waits  until
+      the program either halts or waits for more terminal input.
+
+Example
+
+            COMMAND runprog (text (help "program to run):prog_to_run);
+            BEGIN
+            STRING program_text;
+            ...;
+            INVOKE prog_to_run;
+            ...;
+            GETTYPEOUT program_text;
+            ...;
+            TYPEIN "weekly";
+            ...
+            END
+
+Related
+
+ INVOKE - page 29
+ GETTYPEOUT - page 24
+ CLEARTYPEOUT - page 16
+ KILLPROGRAM - page 30
+
+                                    WHILE
+
+7.32. While
+
+Function
+
+  The WHILE PCL statement provides loop control for PCL routines.
+
+
+Format
+
+            WHILE logical expression DO PCL statement
+
+
+
+Notes
+
+   1. If  the  condition  is  not true then the PCL statement will not be
+      executed.
+
+Related
+
+ DO - page 20
+
+                              SYSTEM FACILITIES
+
+7.33. System
+  Various system services and variables are provided to return specific system
+information or perform system functions.
+
+
+
+7.33.1. System Variables
+  These  may  be  used like any other variables of the appropriate type; a few
+may be written to, but most can only be read.
+
+$Account        STRING - The account of the current job.
+
+$Append         INTEGER - An option to $OPEN for append mode.
+
+$ARPAnet_Node   STRING - The system's ARPAnet node  name.    This  is  a  null
+                string if the system is not on the ARPAnet.
+
+$Atom           STRING  -  After a PARSE statement, contains the text typed in
+                for most parse types (all but Noise, EOL, Comma, and Token.)
+
+$Batch_Job      INTEGER - Non-zero if the job is a batch job.
+
+$ConnectedDirectory
+                STRING - The name of the currently connected directory.
+
+$CR             STRING - A string containing just a carriage return.
+
+$CRLF           STRING - A string containing a  carriage  return  and  a  line
+                feed.
+
+$CURTAD         INTEGER - The current date and time in system internal format.
+
+$Date           STRING - Current date in DD-MON-YY format.
+
+$DECnet_Node    STRING - The system's DECnet node name.  This is a null string
+                if the system is not on a DECnet.
+
+$EMACSTerminal  INTEGER  -  Returns  a  1  if  the  current  terminal  can  be
+                "effectively" used by EMACS, 0 if not.  [CMU only]
+
+$FBCTL
+
+$FBADR
+
+$FBPRT
+
+$FBCRE
+
+$FBGEN
+
+$FBBYV
+
+$FBSIZ
+
+$FBCRV
+
+$FBWRT
+
+$FBREF
+
+$FBCNT
+
+$FBBK0
+
+$FBBBT
+
+$FBNET
+
+$FBUSW
+
+$FBTDT
+
+$FBFET
+
+$FileControl
+
+$FileAddress
+
+$FileProtection
+
+$FileCreation
+
+$FileSize
+
+$FileWrite
+
+$FileRead       INTEGER - These constants are provided to pass to  $FileInfo_I
+                to  extract  information  from the FDB.  Those which look like
+                MONSYM symbols are provided along with descriptive names.
+
+$Author
+
+$Writer
+
+$FileAccount    STRING - These are similar code numbers for $FileInfo_S.
+
+$FileL          STRING - After executing  a  PARSE  FILE  statement,  or  some
+                similar  PARSE,  this  contains  the  file name entered in the
+                longest form, DEV:<DIRECTORY>FILE.EXT.VERSION.
+
+$FileN          STRING - In parsing, the file name entered in the normal form,
+                FILE.EXT.VERSION.
+
+$FileS          STRING - In  parsing,  the  file  name  entered  in  the  form
+                FILE.EXT.  It will contain device: and <directory> if they are
+                different from the connected device and directory.
+
+$FileV          INTEGER - In parsing, contains just the generation number.
+
+$Input          INTEGER - An option to $OPEN for input mode.
+
+$JobNo          INTEGER - The number of the current job.
+
+$LastErrCode    INTEGER - The number of the last JSYS error.
+
+$LastError      STRING - The text of the last JSYS error.
+
+$LF             STRING - A string containing a line feed.
+
+$NUL            STRING - Read/write string like NUL:, returns a null string.
+
+$Output         INTEGER - An option to $OPEN for output mode.
+
+$PromptEnb      STRING - The standard enabled prompt string.
+
+$PromptEnbSub   STRING - The standard enabled subcommand prompt string.
+
+$PromptReg      STRING  -  The standard prompt string, which can be written if
+                the usual "@" is not suitable.
+
+$PromptSub      STRING  -  The  standard  subcommand   prompt   string,   also
+                writeable.
+
+$Quote          STRING - A string containing a double quote character
+
+$TermNumber     INTEGER - The number of the controlling terminal.
+
+$TermWidth      INTEGER - The terminal width of the controlling terminal.
+
+$Time           STRING - Current time in HH:MM:SS format.
+
+$TType          INTEGER  - The terminal type index (GTTYP%) of the controlling
+                terminal.
+
+$Typeahead_Count
+                INTEGER - The number of characters which have been typed-ahead
+                on the controlling terminal.
+
+$UserName       STRING - The user name of the current job.
+
+$Value          INTEGER - Contains a number returned by a  Parse:  The  number
+                typed  in  for  a  Number  field,  the  value for a Keyword or
+                Switch, or the internal date and time for a DayTime.
+
+
+
+7.33.2. System Procedures
+  These predefined procedures may be called without being declared.  Some  are
+typed, and some return results in their arguments.
+
+$Close (channel)
+                Closes the file that is open on channel.
+
+$CVITC (integer)
+                STRING  -  Returns  the  character  whose  value  is equal the
+                integer.  This is useful for manipulating control characters.
+
+$CVCTI (string) INTEGER - Converts the first character in the string  into  an
+                integer.   This   is   also   useful   for  control  character
+                manipulation.
+
+$EOF(channel)   INTEGER - Returns a  non-zero  value  if  the  last  $READ  on
+                channel reached the end of the file.
+
+$ExpandTAD   (internal   date   and   time,year,month,day   of   month,day  of
+                week,hour,minute)
+                Performs an ODCNV% JSYS, expanding the first integer into  the
+                other  6  integers  (year,  month,  day of month, day of week,
+                hour, minute).  The first integer must be a  TOPS-20  internal
+                date and time (TAD).
+
+$File_Dev (file)
+                STRING
+
+$File_Dir (file)
+                STRING
+
+$File_Nam (file)
+                STRING
+
+$File_Typ (file) 
+                STRING  - These return just the corresponding part of the name
+                of the file specified in the same manner as $FileInfo_S.
+
+$InputTAD (string)
+                INTEGER - Converts  a  string  time  and  date  into  internal
+                format.
+
+$Integer (string[,integer])
+                INTEGER  -  Converts decimal number in string into an integer.
+                The optional  second  argument  provides  the  radix  to  use.
+                Returns 0 on an error.
+
+$Length (string)
+                INTEGER - Returns the length of string
+
+$MergeTAD (year,month,day of month,hour,minute) 
+                INTEGER  -  Performs an IDCNV% JSYS, compacting the first five
+                integers (year, month, day of month,  hour,  minute)  into  an
+                internal date and time.
+
+$NextFile       INTEGER - Used to step to the next file in a parsed file list.
+                Returns zero at the end of the list.
+
+$Open(string,integer)
+                INTEGER  -  Opens the file named in the string for I/O, in the
+                mode specified by the  integer  (either  $Input,  $Output,  or
+                $Append).  Returns the PCL channel number assigned, or zero if
+                the open could not be done.
+
+$OutputTAD (integer)
+                STRING - Convert internal date and time to string.
+
+$Read (channel) STRING  -  Reads  a  record  from the file opened for input on
+                channel.
+
+$ReadBinary (integer,string[,integer])
+                STRING - Reads  from  the  terminal,  in  binary,  up  to  the
+                specified   number   (integer)  of  characters  or  until  the
+                specified character (string) is read.  This will time out  and
+                return an empty string if nothing is typed within a second. An
+                optional  third  integer  argument  can be used to provide the
+                number of milliseconds to use for the timeout period.  This is
+                suitable only for reading control information  transmitted  by
+                the  VT100  terminal  in  response  to  requests such as "send
+                terminal model ID" and "send cursor position."
+
+$Search (string,string[,integer])
+                INTEGER - Searches the first string for the second string  and
+                returns  the  index within first string, or zero if not found.
+                With the optional third argument, starts the  search  at  that
+                location within the string.
+
+$SearchRaised (string,string[,integer])
+                INTEGER  -  Same  as $Search except lower case alphabetics are
+                raised to upper case.
+
+$String (integer[,integer])
+                STRING - Converts the integer into a  string.    The  optional
+                second argument provides the radix to use.
+
+$FileInfo_I (file, field code)
+                INTEGER
+
+$FileInfo_S (file, field code)
+                STRING  These two return information about a file. The file is
+                selected by the first argument and the information  to  return
+                is  selected  by the second argument.  Permissible file values
+                are $Parse for the file currently being parsed, or the runtime
+                channel number.
+
+                For $FileInfo_I the field code is the name of the index of the
+                GTFDB JSYS, such as $FBSIZ and $FBCRV, or mnemonic names  such
+                as  $FileSize  and  $FileCreation.   For $FileInfo_S the field
+                codes allowed are:  $Author, the name of  the  author  of  the
+                file;   $Writer,   the   name   of  the  file's  last  writer;
+                $FileAccount, the file's account number; or an integer greater
+                than  63  which  calls  the  JFNS  JSYS  with  the  formatting
+                parameter set to the field code minus 64.
+
+$Wait(integer)  Waits  the  specified  number  of  milliseconds, or forever if
+                zero.
+
+$Write(channel,record)
+                Writes record into the output file opened on channel.
+
+
+
+8. BNF Description
+  This  section  describes the entire PCL language using a BNF notation.  Non-
+terminal symbols are enclosed in angle brackets "< >".  Optional items are are
+enclosed in braces "{ }".
+
+8.1. Top Level BNF
+<PCL-file>              ::= <Top-level>
+                        ::= <Top-level> {;} <PCL-file>
+<Top-level>             ::= <Command-declaration>
+                        ::= <Procedure-declaration>
+                        ::= <Variable-declaration>
+
+<Command-declaration>   ::= <Command-head> ; <Procedure-body>
+<Command-head>          ::= COMMAND <Identifier>
+                        ::= COMMAND <Identifier>
+                                        ( <Command-argument-list> )
+<Command-argument-list> ::= <Command-argument>
+                        ::= <Command-argument> ; <Command-argument-list>
+<Command-argument>      ::= <Field-specification>
+                        ::= <Field-specification> : <Identifier>
+
+<Procedure-declaration> ::= <Procedure-head> ; <Procedure-body>
+                        ::= <Simple-type> <Procedure-head> ;
+                                <Procedure-body>
+<Procedure-head>        ::= PROCEDURE <Identifier>
+                        ::= PROCEDURE <Identifier> (<Formal-parm-list>)
+
+<Procedure-body>        ::= <Block>
+<Formal-parm-list>      ::= <Simple-type> <Id-list>
+                        ::= <Simple-type> <Id-list> ; <Formal-parm-list>
+
+<Block>                 ::= <Block-head> <Compound-tail>
+<Block-head>            ::= BEGIN { <Declaration-list> ; }
+<Declaration-list>      ::= <Declaration>
+                        ::= <Declaration> ; <Declaration-list>
+<Compound-statement>    ::= BEGIN <Compound-tail>
+<Compound-tail>         ::= <Statement-list> { ; } END
+                        ::= END
+<Statement-list>        ::= <Statement>
+                        ::= <Statement> ; <Statement-list>
+
+8.2. Declaration BNF
+
+<Declaration>           ::= <Variable-declaration>
+                        ::= <External-procedure-declaration>
+                        ::= EXTERNAL <Variable-declaration>
+<Variable-declaration>  ::= <Simple-type> <Id-list>
+<Simple-type>           ::= INTEGER
+                        ::= STRING
+<Id-list>               ::= <Identifier>
+                        ::= <Identifier> , <Id-list>
+<External-procedure-declaration>
+                        ::= EXTERNAL PROCEDURE <Id-list>
+                        ::= EXTERNAL <Simple-type> PROCEDURE <Id-list>
+
+
+8.3. Statement BNF
+<Statement>             ::= <Compound-statement>
+                        ::= <Assignment-statement>
+                        ::= <Conditional-statement>
+                        ::= <Go-to-statement>
+                        ::= <Do-statement>
+                        ::= <Case-statement>
+                        ::= <Select-statement>
+                        ::= <Return-statement>
+                        ::= <Exit-statement>
+                        ::= <Procedure-statement>
+                        ::= <Parse-statement>
+                        ::= <Command-statement>
+                        ::= <Program-statement>
+                        ::= <No-op-statement>
+                        ::= <Label> : <Statement>
+
+<Assignment-statement>  ::= LET <Identifier> = <Expression>
+                        ::= <Identifier> = <Expression>
+<Conditional-statement> ::= <If-statement>
+                        ::= <If-statement> ELSE <Statement>
+<If-statement>          ::= IF <Logical-expression> THEN <Statement>
+<Go-to-statement>       ::= GOTO <Label-identifier>
+<Do-statement>          ::= DO <Statement> WHILE <Logical-expression>
+                        ::= WHILE <Logical-expression> DO <Statement>
+<Case-statement>        ::= <Case-head> { <Tagged-statement-list> {;} } END
+<Case-head>             ::= CASE <Integer-expression>
+                                FROM <Integer-constant>
+                                TO <Integer-constant> OF BEGIN
+<Tagged-statement-list> ::= <Tagged-statement>
+                        ::= <Tagged-statement> ; <Tagged-statement-list>
+<Tagged-statement>      ::= <Integer-constant> : <Statement>
+                        ::= INRANGE : <Statement>
+                        ::= OUTRANGE : <Statement>
+<Select-statement>      ::= <Select-head> { <Expr-statement-list> {;} } END
+<Select-head>           ::= SELECT <Expression> OF BEGIN
+<Expr-statement-list>   ::= <Expr-statement>
+                        ::= <Expr-statement> ; <Expr-statement-list>
+<Expr-statement>        ::= <Expression> : <Statement>
+                        ::= OTHERWISE : <Statement>
+<Return-statement>      ::= RETURN
+                        ::= RETURN <Expression>
+<Exit-statement>        ::= EXIT
+                        ::= EXIT SAVE
+                        ::= EXIT TOPROGRAM
+                        ::= ABORT <String-expression>
+<Procedure-statement>   ::= CALL <Procedure-Identifier>
+                        ::= CALL <Procedure-Identifier> (<Actual-parms>)
+<No-op-statement>       ::= NOP
+
+8.4. Parse BNF
+<Parse-statement>       ::= GUIDE <String-constant>
+                        ::= PROMPT <String-constant>
+                        ::= PROMPT NOECHO <String-constant>
+                        ::= PARSE <Field-specification>
+                        ::= PARSE BEGIN <Parse-field-list> END
+<Parse-field>           ::= <Field-specification> [ : <Statement> ]
+                        ::= OTHERWISE : <Statement>
+<Parse-field-list>      ::= <Parse-field>
+                        ::= <Parse-field> ; <Parse-field-list>
+<Field-specification>   ::= <Field-type>
+                        ::= <Field-type> ( <Field-option-list> )
+<Field-type>            ::= KEYWORD
+                        ::= SWITCH
+                        ::= NUMBER
+                        ::= NOISE <String-constant>
+                        ::= INPUTFILE
+                        ::= OUTPUTFILE
+                        ::= FILE
+                        ::= FIELD
+                        ::= EOL        (not available as command argument)
+                        ::= DIRECTORY
+                        ::= USERNAME
+                        ::= COMMA
+                        ::= DEVICE
+                        ::= TEXT
+                        ::= DAYTIME
+                        ::= QUOTEDSTRING
+                        ::= TOKEN <String-constant>
+                        ::= NODE
+                        ::= FILELIST
+<Field-option-list>     ::= <Field-option> { , <Field-option> }
+<Field-option>
+                        ::= DEFAULT <String-primary>
+                        ::= HELP <String-primary>
+                        ::= PARSEONLY
+                        ::= NOHELP
+                        ::= STDHELP
+                        ::= NOINDIRECT
+                        ::= INPUT
+                        ::= OUTPUT
+                        ::= INVISIBLE
+                        ::= DELETED
+                        ::= WILD
+                        ::= DEFAULT_DEV <String-primary>
+                        ::= DEFAULT_DIR <String-primary>
+                        ::= DEFAULT_NAM <String-primary>
+                        ::= DEFAULT_EXT <String-primary>
+                        ::= DEFAULT_GEN <Code>
+                              The codes are 0 (highest generation), + (next
+                              generation), - (first generation), * (all
+                              generations), or a generation number.
+                        ::= RADIX <Integer-constant>
+                        ::= WORDS ( <Word-list> )
+                        ::= TIME
+                        ::= DATE
+                        ::= ERROR <Label-identifier>
+<Word-list>             ::= <Word-definition>
+                        ::= <Word-definition> , <Word-list>
+<Word-definition>       ::= <Identifier> : <Integer-constant>
+                        ::= <Integer-constant> : <Integer-constant>
+                        ::= <Identifier> :: <Integer-constant>
+                        ::= <Integer-constant> :: <Integer-constant>
+
+8.5. Command Statement BNF
+<Command-statement>     ::= DOCOMMAND <String-expression> <Command-option>
+                        ::= DOCOMMAND ORIGINAL <String-expression>
+                                <Command-option>
+<Command-option>        ::= <empty>
+                        ::= TO <String-identifier> <Command-option>
+
+8.6. Program Statement BNF
+<Program-statement>     ::= INVOKE <String-expression>
+                        ::= INVOKE PASSOUTPUT <String-expression>
+                        ::= KILLPROGRAM
+                        ::= TYPEIN <String-expression>
+                        ::= TYPEIN NORETURN <String-expression>
+                        ::= GETTYPEOUT <String-identifier>
+                        ::= CLEARTYPEOUT
+                        ::= DISPLAY <String-expression>
+                        ::= DISPLAY NORETURN <String-expression>
+                        ::= DISPLAY BINARY <String-expression>
+
+8.7. Expression BNF
+<Logical-expression>    ::= <Relational-expression>
+<Relational-expression> ::= <Integer-expression> <Relational-operator>
+                                <Integer-expression>
+                        ::= <String-expression> <Relational-operator>
+                                <String-expression>
+<Relational-operator>   ::= <
+                        ::= =
+                        ::= >
+                        ::= <=
+                        ::= <>
+                        ::= >=
+
+<Expression>            ::= <Integer-expression>
+                        ::= <String-expression>
+
+<Integer-expression>    ::= <Term>
+                        ::= <Term> <Add-operator> <Term>
+<Add-operator>          ::= +
+                        ::= -
+<Term>                  ::= <Integer-primary>
+                        ::= <Integer-primary> <Mult-operator> <Term>
+<Mult-operator>         ::= *
+                        ::= /
+<String-expression>     ::= <String-primary>
+                        ::= <String-primary> + <String-expression>
+<Integer-primary>       ::= <Integer-identifier>
+                        ::= - <Integer-primary>
+                        ::= <Integer-constant>
+                        ::= <Procedure-call>
+                        ::= ( <Integer-expression> )
+<String-primary>        ::= <String-identifier>
+                        ::= <String-constant>
+                        ::= <Procedure-call>
+                        ::= <String-primary>
+                               [ <Integer-expression> :
+                               <Integer-expression> ]
+                        ::= <String-primary>
+                               [ <Integer-expression> : * ]
+<Procedure-call>        ::= <Procedure-identifier>
+                        ::= <Procedure-identifier> ( Actual-parms> )
+<Actual-parms>          ::= <Expression>
+                        ::= <Expression> , <Actual-parms>
+
+8.8. Identifier BNF
+<Integer-identifier>    ::= <Identifier>
+                        ::= <System-variable-identifier>
+<String-identifier>     ::= <Identifier>
+                        ::= <System-variable-identifier>
+<Procedure-identifier>  ::= <Identifier>
+<Label-identifier>      ::= <Identifier>
+<Identifier>            ::= <Alphabetic>
+                        ::= <Identifier> <Alphanumeric>
+                        ::= <Identifier> _ <Alphanumeric>
+<Integer-constant>      ::= <Decimal>
+                        ::= <Decimal-constant> <Decimal>
+<String-constant>       ::= {sequence of characters enclosed by double-
+                             quotes; double-quotes may be inserted in the
+                             string by doubling them}
+
+
+
+                              Table of Contents
+
+1. Introduction                                                              1
+
+1.1. Programmable Command Language                                           1
+1.2. PCL Uses                                                                1
+1.3. PCL Features                                                            1
+
+2. EXEC Interface                                                            2
+
+3. The PCL Language                                                          3
+
+3.1. General Command Format                                                  3
+3.2. PCL Variables                                                           3
+3.3. String Manipulation                                                     3
+3.4. Procedures                                                              3
+3.5. PCL Flow Control                                                        3
+     3.5.1. DO, WHILE                                                        3
+     3.5.2. IF                                                               3
+     3.5.3. CASE                                                             3
+     3.5.4. SELECT                                                           3
+     3.5.5. GOTO                                                             4
+
+4. User Interface                                                            5
+
+4.1. Parse formats                                                           5
+     4.1.1. Simple PARSE                                                     5
+     4.1.2. Complex PARSE                                                    5
+     4.1.3. Command Arguments                                                5
+4.2. Parse Options                                                           5
+4.3. FILELIST                                                                5
+4.4. Parse error handling                                                    5
+
+5. Program and Command Interface                                             6
+
+5.1. Running Programs                                                        6
+5.2. Executing EXEC Commands                                                 6
+
+6. Input/Output                                                              7
+
+7. Reference                                                                 8
+
+7.1. Expressions                                                             9
+     7.1.1. Integer expressions                                              9
+     7.1.2. String expressions                                               9
+     7.1.3. Logical expressions                                              9
+7.2. Statements                                                             10
+7.3. Abort                                                                  11
+7.4. Assignment                                                             12
+7.5. Begin                                                                  13
+7.6. Call                                                                   14
+7.7. Case                                                                   15
+7.8. ClearTypeOut                                                           16
+7.9. Command                                                                17
+7.10. Declare                                                               18
+7.11. Display                                                               19
+7.12. Do                                                                    20
+7.13. DoCommand                                                             21
+7.14. Exit                                                                  22
+7.15. External                                                              23
+7.16. GetTypeOut                                                            24
+7.17. GoTo                                                                  25
+7.18. Guide                                                                 26
+7.19. If                                                                    27
+7.20. Information                                                           28
+7.21. Invoke                                                                29
+7.22. KillProgram                                                           30
+7.23. Original                                                              31
+7.24. Parse                                                                 32
+     7.24.1. Field types                                                    32
+     7.24.2. Field options                                                  32
+7.25. Preserve                                                              34
+7.26. Procedure                                                             35
+7.27. Prompt                                                                36
+7.28. Return                                                                37
+7.29. Select                                                                38
+7.30. Set                                                                   39
+7.31. TypeIn                                                                40
+7.32. While                                                                 41
+7.33. System                                                                42
+     7.33.1. System Variables                                               42
+     7.33.2. System Procedures                                              42
+
+8. BNF Description                                                          44
+
+8.1. Top Level BNF                                                          44
+8.2. Declaration BNF                                                        44
+8.3. Statement BNF                                                          44
+8.4. Parse BNF                                                              44
+8.5. Command Statement BNF                                                  44
+8.6. Program Statement BNF                                                  44
+8.7. Expression BNF                                                         44
+8.8. Identifier BNF                                                         45
+    

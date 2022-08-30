@@ -1,0 +1,230 @@
+@Comment{OUTLINE of PCLX.MSS.18 by Scribe 3B(1134) on 12 January 1983 at 13:39}
+1 INTRODUCTION                                            1 PCLX.MSS.18, L.34
+  1.1 Programmable Command Language                       1 PCLX.MSS.18, L.36
+  1.2 PCL Uses                                            1 PCLX.MSS.18, L.65
+  1.3 PCL Features                                        2 PCLX.MSS.18, L.85
+  1.4 Notational conventions                              2 PCLX.MSS.18, L.104
+2 EXEC INTERFACE                                          3 PCLX.MSS.18, L.117
+3 THE PCL LANGUAGE                                        4 PCLX.MSS.18, L.173
+  3.1 General Command Format                              4 PCLX.MSS.18, L.175
+                              Label                       4 PCLX.MSS.18, L.229
+  3.2 PCL Constants                                       4 PCLX.MSS.18, L.267
+  3.3 PCL Variables                                       4 PCLX.MSS.18, L.298
+  3.4 Reserved names                                      4 PCLX.MSS.18, L.360
+  3.5 String Manipulation                                 5 PCLX.MSS.18, L.442
+  3.6 Logical expressions                                 5 PCLX.MSS.18, L.477
+  3.7 Procedures                                          5 PCLX.MSS.18, L.509
+  3.8 PCL Flow Control                                    5 PCLX.MSS.18, L.560
+    3.8.1 ABORT                                           5 PCLX.MSS.18, L.581
+    3.8.2 EXIT                                            5 PCLX.MSS.18, L.587
+    3.8.3 RETURN                                          5 PCLX.MSS.18, L.592
+    3.8.4 DO, WHILE, UNTIL                                5 PCLX.MSS.18, L.597
+    3.8.5 IF                                              5 PCLX.MSS.18, L.625
+    3.8.6 CASE                                            5 PCLX.MSS.18, L.637
+    3.8.7 SELECT                                          5 PCLX.MSS.18, L.653
+    3.8.8 SELECTALL                                       6 PCLX.MSS.18, L.677
+    3.8.9 GOTO                                            6 PCLX.MSS.18, L.694
+4 SYSTEM SERVICES                                         7 PCLX.MSS.18, L.709
+  4.1 System Constants                                    7 PCLX.MSS.18, L.714
+                              DOLLARPARSE                 7 PCLX.MSS.18, L.738
+  4.2 System Variables                                    7 PCLX.MSS.18, L.753
+                              FILEVARS                    7 PCLX.MSS.18, L.842
+  4.3 System Procedures                                   7 PCLX.MSS.18, L.931
+                              DIRECTORYINFOCONSTANT       8 PCLX.MSS.18, L.976
+                              DOLLARFILE                  8 PCLX.MSS.18, L.1050
+                              FILCODES                    8 PCLX.MSS.18, L.1076
+                              FILEINFOCONSTANTS           8 PCLX.MSS.18, L.1096
+  4.4 System Procedures specific to $Jsys Interface, me   9 PCLX.MSS.18, L.1360
+5 USER INTERFACE                                         10 PCLX.MSS.18, L.1438
+                              PARSEINTRO                 10 PCLX.MSS.18, L.1439
+  5.1 Parse Formats                                      10 PCLX.MSS.18, L.1470
+    5.1.1 Simple PARSE                                   10 PCLX.MSS.18, L.1476
+    5.1.2 Complex PARSE                                  10 PCLX.MSS.18, L.1499
+                              COMPLEXPARSE               10 PCLX.MSS.18, L.1502
+    5.1.3 Command Arguments                              10 PCLX.MSS.18, L.1523
+  5.2 Parse Options                                      10 PCLX.MSS.18, L.1540
+  5.3 Parse Results                                      10 PCLX.MSS.18, L.1574
+  5.4 FILELIST                                           10 PCLX.MSS.18, L.1600
+                              FILELIST                   10 PCLX.MSS.18, L.1602
+  5.5 DIRECTORYLIST, USERLIST                            10 PCLX.MSS.18, L.1639
+                              directorylist              10 PCLX.MSS.18, L.1642
+                              userlist                   10 PCLX.MSS.18, L.1643
+  5.6 Parse error handling                               11 PCLX.MSS.18, L.1696
+                              PARSEERROR                 11 PCLX.MSS.18, L.1699
+6 PROGRAM AND COMMAND INTERFACE                          12 PCLX.MSS.18, L.1734
+  6.1 Running Programs                                   12 PCLX.MSS.18, L.1736
+  6.2 Executing EXEC Commands                            12 PCLX.MSS.18, L.1773
+7 INPUT/OUTPUT                                           13 PCLX.MSS.18, L.1801
+                              INPUTOUTPUT                13 PCLX.MSS.18, L.1802
+8 REFERENCE                                              14 PCLX.MSS.18, L.1842
+  8.1 EXPRESSIONS                                        15 PCLX.MSS.18, L.1844
+                              EXPRESSIONS                15 PCLX.MSS.18, L.1846
+    8.1.1 Integer expressions                            15 PCLX.MSS.18, L.1852
+    8.1.2 String expressions                             15 PCLX.MSS.18, L.1863
+    8.1.3 Logical expressions                            15 PCLX.MSS.18, L.1878
+  8.2 STATEMENTS                                         16 PCLX.MSS.18, L.1893
+                              STATEMENTS                 16 PCLX.MSS.18, L.1895
+  8.3 PCL files                                          17 PCLX.MSS.18, L.1925
+                              PCLFILE                    17 PCLX.MSS.18, L.1926
+  8.4 ABORT                                              18 PCLX.MSS.18, L.1965
+                              Abort                      18 PCLX.MSS.18, L.1967
+  8.5 ASSIGNMENT                                         19 PCLX.MSS.18, L.2000
+                              ASSIGNMENT                 19 PCLX.MSS.18, L.2002
+  8.6 BEGIN - END                                        20 PCLX.MSS.18, L.2036
+                              Begin                      20 PCLX.MSS.18, L.2037
+                              end                        20 PCLX.MSS.18, L.2039
+  8.7 CALL                                               21 PCLX.MSS.18, L.2089
+                              Call                       21 PCLX.MSS.18, L.2091
+  8.8 CASE                                               22 PCLX.MSS.18, L.2146
+                              CASE                       22 PCLX.MSS.18, L.2148
+  8.9 CLEARTYPEOUT                                       23 PCLX.MSS.18, L.2234
+                              ClearTypeOut               23 PCLX.MSS.18, L.2236
+  8.10 COMMAND                                           24 PCLX.MSS.18, L.2281
+                              Command                    24 PCLX.MSS.18, L.2283
+  8.11 DECLARE                                           25 PCLX.MSS.18, L.2383
+                              Declare                    25 PCLX.MSS.18, L.2385
+  8.12 DISPLAY                                           26 PCLX.MSS.18, L.2477
+                              Display                    26 PCLX.MSS.18, L.2479
+  8.13 DO                                                27 PCLX.MSS.18, L.2536
+                              Do                         27 PCLX.MSS.18, L.2538
+  8.14 DOCOMMAND                                         28 PCLX.MSS.18, L.2598
+                              DoCommand                  28 PCLX.MSS.18, L.2600
+  8.15 EXIT                                              29 PCLX.MSS.18, L.2645
+                              Exit                       29 PCLX.MSS.18, L.2647
+  8.16 EXTERNAL                                          30 PCLX.MSS.18, L.2704
+                              External                   30 PCLX.MSS.18, L.2706
+  8.17 GETTYPEOUT                                        31 PCLX.MSS.18, L.2760
+                              GetTypeOut                 31 PCLX.MSS.18, L.2762
+  8.18 GOTO                                              32 PCLX.MSS.18, L.2807
+                              GOTO                       32 PCLX.MSS.18, L.2809
+  8.19 GUIDE                                             33 PCLX.MSS.18, L.2843
+                              GUIDE                      33 PCLX.MSS.18, L.2845
+  8.20 IF ... ELSE                                       34 PCLX.MSS.18, L.2880
+                              IF                         34 PCLX.MSS.18, L.2882
+                              ELSE                       34 PCLX.MSS.18, L.2884
+  8.21 INFORMATION                                       35 PCLX.MSS.18, L.2925
+                              Information                35 PCLX.MSS.18, L.2927
+  8.22 INTEGER - STRING                                  36 PCLX.MSS.18, L.2978
+                              INTEGER                    36 PCLX.MSS.18, L.2980
+  8.23 INVOKE                                            37 PCLX.MSS.18, L.3015
+                              Invoke                     37 PCLX.MSS.18, L.3017
+  8.24 KILLPROGRAM                                       38 PCLX.MSS.18, L.3073
+                              KillProgram                38 PCLX.MSS.18, L.3075
+  8.25 NOP                                               39 PCLX.MSS.18, L.3117
+                              NOP                        39 PCLX.MSS.18, L.3119
+  8.26 NOORIGINAL                                        40 PCLX.MSS.18, L.3148
+                              NOORIGINAL                 40 PCLX.MSS.18, L.3150
+  8.27 ORIGINAL                                          41 PCLX.MSS.18, L.3182
+                              ORIGINAL                   41 PCLX.MSS.18, L.3184
+  8.28 PARSE                                             42 PCLX.MSS.18, L.3211
+                              Parse                      42 PCLX.MSS.18, L.3213
+                              $value                     42 PCLX.MSS.18, L.3322
+                              $atom                      42 PCLX.MSS.18, L.3330
+    8.28.1 Parse Field Types                             42 PCLX.MSS.18, L.3360
+                              PARSEFIELDTYPES            42 PCLX.MSS.18, L.3361
+    8.28.2 Parse Field Options                           43 PCLX.MSS.18, L.3484
+                              PARSEFIELDOPTIONS          43 PCLX.MSS.18, L.3487
+                              HELP                       43 PCLX.MSS.18, L.3564
+                              RADIX                      43 PCLX.MSS.18, L.3586
+                              words                      43 PCLX.MSS.18, L.3605
+  8.29 PRESERVE                                          45 PCLX.MSS.18, L.3645
+                              PRESERVE                   45 PCLX.MSS.18, L.3647
+  8.30 PROCEDURE                                         46 PCLX.MSS.18, L.3694
+                              Procedure                  46 PCLX.MSS.18, L.3696
+  8.31 PROMPT                                            47 PCLX.MSS.18, L.3788
+                              Prompt                     47 PCLX.MSS.18, L.3790
+  8.32 RETURN                                            48 PCLX.MSS.18, L.3858
+                              Return                     48 PCLX.MSS.18, L.3860
+  8.33 SELECT                                            49 PCLX.MSS.18, L.3904
+                              SELECT                     49 PCLX.MSS.18, L.3906
+  8.34 SELECTALL                                         50 PCLX.MSS.18, L.3995
+                              SELECTALL                  50 PCLX.MSS.18, L.3997
+  8.35 SET                                               51 PCLX.MSS.18, L.4066
+                              Set                        51 PCLX.MSS.18, L.4068
+  8.36 SYNONYM                                           52 PCLX.MSS.18, L.4115
+                              SYNONYM                    52 PCLX.MSS.18, L.4117
+  8.37 TYPEIN                                            53 PCLX.MSS.18, L.4146
+                              TypeIn                     53 PCLX.MSS.18, L.4148
+  8.38 UNDECLARE                                         54 PCLX.MSS.18, L.4204
+                              UNDECLARE                  54 PCLX.MSS.18, L.4206
+  8.39 UNTIL                                             55 PCLX.MSS.18, L.4241
+                              UNTIL                      55 PCLX.MSS.18, L.4243
+  8.40 WHILE                                             56 PCLX.MSS.18, L.4266
+                              While                      56 PCLX.MSS.18, L.4268
+I FDB Codes                                              57 PCLX.MSS.18, L.4293
+                              FDBCODES                   57 PCLX.MSS.18, L.4294
+II CRDIR/GTDIR Directory Argument Block                  67 PCLX.MSS.18, L.4302
+                              CRDIRBLOCK                 67 PCLX.MSS.18, L.4303
+III Facilities specific to the FNDP version of PCL       71 PCLX.MSS.18, L.4309
+ Index                                                   72 042S02.TMP.1, L.2
+ Table of Contents                                        1 042S01.TMP.1, L.3
+	Alphabetic Listing of Cross-Reference Tags and Labels
+
+Tag or Label Name                    Page   Label Value  Source file Location
+-----------------------------------------------------------------------------
+$ATOM                                  42        8.28  PCLX.MSS.18, L.3330
+$VALUE                                 42        8.28  PCLX.MSS.18, L.3322
+ABORT                                  18         8.4  PCLX.MSS.18, L.1967
+ASSIGNMENT                             19         8.5  PCLX.MSS.18, L.2002
+BEGIN                                  20         8.6  PCLX.MSS.18, L.2037
+CALL                                   21         8.7  PCLX.MSS.18, L.2091
+CASE                                   22         8.8  PCLX.MSS.18, L.2148
+CLEARTYPEOUT                           23         8.9  PCLX.MSS.18, L.2236
+COMMAND                                24        8.10  PCLX.MSS.18, L.2283
+COMPLEXPARSE                           10       5.1.2  PCLX.MSS.18, L.1502
+CRDIRBLOCK                             70          II  PCLX.MSS.18, L.4303
+DECLARE                                25        8.11  PCLX.MSS.18, L.2385
+DIRECTORYINFOCONSTANTS                  8         4.3  PCLX.MSS.18, L.976
+DIRECTORYLIST                          10         5.5  PCLX.MSS.18, L.1642
+DISPLAY                                26        8.12  PCLX.MSS.18, L.2479
+DO                                     27        8.13  PCLX.MSS.18, L.2538
+DOCOMMAND                              28        8.14  PCLX.MSS.18, L.2600
+DOLLARFILE                              8         4.3  PCLX.MSS.18, L.1050
+DOLLARPARSE                             7         4.1  PCLX.MSS.18, L.738
+ELSE                                   34        8.20  PCLX.MSS.18, L.2884
+END                                    20         8.6  PCLX.MSS.18, L.2039
+EXIT                                   29        8.15  PCLX.MSS.18, L.2647
+EXPRESSIONS                            15         8.1  PCLX.MSS.18, L.1846
+EXTERNAL                               30        8.16  PCLX.MSS.18, L.2706
+FDBCODES                               66           I  PCLX.MSS.18, L.4294
+FILCODES                                8         4.3  PCLX.MSS.18, L.1076
+FILEINFOCONSTANTS                       8         4.3  PCLX.MSS.18, L.1096
+FILELIST                               10         5.4  PCLX.MSS.18, L.1602
+FILEVARS                                7         4.2  PCLX.MSS.18, L.842
+GETTYPEOUT                             31        8.17  PCLX.MSS.18, L.2762
+GOTO                                   32        8.18  PCLX.MSS.18, L.2809
+GUIDE                                  33        8.19  PCLX.MSS.18, L.2845
+HELP                                   43      8.28.2  PCLX.MSS.18, L.3564
+IF                                     34        8.20  PCLX.MSS.18, L.2882
+INFORMATION                            35        8.21  PCLX.MSS.18, L.2927
+INPUTOUTPUT                            13              PCLX.MSS.18, L.1802
+INTEGER                                36        8.22  PCLX.MSS.18, L.2980
+INVOKE                                 37        8.23  PCLX.MSS.18, L.3017
+KILLPROGRAM                            38        8.24  PCLX.MSS.18, L.3075
+LABEL                                   4         3.1  PCLX.MSS.18, L.229
+NOORIGINAL                             40        8.26  PCLX.MSS.18, L.3150
+NOP                                    39        8.25  PCLX.MSS.18, L.3119
+ORIGINAL                               41        8.27  PCLX.MSS.18, L.3184
+PARSE                                  42        8.28  PCLX.MSS.18, L.3213
+PARSEERROR                             11         5.6  PCLX.MSS.18, L.1699
+PARSEFIELDOPTIONS                      43      8.28.2  PCLX.MSS.18, L.3487
+PARSEFIELDTYPES                        42      8.28.1  PCLX.MSS.18, L.3361
+PARSEINTRO                             10           5  PCLX.MSS.18, L.1439
+PCLFILE                                17         8.3  PCLX.MSS.18, L.1926
+PRESERVE                               45        8.29  PCLX.MSS.18, L.3647
+PROCEDURE                              46        8.30  PCLX.MSS.18, L.3696
+PROMPT                                 47        8.31  PCLX.MSS.18, L.3790
+RADIX                                  43      8.28.2  PCLX.MSS.18, L.3586
+RETURN                                 48        8.32  PCLX.MSS.18, L.3860
+SELECT                                 49        8.33  PCLX.MSS.18, L.3906
+SELECTALL                              50        8.34  PCLX.MSS.18, L.3997
+SET                                    51        8.35  PCLX.MSS.18, L.4068
+STATEMENTS                             16         8.2  PCLX.MSS.18, L.1895
+SYNONYM                                52        8.36  PCLX.MSS.18, L.4117
+TYPEIN                                 53        8.37  PCLX.MSS.18, L.4148
+UNDECLARE                              54        8.38  PCLX.MSS.18, L.4206
+UNTIL                                  55        8.39  PCLX.MSS.18, L.4243
+USERLIST                               10         5.5  PCLX.MSS.18, L.1643
+WHILE                                  56        8.40  PCLX.MSS.18, L.4268
+WORDS                                  43      8.28.2  PCLX.MSS.18, L.3605
+  

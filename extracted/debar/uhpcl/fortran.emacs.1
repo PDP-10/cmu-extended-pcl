@@ -1,0 +1,4201 @@
+!* PS:<BEEBE>FORTRAN.EMACS.611 15-Oct-82 14:56:55, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.609  5-Oct-82 20:59:32, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.603 16-Sep-82 18:22:18, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.601  7-Sep-82 18:35:08, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.598  5-Sep-82 12:56:53, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.597 20-Aug-82 16:59:00, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.595  4-Jul-82 08:58:03, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.592 23-Jun-82 18:06:12, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.591 12-Mar-82 12:52:25, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.588 11-Mar-82 12:28:24, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.585 26-Nov-81 12:14:32, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.582 25-Nov-81 18:28:18, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.580  2-Nov-81 10:28:56, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.579 31-Oct-81 16:43:14, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.572 30-Oct-81 19:10:50, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.564 25-Oct-81 12:29:46, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.561 24-Oct-81 20:48:10, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.537  9-Oct-81 10:45:28, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.530 30-Sep-81 11:10:48, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.520 23-Sep-81 12:50:37, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.511 19-Sep-81 11:09:56, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.509 21-Jul-81 18:52:33, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.507 18-Jul-81 14:04:56, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.506  1-Jul-81 15:47:11, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.498 16-Jun-81 19:27:10, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.495 13-Jun-81 20:18:13, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.487 12-Jun-81 15:47:25, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.482 11-Jun-81 19:19:52, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.479 10-Jun-81 13:07:34, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.475  6-Jun-81 17:09:27, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.470  5-Jun-81 16:39:44, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.463  3-Jun-81 17:10:34, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.446 30-May-81 17:54:22, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.444 11-May-81 11:43:01, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.438  9-May-81 09:59:33, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.433  8-May-81 19:38:10, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.419  7-May-81 13:09:22, Edit by BEEBE!
+!* PS:<BEEBE>FORTRAN.EMACS.413  4-May-81 18:53:31, Edit by BEEBE!
+!* -*- TECO -*- !
+!* These TECO macros have been developed from KMP's macros of!
+!* 23-Aug-80 12:14:20 which were distributed with the EMACS release!
+!* from MIT.  They have been extensively rewritten and commented as!
+!* part of my learning process with TECO.  Old TECO experts will!
+!* find much of the commenting redundant, but new users should find!
+!* it helpful in trying to understand the use of TECO.!
+!* New macros have been added for entering Hollerith text strings!
+!* and for converting source containing quoted strings to Portable!
+!* FORTRAN's Hollerith strings.  These have been put on the M-" and!
+!* M-' keys, rather than simply " and ', so as not to interfere with!
+!* their use in comments.  The indentation algorithm has been made!
+!* considerably more sophisticated, in order to support users who!
+!* wish to indent their code according to nesting level.!
+
+!* --Nelson H.F. Beebe, Department of Physics, College of Science!
+!*                      Computer, University of Utah, Salt Lake City, !
+!*                      UT 84112 !
+!*                      Tel: (801) 581-5254!
+
+
+!~Filename~:! ! FORTRAN Editing macros !
+FORTRAN
+
+!FORTRAN Mode:! !C Set up for FORTRAN editing.
+FORTRAN Mode defines the following:
+
+M-X Check Line Length    Scan buffer for lines exceeding a maximum
+                         length specified by the argument, or 72 if
+                         omitted.   It is useful for finding lines which
+                         have exceeded the permitted length due to
+                         editing changes.
+
+M-X Detab FORTRAN        Remove initial tabs from FORTRAN lines.  This
+                         function should be run before editing if the
+                         file contains initial tabs.   Most of the
+                         commands will not perform correctly if the
+                         file contains tabs.
+
+M-X Paginate FORTRAN     Insert page marks (^L) after each END
+                         statement.  This is often convenient to allow
+                         use of M-X SORT Pages to order routines
+                         alphabetically, or to allow use of the
+                         standard EMACS page editing commands (C-X P,
+                         C-X C-P, C-X ], C-X [).
+
+M-X Trim Lines           Trim lines to maximum length specified by
+			 argument; default is 72 if omitted.  This is
+			 useful for removing sequencing information in
+			 columns 73..80.  It may be undone with M-X
+			 UNDO. 
+
+M-X Unpaginate FORTRAN   Remove all page marks (^L) in the file.
+
+C-M-/     Insert COMMON statement
+C-M-;     Eliminates the comment text on a comment line 
+C-M-A     Insert DATA statement
+C-M-B     Insert BLOCKDATA statement
+C-M-C     Insert CHARACTER statement
+C-M-D     Insert DOUBLE PRECISION statement
+C-M-E     Insert END statement
+C-M-F     Insert FUNCTION statement
+C-M-G     Generate GO TO statement at point
+C-M-I     Insert INTEGER statement
+C-M-J     Generate IF statement at point
+C-M-K     Generate CALL statement at point
+C-M-L     Insert LOGICAL statement
+C-M-M     Insert IMPLICIT statement
+C-M-N     Insert NAMELIST statement
+C-M-O     Generate FORMAT statement at point
+C-M-Q     Generate READ statement at point
+C-M-R     Insert REAL statement
+C-M-U     Generate CONTINUE statement at point
+C-M-W     Generate WRITE statement at point
+C-M-X     Insert COMPLEX statement
+C-X-C     Check PFORT Character Set
+C-X-Tab   FORTRAN Rigidly Indent
+C-X-C-N   Find Floating-point Number
+C-X-.     Set FORTRAN Statement Column and fill prefix
+C-X-Linefeed Generate indented continued statement
+C-X-M     Mark indented region
+Linefeed  Drop through to next line and indent to current indentation level
+M-"       Generate an nnH... string at point
+M-`       Generate an nnH...,nn string,length at point
+M-'       Convert quoted strings to PORTABLE nnH.. Hollerith strings
+          (arg = number of strings to convert)
+M-(       Move left to first unmatched open parenthesis
+M-)       Copy parenthesized expression around point into kill ring
+M-*       Insert blanks around arithmetic operators (arg = number of
+          statements to process)
+M-#       Right-adjusts a statement label in columns 1..5 on the
+          current line (arg = number of lines to process)
+M-Backspace  Does FORTRAN Backward Tab, moving to preceding indentation
+          level and deleting intervening characters.  An argument may be
+          use to repeat the command.
+M-/       Move forward over FORTRAN item to next comma or terminal
+	  right parenthesis.
+M-;       Moves to head of comment line, making one if needed
+M-=       Displays a helpful column chart showing the label and
+          statement fields with markers at default tab positions and
+          column 72 flagged. 
+M-bang    Changes the program date line to current date.
+M-@       Inserts a program date line before current line.
+M-&       Finds the program date line.
+M-A       Moves to the beginning of a sentence (if in a comment), or
+          to the beginning of the statement text (if in a statement)
+M-E       Moves to the end of a sentence (if in a comment), or
+          to the end of the statement text (if in a statement)
+M-I       Does like normal tab outside EMACS but fills with spaces
+          to next column position which is a multiple of 8
+M-J       Makes a CRLF and indents for a continuation
+M-N       Moves to next FORTRAN comment line, making one if needed
+M-P       Moves to previous FORTRAN comment line, making one if 
+          needed
+M-S       Mark current statement or sentence so that, for example,
+          it can be killed by ^R Kill Region.
+M-space   Collapses multiple blanks after indentation column in 
+          current FORTRAN statement or comment line to single blanks.
+	  This function is useful for reformatting a single statement
+	  which has been edited or for which the indentation has been
+	  changed. 
+M-^       Removes indentation and leading CRLF and attaches to 
+          previous line
+M-{       Moves forward to next closing parenthesis ")]}", then puts 
+          cursor briefly at matching open parenthesis
+Rubout    Deletes backwards changing tabs to spaces
+Tab       Does FORTRAN Indent.  First tab goes to column 7,
+          subsequent tabs to nesting levels defined by variable 
+          FORTRAN Block Indentation.  An argument may be used to
+          repeat the command.
+
+Auto Fill Mode  is selected  by default.   In comments,  it has  the
+effect of producing a following comment line at the same indentation
+level when  the limit  in  the variable  Comment_continue_Column  is
+reached.   In  FORTRAN  statements,   continuation  lines  will   be
+automatically generated when the text  extends beyond column 72.   A
+carriage return (CR) always positions to column 1 of the next  line,
+but a linefeed (LF) positions to the current indentation level.
+
+The fill prefix changes as one moves from initial statement line  to
+continuation statement line  to comment statement  line, and it  may
+occasionally get  out of  synchronization so  that, for  example,  a
+statement line which extends past column 72 may generate a following
+comment line instead of the expected continuation line.  The  remedy
+for this is  simple.  Just use  Linefeed from the  previous line  to
+position to the desired column, or use C-X-. to set the fill  column
+according to the  line you are  on.  Both of  these update the  fill
+prefix according to the type of line that point is on.!
+
+!* If we are already in FORTRAN Mode, exit immediately.!
+
+@F=MODE/FORTRAN/"E  'W
+
+WM(M.M &_Init_Buffer_Locals)	    !* Clear all previous local variables.! 
+
+0M(M.M &_Alter_..D)._&A<A>A|A~A=A#A!A	    !* Set word syntax!
+
+1M(M.M &_Alter_..D).A&A<A>A|A~A=A#A!A	    !* Set LISP syntax!
+
+0M.L FORTRAN_Statement_Type
+
+1M.L Auto_Fill_Mode
+
+72M.L Fill_Column
+
+0M.C FORTRAN_Abstract_Format*_0 = no-op; non-0=insert_abstract_header_and_date_in_SUBROUTINE/FUNCTION_Insertion
+
+WM.L FORTRAN_Abstract_Format
+
+05M.C FORTRAN_Block_Indentation*_Number_of_columns_to_indent_block
+
+WM.L FORTRAN_Block_Indentation
+
+:I*)}]M.C FORTRAN_Close_Parentheses*_Parentheses_to_be_matched
+
+WM.L FORTRAN_Close_Parentheses
+
+:I*XM.C FORTRAN_Column_6*_Default_Continuation_Character
+
+WM.L FORTRAN_Column_6
+
+65M.C FORTRAN_Comment_Fill_Column*_Column_at_which_to_break_comments_in_auto_fill_mode  
+
+WM.L FORTRAN_Comment_Fill_Column
+
+:I*C_____M.C FORTRAN_Comment_Prefix*_Text_which_begins_comment_statements
+
+WM.L FORTRAN_Comment_Prefix
+
+05M.C FORTRAN_Continue_Indentation*_Number_of_columns_to_indent_continuation_lines_after_initial_line
+
+WM.L FORTRAN_Continue_Indentation
+
+24M.C FORTRAN_Declaration_Indentation*_Column_at_which_declaration_variable_lists_begin
+
+WM.L FORTRAN_Declaration_Indentation
+
+:I**/-+=&<>#|M.C FORTRAN_Operators*_List_of_operators_which_can_be_blank_padded
+
+WM.L FORTRAN_Operators
+
+:I*M.L Fill_Prefix		    !* Null string initially!
+
+7M.C FORTRAN_Statement_ColumnCurrent_statement_indentation_column
+
+WM.L FORTRAN_Statement_Column
+
+M(M.M Make_Local_Q-register).X(9)
+M.M ^R_FORTRAN_Rigidly_IndentU:.X(9)
+
+M.M ^R_FORTRAN_Backward_SentenceM.Q..A
+
+M.M ^R_FORTRAN_Backward_TabM.Q...H
+
+M.M ^R_FORTRAN_BLOCKDATAM.Q...B
+
+M.M ^R_FORTRAN_CALLM.Q...K
+
+M.M ^R_FORTRAN_CHARACTERM.Q...C
+
+M.M ^R_FORTRAN_Change_DateM.Q..!
+
+M.M ^R_FORTRAN_COMMONM.Q.../
+
+M.M ^R_FORTRAN_COMPLEXM.Q...X
+
+M.M ^R_FORTRAN_Continuation_Line_NextM.Q..J
+
+M.M ^R_FORTRAN_CONTINUEM.Q...U
+
+M.M ^R_FORTRAN_Copy_Parenthesized_ExpressionM.Q..)
+
+M.M ^R_FORTRAN_DATAM.Q...A
+
+M.M ^R_FORTRAN_Date_EditM.Q..@
+
+M.M ^R_FORTRAN_DOUBLEPRECISIONM.Q...D
+
+M.M ^R_FORTRAN_Eliminate_CommentM.Q...;
+
+M.M ^R_FORTRAN_Eliminate_Multiple_SpacesM.Q.._
+
+M.M ^R_FORTRAN_ENDM.Q...E
+
+M.M ^R_FORTRAN_Fill_RegionM.Q..G
+
+M.M ^R_FORTRAN_Fill_Tab_Field_with_SpacesM.Q..I
+
+M(M.M Make_Local_Q-register).X()W
+M.M ^R_FORTRAN_Find_Floating-point_NumberU:.X()W
+
+M.M ^R_FORTRAN_Find_DateM.Q..&
+
+M.M ^R_FORTRAN_Find_Unmatched_ParenthesisM.Q..(
+
+M.M ^R_FORTRAN_FORMATM.Q...O
+
+M.M ^R_FORTRAN_Forward_ItemM.Q../
+
+M.M ^R_FORTRAN_Forward_SentenceM.Q..E
+
+M.M ^R_FORTRAN_FUNCTIONM.Q...F
+
+M.M ^R_FORTRAN_GOTOM.Q...G
+
+M.M ^R_FORTRAN_Hollerith_TextM.Q.."
+
+M.M ^R_FORTRAN_Hollerith_Text_and_LengthM.Q..`
+
+M.M ^R_FORTRAN_IFM.Q...J
+
+M.M ^R_FORTRAN_IMPLICITM.Q...M
+
+M.M ^R_FORTRAN_IndentM.QI
+
+M.M ^R_FORTRAN_INTEGERM.Q...I
+
+M.M ^R_FORTRAN_LOGICALM.Q...L
+
+M(M.M Make_Local_Q-register).X(M)W
+M.M ^R_FORTRAN_Mark_Indented_RegionU:.X(M)W
+
+M.M ^R_FORTRAN_Mark_SentenceM.Q..S
+
+M.M ^R_FORTRAN_Matching_ParenthesisM.Q..{
+
+M.M ^R_FORTRAN_Merge_Continuation_with_PreviousM.Q..^
+
+1,M.M^R_FORTRAN_Minus_ConstantM.Q...-
+
+M.M ^R_FORTRAN_Move_to_Comment_FieldM.Q..;
+
+M.M ^R_FORTRAN_Move_to_Next_Comment_FieldM.Q..N
+
+M.M ^R_FORTRAN_Move_to_Previous_Comment_FieldM.Q..P
+
+M.M ^R_FORTRAN_NAMELISTM.Q...N
+
+M.M ^R_FORTRAN_NewlineM.Q
+
+
+M.M ^R_FORTRAN_Operator_PadM.Q..*
+
+1,M.M^R_FORTRAN_PARAMETERM.Q...P
+
+1,M.M^R_FORTRAN_Plus_ConstantM.Q...+
+
+M.M ^R_FORTRAN_Quoted_to_Hollerith_TextM.Q..'
+
+M.M ^R_FORTRAN_READM.Q...Q
+
+M.M ^R_FORTRAN_REALM.Q...R
+
+M.M ^R_FORTRAN_Right-adjust_LabelM.Q..#W
+
+M(M.M Make_Local_Q-register).X(.)W
+M.M ^R_FORTRAN_Set_Statement_ColumnU:.X(.)W
+
+M.M ^R_FORTRAN_Show_ColumnsM.Q..=
+
+M.M ^R_FORTRAN_Show_Declaration_ColumnsM.Q..+
+
+M.M ^R_FORTRAN_SUBROUTINEM.Q...S
+
+M.M ^R_FORTRAN_WRITEM.Q...W
+
+M(M.M Make_Local_Q-register).X(
+)
+M.M &_Generate_Indented_Continued_FORTRAN_StatementU:.X(
+)
+
+M(M.M Make_Local_Q-register).X(C)
+M.M Check_PFORT_Character_SetU:.X(C)
+
+Q(Q.M.Q)M.Q.
+
+Q.0,1M(M.M &_Set_Mode_Line)FORTRAN
+
+
+
+!& Collapse FORTRAN Statement:! !S Collapse a possibly multiline
+FORTRAN statement  into  a  single line.   The  routine  &  Generate
+Continued FORTRAN  Statement  can be  used  to reformat  it  in  the
+buffer, breaking at column 72.!
+
+.[0[1[2			    !* Save Q-registers and current!
+				    !* point in Q0.!
+
+WM(M.M ^R_FORTRAN_Set_Statement_Column)
+				    !* Update current statement!
+				    !* column. !
+
+<1L				    !* Position to column 1 of next line!
+
+(.+7-Z)U2W
+
+Q2"G0;'			    !* Exit loop if at end-of-buffer.!
+
+.,.+5F=_____U1			    !* Are columns 1..5 blank?!
+
+Q1"N0;'				    !* Exit loop if columns 1..5 non-blank!
+
+(-1,6A-0)"E 5C 1D I_ 0L'	    !* Replace a zero in column 6 by!
+				    !* a blank.!
+
+(-1,6A-32)"E0;'			    !* Exit loop if column 6 is a blank.!
+
+-2D 6D				    !* Backup over CR LF and kill CR!
+				    !* LF plus columns 1..6!
+>
+
+.U1				    !* Save final point.!
+
+-@F_	R		    !* Jump backwards to first!
+				    !* non-blank, non-tab.!
+
+Q1-."G				    !* IF initial position exceeds!
+				    !* current position!
+
+	1C 1K			    !* THEN trailing blanks were!
+				    !* found, so kill from last!
+				    !* blank to end-of-line. !
+
+	.U1			    !* Save last point modified.!
+
+	'			    !* END IF!
+
+Q0J				    !* Move pointer back to point at!
+				    !* entry. !
+
+Q0,Q1				    !* Bound changed region!
+
+				    !* Restore registers and return!
+				    !* to caller!
+
+
+!& Fix FORTRAN Label Field:! !S Arrange label field correctly 
+Expects to be run at start of line and will format the next 6 chars if
+on line as necessary... With an arg, this is a continuation line,
+without it is not.!
+
+0[1[7[8[9			    !* Save Q-registers.!
+
+M.M ^R_Delete_Horizontal_Space[9   !* Efficiency...Save function!
+				    !* in Q9 !
+
+0FO..Q FORTRAN_Indent_With_Tabs[8  !* Supply default flag and!
+				    !* then insert in Q8.  Space =!
+				    !* 0, Tabs = 1 ! 
+
+0:GFORTRAN_Column_6U7		    !* Get ASCII value of!
+				    !* continuation character in Q7.! 
+
+M9				    !* Delete all blanks right!
+				    !* here with function saved at!
+				    !* entry !
+
+FF"N			    !* IF argcount non-zero!
+	F"L			    !* THEN IF arg < 0!
+		OUndent'	    !*      THEN delete indentation!
+	"#			    !* ELSE {arg >= 0}!
+		OContin''	    !*      THEN continuation line!
+
+				    !* Skip past label if any ... !
+
+-1,1A-Q7"E			    !* IF col. 6 = continuation!
+				    !*      character !
+	D'			    !* THEN Delete it!
+
+1[0 <				    !* LOOP, ... !
+	-1,1A-71."G		    !* IF nextchar > '9'!
+		0;'		    !* THEN exit!
+	-1,1A-60."L		    !* IF nextchar < '0'!
+		0;'		    !* THEN exit!
+		C		    !* Advance over digit!
+		%0		    !* Increment column count!
+>				    !* END LOOP!
+
+M9				    !* Delete spaces after label !
+
+!* Insert spaces or tab as appropriate ...  !
+!* If  Q$FORTRAN Indent With Tabs$  is set nonzero, then fill with tabs !
+
+Q8"E				    !* IF flag = 0, fill with spaces!
+	<			    !* THEN LOOP!
+		(Q0-7);		    !*      exit if at col. 7!
+		I_		    !*      Insert a blank!
+		%0		    !*      increment coutn!
+	>'			    !* END LOOP!
+"#				    !* ELSE!
+	I	'		    !*      Insert a tab.!
+				    !* END IF!
+				    !* Return to caller!
+
+!Contin!
+
+I_____				    !* Move to head of line -!
+				    !* insert 5 blanks !
+-1,1A-Q7"N			    !* IF Col. 6 NOT continuation!
+				    !*      character !
+	Q7I'			    !* THEN insert a contin!
+				    !*      character. !
+
+				    !* Return to caller!
+
+!Undent!
+M9				    !* Delete blank spaces using!
+				    !* function stored in Q9 at entry.!
+-1,1A-Q7"E			    !* If col. 6 is continuation!
+				    !*      character !
+	D'			    !* THEN delete it!
+
+				    !* Return to caller.!
+
+
+!& Generate Continued FORTRAN Statement:! !S Generate a possibly
+continued FORTRAN statement from the line in which point is
+currently positioned. !
+
+.[0[1				    !* Save Q-registers and initial!
+				    !* point in Q0.!
+
+<				    !* LOOP splitting the line at!
+				    !* column 72.!
+
+:L				    !* Position to end of line!
+
+(FS S HPOS-72)U1W		    !* Get excess of line length!
+
+Q1:"G0;'			    !* Exit if 72 or fewer!
+				    !* characters on line!
+
+0L 72C 13I 10I			    !* Break at column 72!
+
+I_____ 0:GFORTRAN_Column_6I	    !* Insert columns 1..6!
+
+>
+
+.U1				    !* Save last point modified!
+
+Q0J				    !* Restore point to its initial!
+				    !* value.! 
+
+Q0,Q1				    !* Bound changed region.!
+
+				    !* Restore registers and return!
+				    !* to caller.! 
+
+!& Generate Indented Continued FORTRAN Statement:! !S Generate a possibly
+continued FORTRAN  statement  from the  line  in which  point  is
+currently positioned.  Line breaks are made to occur only  before
+arithmetic operators, spaces, or commas.!
+
+.[0[1				    !* Save Q-registers and initial!
+				    !* point in Q0.!
+
+WM(M.M ^R_FORTRAN_Set_Statement_Column)
+				    !* Update current statement!
+				    !* column. !
+
+<				    !* LOOP splitting the line at!
+				    !* column 72.!
+
+:L				    !* Position to end of line!
+
+(FS S HPOS-72)U1W		    !* Get excess of line length!
+
+Q1:"G0;'			    !* Exit if 72 or fewer!
+				    !* characters on line!
+
+1M(M.M &_Set_FORTRAN_Fill_Prefix)  !* Determine the correct fill prefix!
+
+0L 72C				    !* Position to column 72!
+
+-@:F_,/+-=R			    !* Jump back to a separator!
+				    !* character at which we can break!
+				    !* the line and delete the current!
+				    !* value returned.!
+
+13I 10I			    !* Break just before separator.!
+
+M(M.M ^R_Delete_Horizontal_Space)W !* Delete any leading white space!
+
+GFill_Prefix			    !* Insert fill prefix!
+
+>
+
+.U1				    !* Save last point modified!
+
+Q0J				    !* Restore point to its initial!
+				    !* value.! 
+
+Q0,Q1				    !* Bound changed region.!
+
+				    !* Restore registers and return!
+				    !* to caller.! 
+
+!& Indent FORTRAN Label:! !S Indent FORTRAN Label field.!
+
+!* This function is called by ^R FORTRAN Indent when point is in the!
+!* label field.  It right-adjusts any label and blanks through!
+!* column 6, leaving point before column 7.!
+
+[0[1				    !* Save Q-registers!
+
+.U1				    !* Save initial position!
+
+0L .U0				    !* Save head of line in Q0!
+
+Q1-Q0"E			    !* IF we are at beginning of line!
+
+	I______'		    !* THEN insert spaces!
+
+"#				    !* ELSE must have a label!
+
+	((-1,1A)-C)*((-1,1A)-c)*((-1,1A)-*)*((-1,1A)-#)"E
+				    !* IF this is a comment line!
+
+		Q1J		    !* THEN return to initial point!
+            
+	        6-FS S HPOS"G
+      
+			6-FS S HPOS<I_>'' 
+				    !* and insert blanks to put!
+				    !* initial position at column 7! 
+	"#
+		1M(M.M ^R_FORTRAN_Right-adjust_Label)'
+      
+				    !* ELSE right-adjust the label!
+
+'				    !* END IF (beginning of line)!
+
+:L .U1				    !* Save position of end-of-line!
+
+0L 6C				    !* Position to before column 7.!
+
+7UFORTRAN_Statement_Column	    !* Reset current statement column!
+      
+Q0,Q1				    !* Bound changed region!
+
+				    !* Restore registers and return!
+
+
+!& Indent FORTRAN Statement:! !S Indent statement field of FORTRAN text!
+
+!* This subroutine is for internal use by the function ^R FORTRAN Indent!
+!* It returns in Q1,Q2 the bounds of the changed region,!
+!* and preserves all other Q registers.!
+
+
+[0[1[2				    !* Save Q-registers. !
+
+FS S HPOSU1			    !* Remember current column number!
+
+0L				    !* Go to beginning of line!
+
+.U2				    !* Save beginning of changed!
+				    !* region.! 
+
+Q1-6"L				    !* IF we have filled some or all!
+				    !* columns of label field (1..5)!
+	(6-Q1)I_		    !* THEN blank fill up!
+				    !*      through column 6. !
+	Q2,Q2+5			    !*      Bound changed region!
+
+				    !*      Return to caller.!
+
+	'			    !* END IF!
+
+(-1,6A-0)*(-1,6A- )"E	    !* IF column 6 is a continuation!
+				    !* character !
+                                    !* THEN set Q0 to value of!
+				    !* FORTRAN continue indentation.!
+	FORTRAN_Continue_IndentationU0' 
+
+"# 0U0				    !* ELSE set Q0 to 0!
+
+'				    !* END IF!
+
+Q1C				    !* Back to original position. !
+
+				    !* Blank pad to next block level!
+(Q1-6)U1			    !* Set Q1 to number of!
+				    !* characters already in!
+				    !* statement field.!
+
+				    !* Insert padding blanks to next!
+				    !* block level.!
+Q1/QFORTRAN_Block_Indentation+1*QFORTRAN_Block_Indentation-Q1<I_>
+
+FS S HPOS+1UFORTRAN_Statement_Column
+				    !* Update current statement column.!
+
+Q0"G Q0<I_>'			    !* Insert any continue indentation.!
+
+.U1				    !* End of changed region.!
+
+Q2,Q1				    !* Q2,Q1 bound the changed region !
+
+				    !* Restore registers and return!
+
+!& Position for New Statement:! !S Position point for insertion of a
+new statement.  If point is already  at the beginning of a line,  or
+inside an entirely  blank line,  then insertion  occurs BEFORE  that
+line.  Otherwise, insertion  occurs AFTER that  line (even if  point
+was in the middle of the line  when this function was invoked).   On
+return, point is at the beginning of an empty line.!
+
+.[0				    !* Save Q0 and put current point!
+				    !* in it.!
+
+0L				    !* Go to the beginning of the line.!
+
+.-Q0"E				    !* IF we were at the beginning! 
+
+	WM(M.M ^R_CRLF)	    !* THEN make an empty line!
+
+	-1L'			    !* and go to beginning of it.!
+
+"#				    !* ELSE not at beginning of line!
+
+	:L			    !* THEN position to end of line!
+
+	-@F_	R	    !* Jump backward to the first!
+				    !* non-blank, non-tab character!
+
+	FS S HPOS"G		    !* IF we stopped BEFORE the!
+				    !* beginning of the line!
+
+		WM(M.M ^R_CRLF)'   !* THEN make a new line for the!
+				    !* insertion, since this line is! 
+				    !* not empty!
+
+	"#			    !* ELSE line is empty, so clear it!
+				    !* of unnecessary blanks!
+
+		M(M.M ^R_Delete_Horizontal_Space)
+
+	'			    !* END IF (we stopped before!
+				    !* beginning)! 
+
+'				    !* END IF (we were not at!
+				    !* beginning)! 
+
+				    !* Restore Q-registers and!
+				    !* return to caller.!
+
+!& Set FORTRAN Fill Prefix:! !S Determine the fill prefix and fill
+column according to the contents of the current line.  The variable
+FORTRAN Statement Type is set to -1 if the line is a comment, and to +1
+if it is a statement.!
+
+[0[1				    !* Save Q-registers!
+
+0L				    !* Position to beginning of!
+				    !* current line.!
+
+((-1,1A)-C)*((-1,1A)-c)*((-1,1A)-*)*((-1,1A)-#)"E
+				    !* IF on a comment (C,c,*,#)... !
+
+	QFORTRAN_Comment_Fill_ColumnUFill_Column
+				    !* THEN set the comment fill!
+				    !* column.! 
+
+	-1UFORTRAN_Statement_Type !* Indicate comment statement!
+
+	.U1			    !* Save location of beginning of!
+				    !* line.! 
+
+	:L			    !* Go to end of line.!
+
+	FS S HPOS-6"L		    !* IF linewidth is shorter than!
+				    !* 6 characters ! 
+
+		Q1,.X0		    !* THEN copy line into fill!
+				    !* prefix! 
+
+		6-FS S HPOS<:I00_>
+				    !* blank pad to 6 characters!
+		
+		Q0UFill_Prefix    !* and store in variable Fill!
+				    !* Prefix! 
+
+		'
+
+	"#			    !* ELSE previous line longer!
+				    !* than 7 characters!
+
+		0L 6C		    !* Position to before column 7!
+
+		W		    !* Flush current value.!
+
+		@F_	R  !* Jump to first non-blank!
+				    !* character; this determines!
+				    !* the fill prefix.!
+
+		Q1,.XFill_Prefix
+				    !* Copy line up to last blank!
+				    !* into fill prefix!
+
+		:L		    !* Move to end of current line!
+
+	''			    !* END IF (comment linewidth!
+				    !* less than 7)!
+
+"#				    !* ELSE (not a comment)!
+
+	1UFORTRAN_Statement_Type  !* Indicate FORTRAN statement!
+
+	:L			    !* Move to end of current line!
+
+	FS S HPOS-72"G		    !* IF linewidth greater than 72,!
+				    !* the next line must be a!
+				    !* continuation line, so make an!
+				    !* appropriate fill prefix for!
+				    !* it.! 
+
+		:I1_____	    !* THEN setup columns 1..5 in!
+				    !* Q1! 
+
+		QFORTRAN_Column_6U0
+				    !* Get continuation character in!
+				    !* Q0!  
+
+		:I110	    !* Append column 6 to Q1!
+
+		QFORTRAN_Statement_Column-7U0
+				    !* Number of blanks to insert to get!
+				    !* to statement column.!
+
+		QFORTRAN_Continue_Indentation+Q0U0
+				    !* Add any continue indentation!
+
+		Q0"G Q0<:I11_>'' !* Append the blanks to!
+				    !* Q1, if there are any.!
+
+	"#			    !* ELSE linewidth less than 73,!
+				    !* so next line will be an!
+				    !* initial line!
+
+		:I1		    !* Put a null string in Q1.!
+
+		QFORTRAN_Statement_Column-1<:I11_>
+				    !* Make a string of blanks in!
+				    !* Q1.!
+
+		'		    !* END IF (linelength greater!
+				    !* than 72)!
+
+	Q1UFill_Prefix	    !* Update the fill prefix.!
+
+	72UFill_Column	    !* Update the fill column.!
+
+'				    !* END IF (comment statement)!
+
+				    !* Restore registers and return!
+				    !* to caller.!
+
+!& Sort FORTRAN Pages:! !S Sort the region alphabetically page by page.
+You should put a page separator after the last page before  sorting.
+If you  don't, one  will  be made  automatically.   It will  not  be
+deleted automaticaly afterward.  This  function is adapted from  the
+SORT Library Sort Pages function by removing the Save for Undo code;
+we want to have that at a higher level in the Sort FORTRAN  Routines
+function.!
+
+ F[VB 
+ F[VZ 
+ :,.F FSBOUND
+ ZJ 0@L QPage_Delimiter[0
+ :S0W 0@F  "N .-Z"E O Win'' !* If there's a page delimiter!
+				    !* at the end already, fine.!	 
+ ZJ 0@F  "N I
+'				    !* Otherwise, insert a CRLF if!
+				    !* not one already! 
+ G0 FKC :S"L R.,ZK'	    !* and insert a page delimiter.!
+
+!Win!
+ M.M ^R_Next_Page[1
+
+ -1FS ^Pcase
+
+  @F 
+_R  1M1W 	    !* Do the sort.!
+
+ 				    !* Return to caller.!
+
+!Check Line Length:! !C Scan buffer for lines exceeding specified length.
+An argument of 0 or 1 (default if omitted) selects the default length of
+72; other positive arguments specify  that line length. The scan  begins
+at the current point and terminates at  the end of the first line  which
+is longer than the specified line length.  If the scan is  unsuccessful,
+point is left unchanged.!
+
+.[0[1				    !* Save Q-registers and current!
+				    !* point in Q0.!
+
+U1				    !* Arg = line length!
+
+-2"L 72U1'			    !* But supply default length =!
+				    !* 72 if arg < 2! 
+
+<				    !* LOOP over buffer!
+
+.-Z"E				    !* IF end of buffer reached!
+
+	Q0J			    !* THEN return to initial point,!
+
+	Q1:\U1			    !* convert length to characters,!
+
+	:FTNo_lines_exceeded_1_characters_in_length.
+				    !* tell user we failed,!
+
+	0;			    !* and exit the loop.!
+
+	'			    !* END IF!
+
+:L				    !* Move to end of current line!
+
+FS S HPOS-Q1"G 0;'		    !* Exit if current line length!
+				    !* exceeds value in Q1.!
+
+1L				    !* Advance to next line.!
+
+>				    !* END LOOP over buffer!
+
+				    !* Restore Q-registers and!
+				    !* return to caller.!
+
+
+!Check PFORT Character Set:! !C Search the buffer forward (no arg) or
+backward (arg <  0) for  the first  character outside  a comment  line
+which is not  a member of  the PFORT character  set, setting point  at
+that character,  and mark  where  the search  began.  If  an  explicit
+non-negative argument is given, display matching lines, including  the
+arg lines before  and after  the matching  line (just  like the  Occur
+function does).  
+Invoked by Check PFORT Character Set!
+
+.[0[1.[2			    !* Save Q-registers!
+
+U1				    !* Save argument.!
+
+WM(M.M ^R_Set/Pop_Mark)	    !* Set the mark at the start.!
+
+<				    !* LOOP over buffer!
+
+Q1"L				    !* IF arg negative!
+
+	.-B"E 0;'		    !* IF at beginning THEN exit loop.!
+
+	.-1,B@FABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=+-*/(),. 
+R				    !* THEN search backward!
+
+'
+"#				    !* ELSE!
+
+	.-Z"E 0;'		    !* IF at end THEN exit loop.!
+
+	.+1,Z@FABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=+-*/(),. 
+R				    !* search forward!
+
+'				    !* END IF!
+
+.U0				    !* Remember position.!
+
+0L (-1,1A-c)*(-1,1A-C)*(-1,1A-*)"N
+				    !* IF not on comment line!
+
+	:"L			    !* THEN IF arg >= 0!
+		FF"N	    !* THEN IF explicit arg given!
+			-Q1T Q1+1T  !* THEN type arg surrounding lines!
+			Q1"NFT~~~~~~~~
+'				    !* put out a separator line!
+			L	    !* and advance to next line.!
+			'
+		"#		    !* ELSE no explicit arg!
+		0;		    !* exit loop!
+		'		    !* END IF (explicit arg)!
+	'
+	"#			    !* ELSE arg < 0!
+		0;		    !* exit loop!
+	'			    !* END IF (arg >= 0)!
+'
+"#				    !* ELSE was a comment!
+
+	Q0J			    !* Go back where we left off.!
+
+'				    !* END IF (not on comment line)!
+
+>				    !* END LOOP!
+
+FF"N			    !* IF explicit argument!
+
+	:"L Q2J'		    !* THEN IF arg >= 0 THEN return to!
+				    !* start.! 
+	"# Q0J			    !* ELSE put point on illegal!
+				    !* character. !
+	'			    !* END IF (arg >= 0)!
+'
+"#				    !* ELSE!
+	Q0J			    !* Put point on illegal character.!
+
+'				    !* END IF (explicit argument)!
+
+				    !* Return to caller.!
+
+!Detab FORTRAN:! !C Replace FORTRAN initial tabs with  blanks.
+Invoke by M-X  Detab FORTRAN.  An  initial tab followed  by a  digit
+1..9 generates a continuation line; initial  tab followed by a 0  or
+non-digit positions to column 7.  A tab following a label in  column
+1..6 is replaced  by blank fill  through column 6.   Other tabs  are
+left unchanged.  Use the command M-X Untabify if you want to  remove
+any remaining tabs.!
+
+[0[1[2				    !* Save Q0, Q1, and Q2.!
+
+BJ				    !* Position to beginning of buffer!
+
+<				    !* LOOP until end of buffer!
+
+.+7-Z"G0;'			    !* Exit if we are at end of buffer.!
+
+0L				    !* Position to beginning of line.!
+
+.,.+5F=_____U1			    !* Are columns 1..5 blank?!
+
+Q1"E 1L !<! >'			    !* Yes, move down a line and!
+				    !* cycle loop.!
+
+(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"E 1L !<! >'
+				    !* Move down a line and cycle!
+				    !* loop if we have a comment!
+				    !* statement. !
+
+(-1,1A)-9"E			    !* IF first character is a tab (HT)!
+
+	(-1,2A)"D		    !* THEN IF second character is a digit!
+
+		(-1,2A)-0"E	    !* THEN IF second character is 0 digit!
+
+			2D	    !* Delete HT and 0 digit!
+
+			I______ '	    !* Blank columns 1..6!
+
+		"# 2D		    !* ELSE delete HT and digit !
+
+			I_____	    !* Blank columns 1..5!
+
+			0:GFORTRAN_Column_6I'
+				    !* Insert default continuation!
+				    !* character in column 6!
+		'		    !* END IF!
+
+	"#			    !* ELSE first character is HT!
+				    !* and second character is not!
+				    !* a digit.!
+
+		1D		    !* Delete HT!
+
+		I______'	    !* Blank columns 1..6!
+
+'
+"#				    !* ELSE first character is not a!
+				    !* tab.  Check for a statement!
+				    !* label followed by a tab.!
+
+	0U0			    !* Initialize column count. !
+
+	-1U1			    !* Initialize label-found flag!
+				    !* to NOT FOUND!
+
+	6<			    !* Scan columns 1..6!
+
+	%0			    !* Increment column count.!
+
+	-1,1A"D			    !* IF character is a digit!
+
+		(6-Q0)U2	    !* THEN determine columns left!
+				    !* to examine!
+
+		 Q2"G		    !* IF we are in columns 1..5!
+
+			0U1 '	    !* THEN set label-found flag to!	 
+				    !*      FOUND. !
+
+		"#		    !* ELSE (in column 6)!
+
+			(-1,1A-0)"E 1D I_''
+				    !* Blank any 0 in column 6.!
+
+		'		    !* END IF!
+
+	"#			    !* ELSE character is NOT a digit !
+
+		(-1,1A)-9"E	    !* THEN IF character is a tab!
+
+			1D	    !* THEN delete the tab,!
+
+			(7-Q0)<I_> !* blank through column 6,!
+
+			0;'	    !* and exit loop.!
+
+
+		(-1,1A)-32"N	    !* IF NOT blank or tab!
+
+			-1U1	    !* THEN set NOT FOUND flag in Q1!
+
+			0;'	    !* and exit loop! 
+
+	'			    !* END IF!
+
+	1C			    !* Advance to next character!
+
+	>			    !* END LOOP over columns 1..6!
+
+	Q1"E			    !* IF label found !
+
+				    !* THEN right adjust the label!
+		1M(M.M_^R_FORTRAN_Right-adjust_label)'
+
+
+
+'				    !* END IF!
+
+1L				    !* Advance to next line!
+
+>				    !* END LOOP!
+
+BJ				    !* Position to beginning of buffer!
+
+				    !* Return to caller.!
+
+!Expand for FORTRAN:! !C Expand RLBs compressed FORTRAN format to be
+readable For use locally on MC only. ^S is a space efficiency  hack.
+This routine will  search for  Control-S, delete it  and next  char,
+using next chars ascii val minus 32 as number of spaces to insert  !
+
+!--------------------UNUSED AT UTAH--------------------!
+
+[0[1
+J < :S; rd 1a-32 f( w d ) < i_ >  >  !* Expand ^S<char> into spaces !
+J < .-z;			         !* Loop truncating 72nd column !
+    1f<!COMS!
+      .u1 :l q1+7-."g l f;COMS' "# 0l'	 !* Exit if line obviously to short !
+      < .-(q1+6);		         !* Exit at char 6 !
+        1a-9"e 0;' c >		         !* Tab completes the label field !
+      .u1			         !* Put current location in q1 !
+      :l q1+66-."l q1+66,.k '	         !* If line is too long, kill some !
+      l > >			         !* Go to next line !
+J < .-z; :l 			         !* Loop going to end of each line !
+    M(M.M ^R_Delete_Horizontal_Space)   !* Deleting trailing blanks!
+    l > J			         !* Next line. Jump top when done. !
+ 
+
+!Paginate FORTRAN:! !C Remove existing page marks, then insert page
+marks at beginning of buffer and after every END statement  (including
+the last).  Page marks consist of the sequence FF CR LF at the end  of
+a line, so  that the  FF will  not be  visible when  the page  editing
+commands (C-X P, C-X C-P, C-X C-[ and C-X C-]) are used to concentrate
+editing on  a single  page at  a time.   The function  M-X  Unpaginate
+FORTRAN may be used to remove page marks installed by this  function.!
+
+.[0[9				    !* Save Q-registers and current!
+				    !* point in Q0!  
+
+!* PAGE library function use temporarily suppressed.  ^R Join Next!
+!* Page gets a NIB error and fails to do anything.!
+
+!*M.A PAGE^R_Insert_PagemarkU9!   !* Save the Insert Pagemark!
+				    !* function in Q9.  It is!
+				    !* normally not loaded.!
+
+@:I9/12I 13I 10I/		    !* Function to insert a FF CR LF!
+				    !* at end-of-line!
+
+1M.L Page_Flush_CRLF		    !* Indicate page delimiter is!
+				    !* CRLF FF CRLF!
+
+M(M.M Unpaginate_FORTRAN)	    !* Remove any existing pagemarks.!
+
+W				    !* Flush current value.!
+
+BJ				    !* Go to beginning of buffer.!
+
+M9				    !* Insert leading pagemark!
+
+<				    !* LOOP over all lines in buffer.!
+
+@F_	R		    !* Position to first character!
+				    !* which is not a blank or tab.!
+
+.-Z"E 0;'			    !* IF end-of-buffer THEN exit!
+				    !* loop.! 
+
+.,.+3F~END"E			    !* IF text is "END" (ignoring!
+				    !* letter case) ! 
+
+	.+3J			    !* THEN Position to character!
+				    !* following "END"!
+
+	@F_	R	    !* Position to first character!
+				    !* which is not a blank or tab.!
+
+	-1,1A-13"E		    !* IF character is CR!
+
+		(-1,2A-10)"E 2C @M9'	    
+				    !* THEN we have a valid END!
+				    !* statement, so insert a!
+				    !* pagemark after the CRLF.! 
+
+		.+3-Z"G 0;'	    !* IF we are at end-of-buffer, exit!
+				    !* loop.! 
+
+		'		    !* END IF (character is CR)!
+
+	'			    !* END IF (text is "END")!
+
+1L				    !* Move to beginning of next!
+				    !* line.!
+
+>				    !* END LOOP (over lines)!
+
+W				    !* Flush value.!
+
+Q0J				    !* Return to where we started!
+				    !* from (approximately, since we!
+				    !* inserted text in the buffer).!
+
+				    !* Return to caller.!
+
+!Sort FORTRAN Routines:! !C Sort FORTRAN routines alphabetically in the
+buffer region between point and mark.  This function works by invoking
+the command M-X  Paginate FORTRAN,  then searches the  page for  BLOCK
+DATA, PROGRAM, SUBROUTINE, and FUNCTION keywords, and if one is found,
+the routine name  is extracted  and stored in  a comment  line at  the
+beginning of the page.   A private version of  the Sort Pages  command
+from the  SORT library  which suppresses  the Save  for Undo  is  then
+invoked to sort the routines.   The leading comment lines inserted  in
+the previous  step are  then  deleted and  finally, the  function  M-X
+Unpaginate FORTRAN is invoked to  remove the page marks.  The  comment
+lines  inserted  are  intentionally  prefixed  with  leading   control
+characters (5 ^Q's) to make them  unique.  You can undo the effect  of
+this command with M-X Undo.!
+
+:I*Sort_FORTRAN_Routines_inM(M.M &_Save_Region_and_Query)F"E'
+
+0[1[2[3[4			    !* Save Q-registers!
+
+:,.F [0F[VB			    !* Put B at start of!
+				    !* region, point at end.!
+
+Q0J				    !* Go to the end of the region.!
+
+FS Z-.F[VZ			    !* Set Z at end of region!
+
+WM(M.M Paginate_FORTRAN)W
+
+ZJ				    !* Move to end of paginated region!
+
+:,.F [0F[VB			    !* Put B at start of!
+				    !* region, point at end.!
+
+Q0J				    !* Go to the end of the region.!
+
+FS Z-.F[VZ			    !* Set Z at end of region!
+
+BJ				    !* Move to beginning of buffer!
+
+:I3C			    !* Special comment line to be!
+				    !* inserted at start of each page.!
+
+<				    !* LOOP over all pages in the buffer!
+
+.+3-Z"G 			    !* Exit loop at end-of-buffer.  ^R!
+				    !* Next Page positions point after!
+	!ZJ!			    !* the FF and before the following!
+	!G3 I	13I 10I!    !* CRLF, so we allow for that here.!
+	0;'			    !* We insert an identifying comment!
+				    !* line on the last empty page which!
+				    !* will keep it there as the last page.!
+
+
+
+1L				    !* Move to beginning of first line!
+				    !* following page mark.!
+
+.U0				    !* Save location of start of first!
+				    !* line.! 
+
+1:SSUBROUTINEPROGRAMFUNCTIONBLOCKDATABLOCK_DATA"L
+				    !* IF we found a keyword!
+
+	.U1			    !* THEN remember where we are!
+
+	FKC			    !* Back up to beginning of matching!
+				    !* string! 
+
+	.,.+5F~BLOCK"E		    !* IF we found BLOCK DATA!
+		Q0J		    !* THEN go back to start of buffer!
+
+		G3 IBLOCK_DATA 13I 10I'
+				    !* and insert identifying comment!
+				    !* line.! 
+
+	"#			    !* ELSE (not BLOCK DATA)!
+
+		Q1J		    !* Return to end of match!
+
+		@F_	R  !* Skip forward to first non-blank,!
+				    !* non-tab! 
+
+		.U1		    !* Save position!
+
+		@:F(_
+	R  
+				    !* Skip forward to next left!
+				    !* parenthesis, blank, CR, LF, FF!
+				    !* or tab.!  
+
+		Q1,.X4		    !* Save routine name in Q4!
+
+		Q0J		    !* Return to start of page!
+
+		G3 G4 13I 10I	    !* Insert identifying comment!
+
+	''			    !* END IF (BLOCK DATA)!
+
+"#				    !* ELSE (did not find keyword)!
+
+	Q0J			    !* Return to start of page!
+
+	G3 13I 10I		    !* Insert empty identifying comment!
+				    !* line! 
+
+'				    !* END IF!
+
+1M(M.M ^R_Next_Page)W		    !* Advance to next page!
+
+>				    !* END LOOP (over buffer pages)!
+
+ZJ				    !* Goto end of buffer!
+
+:,.F [0F[VB			    !* Put B at start of!
+				    !* region, point at end.!
+
+Q0J				    !* Go to the end of the region.!
+
+FS Z-.F[VZ			    !* Set Z at end of region!
+
+M(M.M &_Sort_FORTRAN_Pages)	    !* Sort the pages with our private!
+				    !* version of the SORT library Sort!
+				    !* Page function which does not do a!
+				    !* Save for Undo internally.!
+
+ZJ				    !* Goto end of buffer!
+
+-1,0A-12"E 13I 10I'		    !* If last character is FF, insert!
+				    !* CR LF to make a proper pagemark;!
+				    !* Sort screws this up.!
+
+BJ				    !* Goto beginning of buffer!
+
+<				    !* LOOP over all pages!
+
+.-Z+3"G 0;'			    !* Exit if at end-of-buffer!
+
+1L				    !* Go to beginning of first line.!
+
+.,.+6F=3"E 1K'		    !* Kill matching comment line!
+
+1M(M.M ^R_Next_Page)W		    !* Advance to next page!
+
+>				    !* END LOOP (over buffer pages)!
+
+ZJ				    !* Go to end of buffer!
+
+:,.F [0F[VB			    !* Put B at start of!
+				    !* region, point at end.!
+
+Q0J				    !* Go to the end of the region.!
+
+FS Z-.F[VZ			    !* Set Z at end of region!
+
+WM(M.M Unpaginate_FORTRAN)W
+
+				    !* Return to caller!
+
+!Sort FORTRAN Tokens:! !C Sort FORTRAN tokens into alphabetical order
+in the  region  between point  and  mark.   A token  begins  with  any
+non-delimiter  character,  and  ends   immediately  before  the   next
+non-delimiter character  which follows  a comma  which is  not  inside
+nested parentheses.  A typical application might be sorting a list  of
+variable names (some perhaps followed by dimension lists) in a FORTRAN
+type declaration.  It may be undone with M-X Undo.!
+
+:I*Sort_Tokens_inM(M.M &_Save_Region_and_Query)F"E'
+				    !* Set up for possible later UNDO!
+				    !* or aborting this command.! 
+
+[0[1				    !* Save Q-registers!
+
+:,.F [0F[VB			    !* Put B at start of!
+				    !* region, point at end.!
+
+Q0J				    !* Go to the end of the region.!
+
+FS Z-.F[VZ			    !* Set Z at end of region!
+
+ZJ @I/,/			    !* Insert a comma at!
+				    !* end-of-buffer. !
+
+BJ				    !* Go back to beginning of buffer. !
+
+M.M ^R_FORTRAN_Forward_ItemU1	    !* Save function in Q1!
+
+@:S//"L-1C'"#ZJ'1M1@:S//"L-1C'"#ZJ'
+				    !* Sort the buffer!
+
+ZJ WM(M.M ^R_Delete_Horizontal_Space)
+				    !* Trim end of buffer.!
+
+ZJ -1,0A-44"E -1D'		    !* and delete any unwanted extra!
+				    !* delimiter at end-of-buffer!
+
+				    !* Restore Q-registers and return to!
+				    !* caller. !
+
+!Trim Lines:! !C Trim lines in the buffer to a specified maximum
+length, deleting  trailing white  space.  An  argument of  0 or  1  (the
+default if  omitted) selects  the default  of 72  characters.  A  larger
+argument may be  used to specify  that value for  the line length.   M-X
+UNDO may be used to undo the command. !
+
+:I*Trim_Lines_inM(M.M &_Save_Region_and_Query)F"E'
+				 !* Set up for possible later UNDO or!
+				 !* aborting this command.!
+
+.[0[1[2				    !* Save Q-registers and current!
+				    !* point in Q0.!
+
+M.M ^R_Delete_Horizontal_Space[2   !* Efficiency...Save function!
+				    !* in Q2 !
+
+U1				    !* Arg = line length!
+
+-2"L 72U1'			    !* But supply default length =!
+				    !* 72 if arg < 2! 
+
+<				    !* LOOP over buffer!
+
+.-Z"E Q0J 0;'			    !* Exit at end of buffer after!
+				    !* returning to previous point.!
+
+:L				    !* Move to end of current line!
+
+FS S HPOS-Q1"G			    !* IF current line length exceeds!
+				    !* specified limit!
+	
+	0L Q1C			    !* THEN move to limit column!
+
+	:K			    !* kill to remainder of line!
+
+	'			    !* END IF!
+
+M2				    !* Delete trailing blanks!
+
+1L				    !* Advance to next line.!
+
+>				    !* END LOOP over buffer.!
+
+				    !* Restore Q-registers and return to!
+				    !* caller.!
+
+!Unpaginate FORTRAN:! !C Remove pagemarks from FORTRAN file.!
+
+
+.[0[1[2[3[4			    !* Save Q-registers and put current!
+				    !* point in Q0.!
+
+BJ				    !* Position to start of buffer.!
+
+12:I2 13:I3 10:I4 :I1234	    !* Get FF CR LF in Q1!
+
+
+<				    !* LOOP over buffer!
+
+.+3-Z"G 0;'			    !* IF at end-of-buffer THEN exit loop!
+
+1:S1;			    !* Search for FF CR LF, exiting if!
+				    !* not found.!
+
+
+-3D				    !* Delete the FF CR LF!
+
+>				    !* END LOOP (over buffer)!
+ 
+ZJ -1,0A-12"E -D'		    !* If last character in buffer is!
+				    !* FF, delete it.!
+
+Q0-Z"G				    !* If initial point is past!
+				    !* end-of-buffer (because we shrank)!
+
+	ZJ '			    !* THEN go to end-of-buffer!
+
+"#				    !* ELSE (Q0 in buffer)!
+
+	Q0J'			    !* Move back to initial point.!
+
+				    !* Restore registers and return to!
+				    !* caller. !
+
+!^R FORTRAN Backward Sentence:! !^R Move to the beginning of a
+sentence (if in a comment), or to the beginning of the statement
+field (if in a statement).  Mark is set to the value of point at
+entry.  An argument may be used to repeat the command (arg = 0 does
+nothing, arg < 0 runs ^R FORTRAN Forward Sentence).  
+Invoked by ^R FORTRAN Backward Sentence!
+
+.[0[1[2				    !* Save Q registers and put current!
+				    !* point in Q0.! 
+
+U2				    !* Get argument count.!
+
+Q2"L -Q2:M(M.M ^R_FORTRAN_Forward_Sentence)'
+				    !* IF arg negative, search in!
+				    !* reverse direction and return!
+				    !* directly to caller.!
+
+Q2"E '			    !* Exit immediately if argument zero!
+
+@M(M.M ^R_Set/Pop_Mark)W	    !* Set mark to point.!
+
+Q2<				    !* LOOP arg times!
+
+0L				    !* Move to beginning of line!
+
+!begin!				    !* Jump here if we move off the!
+				    !* current FORTRAN statement!
+
+((-1,1A)-C)*((-1,1A)-c)*((-1,1A)-*)*((-1,1A)-#)"E 
+				    !* IF we are in a comment !
+				    !* THEN use standard text!
+				    !* function! 
+	1M(M.M ^R_Backward_Sentence)'
+
+"#				    !* ELSE (statement)!
+
+	0U1			    !* Set completion flag in Q1!
+
+	W			    !* Flush current value.!
+
+	<			    !* LOOP looking for statement!
+				    !* beginning !
+
+	(.-B)"E			    !* IF we are at beginning of!
+				    !* buffer!  
+
+		6C		    !* THEN position to before!
+				    !* column 7!
+
+		@F_	R  !* Jump to first non-blank,!
+				    !* non-tab.! 
+
+		0;'		    !* and exit.!
+
+	((-1,1A)-C)*((-1,1A)-c)*((-1,1A)-*)*((-1,1A)-#)"E -1U1 0;'
+				    !* IF we reach a comment line, then!
+				    !* restart scan.!
+
+	(-1,6A-32)*(-1,6A-0)"E    !* IF we are on an initial!
+				    !* statement line!
+
+		6C		    !* THEN position to before!
+				    !* column 7!
+
+		@F_	R  !* Jump to first non-blank!
+
+		(.-Q0)"L 0;'	    !* IF we have moved backwards in!
+				    !* the buffer, THEN exit iteration!
+
+		-1L -1U1 0;'	    !* Move back one line and!
+				    !* restart the scan.!
+
+	"#			    !* ELSE (on a continuation line)!
+
+		-1L		    !* Move back one line and!
+				    !* continue search.!
+
+		'		    !* END IF!
+
+	>			    !* END LOOP!
+
+	Q1"N Obegin'		    !* Restart scan on failure.!
+
+'				    !* END IF (comment or statement)!
+
+>				    !* END LOOP (arg times)!
+
+W				    !* Flush current value!
+
+0				    !* Indicate no change to buffer!
+
+				    !* Restore Q-registers and!
+				    !* return to caller! 
+
+!^R FORTRAN Backward Tab:! !^R Tab to preceding indentation level
+with rubout of intervening characters.  A positive argument may be  used
+to repeat the command.  The current  statement column is updated to  the
+beginning column on completion.
+Invoked by ^R FORTRAN Backward Tab!
+
+:"G -:M(M.M ^R_FORTRAN_Indent)'	    
+				    !* Use ^R FORTRAN Indent if!
+				    !* argument not positive.!
+
+.[0[1[2				    !* Save Q-registers and put!
+				    !* current point in Q0.!
+
+<				    !* LOOP arg times!
+
+FS S HPOS-6"G			    !* IF we are past column 7 (note!
+				    !* that FS S HPOS + 1 = current!
+				    !* column number)! 
+
+	QFORTRAN_Block_IndentationU2
+				    !* THEN delete back to preceding!
+				    !* indentation level.!
+
+	((FS S HPOS-7)/Q2)*Q2+7U1
+				    !* New column number.!
+
+	(FS S HPOS-Q1+1)<-1D>'	    !* Delete backwards to new!
+				    !* column number.!
+
+	Q1UFORTRAN_Statement_Column
+
+"#				    !* ELSE not past column 7!
+
+	7UFORTRAN_Statement_Column
+
+	FS S HPOS"E 0;'	    !* THEN exit loop if at!
+				    !* beginning of line,!
+
+	FS S HPOS<-1D>'	    !* otherwise delete back to!
+				    !* column 1.!  
+
+>				    !* END LOOP!
+
+.,Q0				    !* Bound changed region.!
+
+				    !* Restore Q-registers and!
+				    !* return to caller.!
+
+!^R FORTRAN BLOCKDATA:! !^R Insert BLOCKDATA and END Statement.
+Invoked by ^R FORTRAN BLOCKDATA!
+
+[0				    !* Save Q0.!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______BLOCK_DATA 
+
+.U0				    !* Save point to return to.!
+
+WM(M.M ^R_CRLF)
+
+QFORTRAN_Abstract_Format"N	    !* IF abstract format requested!
+
+     IC_____()			    !* THEN insert header and date!
+				    !* comment lines.!
+
+     WM(M.M ^R_CRLF)W 
+
+     1M(M.M ^R_FORTRAN_Date_Edit)
+
+     '				    !* END IF!
+
+I______END
+
+WM(M.M ^R_CRLF)
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continuation point.!
+
+
+!^R FORTRAN CALL:! !^R Generate CALL Statement at point.
+Invoked by ^R FORTRAN CALL!
+
+[0				    !* Save Q0!
+
+ICALL__() 
+
+.-3U0				    !* Save location of name!
+
+WM(M.M ^R_CRLF) 
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to insert name!
+
+
+!^R FORTRAN Change Date:! !^R Change the program date line.
+If invoked without an argument,  the buffer is searched backward  to
+find the  SUBROUTINE, FUNCTION,  BLOCK DATA,  or PROGRAM  statement,
+then forward for a date line of the standard form.  If invoked  with
+an argument, the search begins at  the start of the buffer  instead.
+If a date  line is found,  it is  replaced by one  with the  current
+date, and point remains unchanged.  
+Invoked with ^R FORTRAN Change Date.!
+
+[0.[1				    !* Save Q-registers!
+
+FF"N			    !* IF called with an argument!
+
+	BJ'			    !* THEN go to start of buffer!
+"#
+
+	-1:S______SUBROUTINE_______PROGRAM_______BLOCK_DATA______BLOCKDATA__FUNCTION_"E BJ'
+				    !* ELSE search backwards for the!
+				    !* header statement, reverting!
+				    !* to beginning of buffer if the!
+				    !* search fails.!
+'				    !* END IF (invoked without arguments)!
+
+QFORTRAN_Comment_PrefixU0	    !* Get comment prefix.!
+
+0FS S ERROR			    !* Don't let failure cause error!
+				    !* message! 
+
+<				    !* LOOP over buffer!
+
+:S
+0("E			    !* Search for first possible date!
+				    !* line, and exit if not found.!
+	:FTNo_date_line_found	
+
+	0;'
+
+-1,1A"D				    !* Test for date pattern DD-AAA-DD)!
+-1,2A"D				    
+-1,3A--"E
+-1,4A"A
+-1,5A"A
+-1,6A"A
+-1,7A--"E
+-1,8A"D
+-1,9A"D
+-1,10A-)"E
+
+0L 1K				    !* Matched--Kill this line!
+
+1M(M.M ^R_FORTRAN_Date_Edit)	    !* Insert a new date!
+
+0;				    !* Exit the loop!
+
+''''''''''			    !* END 10 nested IFs!
+
+>				    !* END LOOP over buffer.!
+
+Q1J				    !* Move back to point at entry.!
+
+				    !* Restore Q-registers and return to!
+				    !* caller.!
+
+!^R FORTRAN CHARACTER:! !^R Insert CHARACTER Statement.  An positive argument
+can be used to supply the length attribute '*n'.  A negative argument value
+inserts the subprogram argument length attribute '*(*)'.
+Invoked by ^R FORTRAN CHARACTER!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______CHARACTER
+
+FF"N			    !* If we were invoked with an!
+				    !* argument !
+	I*			    !* THEN insert length attribute!
+	"G \'		    !* *n if arg > 0!
+	"# I(*)''		    !* *(*) if arg <= 0!
+I_
+
+QFORTRAN_Declaration_Indentation-FS S HPOS-1<I_>
+
+.U0				    !* Save continue point.!
+
+!* WM(M.M ^R_CRLF)W!
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+!^R FORTRAN COMMON:! !^R Insert COMMON Statement.
+Invoked by ^R FORTRAN COMMON!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______COMMON_// 
+
+.-1U0				    !* Save return point.!
+
+WM(M.M ^R_CRLF)
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to insert name!
+
+
+
+!^R FORTRAN COMPLEX:! !^R Insert COMPLEX Statement.
+Invoked by ^R FORTRAN COMPLEX!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______COMPLEX_  
+
+QFORTRAN_Declaration_Indentation-15<I_>
+
+.U0				    !* Save continue point.!
+
+!* WM(M.M ^R_CRLF)W!
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+!^R FORTRAN Continuation Line Next:! !^R Get new line, make it a continuation.
+Invoked by ^R FORTRAN Continuation Line Next!
+
+
+.[0[1[2				    !* Save Q-registers and initial!
+				    !* point in Q0.!
+
+WM(M.M ^R_FORTRAN_Set_Statement_Column)
+				    !* Update current statement!
+				    !* column. !
+
+:I1_____			    !* THEN setup columns 1..5 in!
+				    !* Q1! 
+
+QFORTRAN_Column_6U0		    !* Get continuation character in!
+				    !* Q0!  
+
+:I110			    !* Append column 6 to Q1!
+
+
+QFORTRAN_Statement_Column-7U0	    !* Number of blanks to insert to get!
+				    !* to statement column.!
+
+.U2 0L				    !* Save current point in Q2 and go!
+				    !* to beginning of line!
+
+.,.+6F~1"N			    !* If this is NOT a continuation!
+				    !* line, THEN!
+	Q2J			    !* Move back to initial position and!
+
+	QFORTRAN_Continue_Indentation+Q0U0'
+				    !* add any continue indentation!
+
+	"# Q2J '		    !* ELSE move back to initial position.!
+
+Q0"G Q0<:I11_>''		    !* Append the blanks to!
+				    !* Q1, if there are any.!
+
+
+13I 10I			    !* Insert CRLF !
+
+M(M.M ^R_Delete_Horizontal_Space)W !* Delete any leading white space!
+
+G1				    !* Insert line continuation!
+
+.U1				    !* Save last point modified!
+
+Q0,Q1				    !* Bound changed region.!
+
+				    !* Return to caller!
+
+!^R FORTRAN CONTINUE:! !^R Generate CONTINUE Statement at point.
+Invoked by ^R FORTRAN CONTINUE!
+
+ICONTINUE  
+
+WM(M.M ^R_CRLF)W
+
+
+
+!^R FORTRAN Copy Parenthesized Expression:! !^R Set point and mark at (..)
+and copy the contents of the expression (minus the parentheses) into the
+kill ring.  On exit, the point is unchanged, and the end and beginning 
+positions of the string are on the mark stack which may be popped by
+^R Set/Pop Mark.  Invoked by ^R FORTRAN Copy Parenthesized Expression!
+
+.[0[1				    !* Save Q-registers!
+           
+-1U1				    !* Initialize unbalenced parentheses!
+				    !* count.!  
+
+<				    !* LOOP backwards over buffer!
+
+.-B"E 0;'			    !* Exit at beginning of buffer!
+
+-1,1A-)"E Q1-1U1'		    !* Decrement count at right paren!
+
+-1,1A-("E Q1+1U1'		    !* Increment count at left paren!
+
+Q1"E 0;'			    !* Exit if count = 0!
+
+:R				    !* Backup one character!
+
+>				    !* END LOOP backward over buffer !
+
+1:C				    !* Move right over parenthesis!
+
+WM(M.M ^R_Set/Pop_Mark)	    !* Set the mark here.!
+
+1U1				    !* Initialize unbalenced parenthesis!
+				    !* count. !
+
+<				    !* LOOP forward over buffer!
+
+.-Z"E 0;'			    !* Exit at end of buffer!
+
+-1,1A-)"E Q1-1U1'		    !* Decrement count at right paren!
+
+-1,1A-("E Q1+1U1'		    !* Increment count at left paren!
+
+Q1"E 0;'			    !* Exit if count = 0!
+
+1:C				    !* Move forward one character!
+
+>				    !* END LOOP forward over buffer !
+
+1M(M.M ^R_Copy_Region)		    !* Copy the marked region into the!
+				    !* kill ring.!
+
+WM(M.M ^R_Set/Pop_Mark)	    !* Set the mark here.!
+
+Q0J				    !* Move back to original position!
+
+				    !* Restore Q-registers and return to!
+				    !* caller.!
+
+!^R FORTRAN DATA:! !^R Insert DATA Statement.
+Invoked by ^R FORTRAN DATA!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______DATA_ 
+
+QFORTRAN_Declaration_Indentation-12<I_>
+
+.U0				    !* Save continue point.!
+
+!* WM(M.M ^R_CRLF)W !
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+
+!^R FORTRAN Date Edit:! !^R Insert comment line with current date.
+Invoked by ^R FORTRAN Date Edit!
+
+0L				    !* Move to start of current line.!
+
+WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at this line.!
+
+GFORTRAN_Comment_Prefix
+
+I(			    !* Insert C    (NN-MON-YY)!
+
+0,(FSDATE)FSFDCONV
+
+-9D				    !* Kill time field.!
+
+I)
+
+-3M(M.M ^R_Uppercase_Word)	    !* Convert date to uppercase!
+
+0L 7C (-1,1A-32)"E 1D I0 -1C' 10C  !* Change leading blank in date!
+				    !* to 0 and position following!
+				    !* date field for end-of-line!
+				    !* insertion. !
+
+WM(M.M ^R_CRLF)W
+
+				    !* Return to caller.!
+
+!^R FORTRAN DOUBLEPRECISION:! !^R Insert DOUBLEPRECISION Statement.
+Invoked by ^R FORTRAN DOUBLEPRECISION!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______DOUBLE_PRECISION_ 
+
+QFORTRAN_Declaration_Indentation-24<I_>
+
+.U0				    !* Save continue point.!
+
+!* WM(M.M ^R_CRLF)W !
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+
+!^R FORTRAN Eliminate Comment Field:! !^R If on a comment line,
+delete its text, leaving point in column 7 of an empty comment line.
+Invoked by ^R FORTRAN Eliminate Comment Field!
+
+.[0				    !* Save initial position!
+
+FF"E			    !* IF no arg !
+	0L'			    !* THEN go to head of line !
+	"# L'			    !* ELSE go arg lines forward !
+
+((-1,1A)-C)*((-1,1A)-c)*((-1,1A)-*)*((-1,1A)-#)"E   
+				    !* IF on a comment (C,c,*,#)... !
+	.U0			    !* THEN save position of!
+				    !*      beginning of line.! 
+	:K			    !*      Kill all but newline!
+	GFORTRAN_Comment_Prefix   !*      Insert an empty comment!
+				    !*      line. !
+	.-1,Q0		            !*      Bound changed region and!
+	'			    !*      return to caller!
+
+"#	Q0J			    !* ELSE jump back to initial position!
+	0			    !*      mark buffer unchanged and!
+	'			    !*      return to caller.!
+
+!^R FORTRAN Eliminate Multiple Spaces:! !^R Eliminate multiple
+spaces in current FORTRAN statement or comment statement after
+current indentation column.  
+Invoked by ^R FORTRAN Eliminate Multiple Spaces!
+
+.[0[1[2				    !* Save Q-registers and put!
+				    !* point in Q0. !
+
+M(M.M &_Collapse_FORTRAN_Statement)W
+				    !* Collapse following!
+				    !* continuation lines.!
+
+
+:L FS S HPOSU1 0L		    !* Get statement length in Q1.!
+
+(QFORTRAN_Statement_Column-Q1)"G '
+				    !* Return if statement shorter!
+				    !* than indentation column.!
+
+(QFORTRAN_Statement_Column-1)CW  !* Position to start of indented!
+				    !* text. !
+
+<				    !* LOOP over rest of line!
+
+(-1,1A)U1			    !* Get next character!
+
+(Q1+1)*(Q1-13)"E 0;'		    !* Exit loop if end-of-buffer or!
+				    !* end-of-line (CR)!
+
+(Q1-32)"E			    !* IF character is a blank!
+
+	(-1,2A)U2		    !* THEN Get character following the blank!
+
+	(Q2-32)"E 		    !* IF next character is a blank,!
+
+		1D'		    !* THEN delete it.!
+	"# 
+		1C		    !* ELSE advance to next character!
+
+	' 			    !* END IF (next character is blank)!
+	'
+
+"# 1C'				    !* ELSE advance to next character!
+
+>				    !* END LOOP over statement!
+
+M(M.M &_Generate_Indented_Continued_FORTRAN_Statement)W
+				    !* Break up the statement again.!
+
+				    !* Return to caller.!
+
+!^R FORTRAN END:! !^R Insert END Statement.
+Invoked by ^R FORTRAN END!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______END  
+
+WM(M.M ^R_CRLF)W
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+
+
+!^R FORTRAN Fill Region:! !^R Set the fill prefix and fill the region.  An 
+argument causes right-justified fill. Invoked by ^R FORTRAN Fill Region.!
+
+.[0				    !* Save Q0!
+
+WM(M.M ^R_Exchange_Point_and_Mark) !* Make sure point is at beginning!
+				    !* of region before attempting to!
+				    !* set the fill prefix.!
+
+.-Q0"G WM(M.M ^R_Exchange_Point_and_Mark)'
+
+WM(M.M ^R_FORTRAN_Set_Statement_Column)
+
+FM(M.M ^R_Fill_Region)	    !* Do filling!
+
+				    !* Restore registers and return!
+				    !* to caller.!
+
+!^R FORTRAN Fill Tab Field With Spaces:! !^R Tabs are expanded to blanks.
+Invoked by ^R FORTRAN Fill Tab Field With Spaces.!
+
+.[0				    !* Save initial point in q0!
+
+FS S HPOS[1			    !* Save hpos in q1!
+
+Q1/8+1*8-Q1<I_> 		    !* Fill spaces to next stop !
+
+Q0,.				    !* Bound changed region.!
+
+				    !* Restore registers and return!
+				    !* to caller.!
+
+!^R FORTRAN Find Date:! !^R Find the program date line.
+If invoked without an argument,  the buffer is searched backward  to
+find the  SUBROUTINE, FUNCTION,  BLOCK DATA,  or PROGRAM  statement,
+then forward for a date line of the standard form.  If invoked  with
+an argument, the search begins at  the start of the buffer  instead.
+The mark is set at point at entry.  
+Invoked by ^R FORTRAN Find Date!
+
+[0				    !* Save Q-registers!
+
+WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at point!
+
+FF"N			    !* IF called with an argument!
+
+	BJ'			    !* THEN go to start of buffer!
+"#
+
+	-1:S______SUBROUTINE_______PROGRAM_______BLOCK_DATA______BLOCKDATA__FUNCTION_"E BJ'
+				    !* ELSE search backwards for the!
+				    !* header statement, reverting!
+				    !* to beginning of buffer if the!
+				    !* search fails.!
+'				    !* END IF (invoked without arguments)!
+
+QFORTRAN_Comment_PrefixU0	    !* Get comment prefix.!
+
+0FS S ERROR			    !* Don't let failure cause error!
+				    !* message! 
+
+<				    !* LOOP over buffer!
+
+:S
+0("E			    !* Search for first possible date!
+				    !* line, and exit if not found.!
+	:FTNo_date_line_found	
+
+	0;'
+
+-1,1A"D				    !* Test for date pattern DD-AAA-DD)!
+-1,2A"D				    
+-1,3A--"E
+-1,4A"A
+-1,5A"A
+-1,6A"A
+-1,7A--"E
+-1,8A"D
+-1,9A"D
+-1,10A-)"E
+
+0;				    !* Exit the loop!
+
+''''''''''			    !* END 10 nested IFs!
+
+>				    !* END LOOP over buffer.!
+
+				    !* Restore Q-registers and return to!
+				    !* caller.!
+
+!^R FORTRAN Find Floating-point Number:! !^R Position the cursor
+to the next floating-point number in the buffer.  An omitted  argument
+searches  forward,  a   negative  argument   backward.   An   explicit
+non-negative argument  will  run  the Occur  function  on  the  search
+string, displaying the arg lines before and after each following  line
+in the buffer which contain matches.  The mark is set at the  starting
+position.  Because of limitations in EMACS pattern matching,  patterns
+E-, E+, D-, and  D+ may also  be found.  
+Invoked  by ^R FORTRAN Find Floating-point Number.!
+
+[0[1[2[3[4			    !* Save Q-registers.!
+
+@M(M.M ^R_Set/Pop_Mark)W	    !* Set mark to point.!
+
+
+:I00.1.2.3.4.5.6.7.8.9.
+:I1.0.1.2.3.4.5.6.7.8.9
+:I2E0E1E2E3E4E5E6E7E8E9E-E+
+:I3D0D1D2D3D4D5D6D7D8D9D-D+
+
+:I40123		    !* Build complete pattern string.!
+
+FF"N			    !* IF explicit argument given!
+
+	:"L			    !* THEN IF arg >= 0!
+
+		M(M.M Occur)4 !* THEN Run Occur!
+
+	'
+	"#			    !* ELSE arg < 0 !
+		:S4	    !* Search forward or!
+				    !* backward for the pattern.!
+	'			    !* END IF (arg >= 0)!
+'
+"#				    !* ELSE no explicit argument!
+	1:S4			    !* Search forward or!
+				    !* backward for the pattern.!
+
+'				    !* END IF (explicit argument)!
+
+				    !* Return to caller.!
+
+!^R FORTRAN Find Unmatched Parenthesis:! !^R Show the first unmatched 
+open parenthesis, if there is one.  The search is backwards from  point.
+The argument  is  the  number  of  seconds  to  stay  at  the  unmatched
+parenthesis.  If there  is no argument,  point stays there  permanently.
+Invoked by ^R FORTRAN Find Unmatched Parenthesis!
+
+!* Code borrowed from <EMACS>PASCAL.EMACS for use by FORTRAN.!
+
+ .[.0				    !* Save Q.0 and load it with!
+				    !* current point.!
+
+ 1:<-FUL>"N Q.0J :I*NUP	No_Unmatched_ParenthesesFSErr ' 
+
+ FF&1"N : Q.0J'		    !* Sleep if argument *!
+
+ 				    !* Restore Q-registers and!
+				    !* return *! 
+
+!^R FORTRAN FORMAT:! !^R Generate FORMAT Statement at point.
+Invoked by ^R FORTRAN FORMAT!
+
+[0				    !* Save Q0!
+
+IFORMAT_() 
+
+.-1U0				    !* Save continue point.!
+
+WM(M.M ^R_CRLF)W
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+
+!^R FORTRAN Forward Item:! !^R Move forward to the next comma not inside ().
+This  command  is  useful  for  moving  over  variables   (including
+following dimensions) and expressions  in declarations and  argument
+lists.  
+Invoked by ^R FORTRAN Forward Item!
+
+[0				    !* Save Q0!
+
+0U0				    !* Zero parentheses count!
+
+<				    !* LOOP over buffer!
+
+.-Z"E 0;'			    !* Exit if at end-of-buffer.!
+
+:S,()"E 0;'		    !* Search for one of ,()!
+
+-1,0A-40"E Q0+1U0'		    !* Increment count if (!
+
+-1,0A-41"E Q0-1U0  Q0"L 0;''	    !* Decrement count if ), and!
+				    !* exit if it becomes negative,!
+				    !* so that we stop if we started!
+				    !* inside a parenthesized list.!
+
+-1,0A-44"E Q0@;'		    !* Exit at comma if count = 0!
+
+>				    !* END LOOP over buffer!
+
+				    !* Restore registers and return to!
+				    !* caller. !
+
+!^R FORTRAN Forward Sentence:! !^R Move to the end of a sentence (if
+in a comment), or to the end of the statement field (if in a
+statement).  An argument may be used to repeat the command (arg = 0
+does nothing, arg < 0 runs ^R FORTRAN Backward Sentence).  Mark is
+set to the value of point at entry. 
+Invoked by ^R FORTRAN Forward Sentence!
+
+.[0[1[2				    !* Save Q-registers and put!
+				    !* current point in Q0.! 
+
+U2				    !* Get argument count.!
+
+Q2"L -Q2:M(M.M ^R_FORTRAN_Backward_Sentence)'
+				    !* IF arg negative, search in!
+				    !* reverse direction and return!
+				    !* directly to caller.!
+
+Q2"E '			    !* Exit immediately if argument zero!
+
+@M(M.M ^R_Set/Pop_Mark)W	    !* Set mark to point.!
+
+Q2<				    !* LOOP arg times!
+
+0L				    !* Move to end of line!
+
+!begin!				    !* Jump here if we move off the!
+				    !* current FORTRAN statement!
+
+((-1,1A)-C)*((-1,1A)-c)*((-1,1A)-*)*((-1,1A)-#)"E 
+				    !* IF we are in a comment !
+				    !* THEN use standard text!
+				    !* function! 
+	1M(M.M ^R_Forward_Sentence)'
+
+"#				    !* ELSE (statement)!
+
+	0U1			    !* Set completion flag in Q1!
+
+	W			    !* Flush current value.!
+
+	<			    !* LOOP looking for statement!
+				    !* end !
+
+	1L			    !* Move down a line to check for!
+				    !* continuation lines!
+
+	(.+6-Z)"G ZJ 0;'	    !* If we are near end of buffer,!
+				    !* jump to end and exit iteration!
+
+
+	((-1,1A)-C)*((-1,1A)-c)*((-1,1A)-*)*((-1,1A)-#)*((-1,6A)-32)*((-1,6A)-0)"E
+				    !* IF next line is a new statement!
+				    !* or a comment!
+
+		0:L		    !* THEN move to end of previous line!
+
+
+		(.-Q0)"G	    !* IF we moved forward from our!
+				    !* initial position,!
+
+			0;'	    !* THEN we found the end of!
+				    !* statement, so exit loop!
+
+		"#		    !* ELSE (have not moved forward)!
+
+		        1L -1U1 0; !* so move down a line!
+				    !* and restart the search!   
+
+		'		    !* END IF (we moved forward)!
+
+	'			    !* END IF (next line is new!
+				    !* statement)! 
+
+				    !* ELSE next line is a!
+				    !* continuation, so just!
+				    !* continue scanning!
+		
+	>			    !* END LOOP!
+
+	Q1"N Obegin'		    !* Restart scan on failure!
+
+'				    !* END IF (comment or statement)!
+
+>				    !* END LOOP (arg times)!
+
+W				    !* Flush current value!
+
+0				    !* Indicate no change to buffer!
+
+				    !* Restore Q-registers and!
+				    !* return to caller! 
+
+!^R FORTRAN FUNCTION:! !^R Insert FUNCTION and END Statement.
+Invoked by ^R FORTRAN FUNCTION!
+
+[0				    !* Save Q-registers!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+1,M(M.M &_Read_Line)Enter_function_TYPE_(C,D,R,I,L)_and_end_with_CR:_F"E'[0
+				    !* Read a line into Q0. The!
+				    !* funny business with F"E etc!
+				    !* is simply a dummy conditional!
+				    !* which extracts the string!
+				    !* argument returned by the!
+				    !* subroutine to get it into Q0.!
+				    !* I found this usage in the!
+				    !* Send Mail command in!
+				    !* <EMACS>TMUCS.EMACS. !
+
+FQ0:"G '			    !* Exit immediately if the!
+				    !* string has no characters in!
+				    !* it.  The user may have!
+				    !* reconsidered and simply typed!
+				    !* a CR in response to the prompt.!
+
+!Decode!
+@F~0/C/"E I______COMPLEX_'
+"# @F~0/D/"E I______DOUBLE_PRECISION_'
+"# @F~0/I/"E I______INTEGER_'
+"# @F~0/L/"E I______LOGICAL_'
+"# @F~0/R/"E I______REAL_'
+"# 1,M(M.M &_Read_Line)You_must_type_one_of_(C,D,I,L,R):_F"E'[0
+	FQ0:"G ' ODecode'''''
+
+1,M(M.M &_Read_Line)Enter_function_NAME_and_end_with_CR:_F"E'[0
+
+FQ0:"G '
+
+IFUNCTION__ G0 I_()  .-1U0
+
+WM(M.M ^R_CRLF)W 
+
+QFORTRAN_Abstract_Format"N	    !* IF abstract format requested!
+
+     IC_____()			    !* THEN insert header and date!
+				    !* comment lines.!
+
+     WM(M.M ^R_CRLF)W 
+
+     1M(M.M ^R_FORTRAN_Date_Edit)
+
+     '				    !* END IF!
+
+I______RETURN
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+I______END
+
+WM(M.M ^R_CRLF)W 
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to insert args!
+
+
+
+
+
+!^R FORTRAN GOTO:! !^R Generate GOTO Statement at point.
+Invoked by ^R FORTRAN GOTO!
+
+IGO_TO_
+
+
+!^R FORTRAN Hollerith Text:! !^R Begin accumulation of Hollerith text.
+After you type this  command, everything until  CR is typed  becomes
+part of the Hollerith string which will be inserted into the  buffer
+preceded by nnH.  An  argument will cause the  insertion of a  comma
+and the length field  after the string  (e.g. 3Hfoo,3).  
+Invoked  by ^R FORTRAN Hollerith Text!
+
+.[1[2[3				    !* Save initial point in Q1 and!
+				    !* save Q2 and Q3.!
+
+1,M(M.M &_Read_Line)Enter_Hollerith_string_and_end_with_CR:_F"E'[0	    
+
+				    !* Read a line into Q0. The!
+				    !* funny business with F"E etc!
+				    !* is simply a dummy conditional!
+				    !* which extracts the string!
+				    !* argument returned by the!
+				    !* subroutine to get it into Q0.!
+				    !* I found this usage in the!
+				    !* Send Mail command in!
+				    !* <EMACS>TMUCS.EMACS. !
+
+FQ0:"G '			    !* Exit immediately if the!
+				    !* string has no characters in!
+				    !* it.  The user may have!
+				    !* reconsidered and simply typed!
+				    !* a CR in response to the prompt.!
+
+FQ0\				    !* Insert into the buffer the!
+				    !* character form of the length!
+				    !* of the string in Q0!
+
+IH				    !* Put H in buffer.!
+
+G0				    !* Move string into buffer.!
+
+.U3				    !* Save position of!
+				    !* end-of-string. !
+
+FF"N			    !* If we were invoked with an!
+				    !* argument !
+
+     I,			    !* THEN insert a comma and!
+
+     FQ0\			    !* the character form of the length!
+				    !* of the string in Q0, and!
+
+     .U3			    !* save position of end-of-length!
+
+	'			    !* END IF!
+
+
+:L				    !* Advance to end of current!
+				    !* line.! 
+
+FS S HPOS-72:"G		    !* IF line length NOT greater!
+				    !* than 72!
+
+	Q3J'			    !* THEN reposition to end of!
+				    !* string! 
+
+"#				    !* ELSE line has overflowed!
+				    !* column 72!
+
+	Q1J			    !* Position to start of string.!
+
+	
+
+	1M(M.M ^R_CRLF)W	    !* Insert CR LF before!
+				    !* beginning of string, so that!
+				    !* we can try to keep it on one!
+				    !* line. !
+
+	3R			    !* Backup over CR LF and point!
+				    !* to last character on line.!
+
+	FS S HPOS<		    !* LOOP backwards to column 1!
+
+		(-1,1A-32)"N0;'	    !* IF character non-blank, exit!
+				    !* loop. !
+
+		1R>		    !* Backup 1 character!
+
+	(FS S HPOS-6)U2	    !* Get number of characters in!
+				    !* statement field.!
+
+	Q2:"G			    !* IF last non-blank column NOT!
+				    !* greater than 6!
+
+		0L 1K'		    !* THEN kill entire line so as!
+				    !* to avoid having an empty!
+				    !* continuation line.!
+	"# 1L'			    !* ELSE position to beginning of!
+				    !* next line.!
+
+	I_____			    !* Blank columns 1..5 of new!
+				    !* line.! 
+
+	0:GFORTRAN_Column_6I	    !* Insert continuation!
+				    !* character.! 
+
+				    !* When a string insertion!
+				    !* causes spill into column 72,!
+				    !* then we must merge following!
+				    !* continuation lines and then!
+				    !* split the statement again in!
+				    !* order to nicely format it. !    
+
+	M(M.M &_Collapse_FORTRAN_Statement)
+
+	M(M.M &_Generate_Continued_Fortran_Statement)
+
+'				    !* END IF!
+
+
+				    !* Restore Q regs and return.!
+
+!^R FORTRAN Hollerith Text and Length:! !^R Generate nnH...,nn at point.
+Invoked by ^R FORTRAN Hollerith Text and Length!
+
+1M(M.M ^R_FORTRAN_Hollerith_Text)
+
+
+
+!^R FORTRAN IF:! !^R Generate a simple IF Statement at point.  An argument 
+causes a block IF () THEN ... ELSE ... END IF statement to be generated
+instead.  Invoked by ^R FORTRAN IF!
+
+FF"N			    !* If we were invoked with an!
+				    !* argument !
+	M(M.M Run_Library)SFTRAN3^R_SFTRAN3_IF_()_THEN_..._ELSE_..._END_IF
+				    !* THEN insert BLOCK IF!
+' "#				    !* ELSE insert simple IF!
+
+	[0			    !* Save Q0!
+
+	IIF_()_ 
+
+	.U0			    !* Save continue point.!
+
+	!* WM(M.M ^R_CRLF)W !
+
+	0L WM(M.M ^R_Set/Pop_Mark) !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+	Q0J			    !* Move back to continue point!
+
+'
+
+
+!^R FORTRAN IMPLICIT:! !^R Insert IMPLICIT Statement.
+Invoked by ^R FORTRAN IMPLICIT!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______IMPLICIT_DOUBLE_PRECISION_(A-H,O-Z) 
+
+WM(M.M ^R_CRLF)W
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+
+
+
+!^R FORTRAN Indent:! !^R Indent correctly for FORTRAN.  If the last
+column is before column 7, then insert blanks to position to column
+7.  Otherwise position to the next tab stop by blank insertion,
+where tab stops are at intervals given by the global variable
+FORTRAN Block Indentation.  A positive argument may be used to
+repeat the function.  A zero argument is a no-op, and a negative
+argument invokes the function ^R FORTRAN Backward Tab (which can
+be directly invoked by  ^R FORTRAN Backward Tab).  
+Invoked by ^R FORTRAN Indent!
+
+FF-2"E 0'			    !* Exit if 2 args !
+
+"E 0'			    !* Exit if arg = 0!
+
+"L -:M(M.M ^R_FORTRAN_Backward_Tab) '
+				    !* Tab backward if arg negative.!
+
+<				    !* LOOP arg times.!
+
+FS S HPOS-5"G			    !* IF current column >= 6 !
+
+	FM(M.M &_Indent_FORTRAN_Statement)'	    
+				    !* THEN indent statement field!
+"#
+	FM(M.M &_Indent_FORTRAN_Label)'  
+				    !* ELSE indent label field!
+
+>				    !* END LOOP (arg times)!
+
+				    !* Restore registers and return.!
+
+!^R FORTRAN INTEGER:! !^R Insert INTEGER Statement.
+Invoked by ^R FORTRAN INTEGER!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______INTEGER_ 
+
+QFORTRAN_Declaration_Indentation-15<I_>
+
+.U0				    !* Save continue point.!
+
+!* WM(M.M ^R_CRLF)W!
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+
+!^R FORTRAN LOGICAL:! !^R Insert LOGICAL Statement.
+Invoked by ^R FORTRAN LOGICAL!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______LOGICAL_ 
+
+QFORTRAN_Declaration_Indentation-15<I_>
+
+.U0				    !* Save continue point.!
+
+!* WM(M.M ^R_CRLF)W !
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+
+!^R FORTRAN Mark Indented Region:! !^R Mark region at current indentation.
+Put mark  and point  at beginning  and end  of the  indented  region
+corresponding to the indentation of the statement at which point  is
+on when this function is  invoked.  Indentation is according to  the
+current statement type.  If on  a comment, only surrounding  comment
+lines will be included.  If on a FORTRAN statement, the region  will
+extend only  to  an  indentation change,  or  a  comment  statement.
+Invoked by ^R FORTRAN Mark Indented Region!
+
+[1[2[3				    !* Save Q-registers!
+
+:L				    !* Go to end of line.!
+
+FS S HPOSU3			    !* Save line length.!
+
+0L				    !* Go to beginning of current line.!
+
+(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"E
+				    !* IF we have a comment line!
+
+	Q3-7"L '		    !* THEN exit if too short!
+
+	6C
+
+	(Q3-6)<			    !* LOOP over line!
+
+		(-1,1A-32)"N 0;'    !* Exit if not blank!
+
+		:C		    !* Advance one character!
+
+		>		    !* END LOOP over line!
+
+	FS S HPOSU2		    !* Save line's indentation value.!
+
+	.U1			    !* Remember current position.!
+
+	-1L			    !* Move to start of previous line.!
+
+	<			    !* LOOP backward over buffer!
+
+		.-B"E		    !* IF at beginning of buffer!
+
+			(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"N
+				    !* IF not a comment line!
+
+				1L  !* Advance to next line!
+
+				'   !* END IF (not a comment line)!
+
+			WM(M.M ^R_Set/Pop_Mark)
+
+			0;	    !* Exit loop!
+
+
+		'		    !* END IF (at beginning of buffer)!
+
+		(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"N
+				    !* IF not a comment line!
+
+			1L	    !* THEN move to start of next line!
+
+			WM(M.M ^R_Set/Pop_Mark)
+				    !* Remember position!
+
+			 0;	    !* and exit loop!
+
+			'	    !* END IF (not a comment line)!
+
+		:L		    !* Go to end of line!
+
+		FS S HPOS-Q2"L	    !* IF too short!
+
+			1L	    !* THEN advance one line!
+
+			WM(M.M ^R_Set/Pop_Mark)
+				    !* set mark!
+			
+			0;	    !* Exit from loop!
+			
+			'	    !* END IF (too short)!
+
+		0L 6C		    !* Position to col. 7!
+
+		<		    !* LOOP over line!
+
+		(-1,1A-32)"N 0;'    !* Exit if not blank!
+
+		:C		    !* Advance one character!
+
+		>		    !* END LOOP over line!
+
+		FS S HPOS-Q2"N	    !* IF indentation does not match!
+
+			1L	    !* THEN advance one line!
+
+			WM(M.M ^R_Set/Pop_Mark)
+				    !* Set the mark!
+
+			 0;	    !* Exit loop!
+
+			'	    !* END IF (indentation does not match)!
+
+		-1L		    !* Position to start of previous line.!
+
+	>			    !* END LOOP (backward over!
+				    !* buffer)!
+
+	Q1J 1L			    !* Position to line following!
+				    !* one we started in.!
+
+
+	<			    !* LOOP forward over buffer!
+
+	.-Z"E 0;'		    !* Exit loop if at end of buffer!
+	
+	(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"N
+				    !* IF not a comment line!
+
+		0L		    !* THEN go to start of line!
+	
+		0;		    !* and exit loop!
+
+		'		    !* END IF (not a comment line)!
+
+	:L			    !* Go to end of line!
+
+	FS S HPOS-Q2"L		    !* IF too short!
+
+		0L		    !* THEN go to start of line!
+	
+		0;		    !* and exit loop!
+
+		'		    !* END IF (too short)!
+
+	0L 6C			    !* Position to col. 7!
+
+	<			    !* LOOP over line!
+
+	(-1,1A-32)"N 0;'	    !* Exit if not blank!
+
+	:C			    !* Advance one character!
+
+	>			    !* END LOOP over line!
+
+	FS S HPOS-Q2"N		    !* IF indentation does not match!
+
+	0L			    !* THEN go to start of line!
+
+	0;			    !* and exit loop!
+
+	'			    !* END IF (indentation does not match)!
+
+	1L			    !* Position to start of next line.!
+
+	>			    !* END LOOP (forward over buffer)!
+
+'				    !* END IF (we have a comment line)!
+
+"#				    !* ELSE (FORTRAN Statement)!
+
+	Q3-7"L '		    !* THEN exit if too short!
+
+	6C
+
+	(Q3-6)<			    !* LOOP over line!
+
+		(-1,1A-32)"N 0;'    !* Exit if not blank!
+
+		:C		    !* Advance one character!
+
+		>		    !* END LOOP over line!
+
+	FS S HPOSU2		    !* Save line's indentation value.!
+
+	.U1			    !* Remember current position.!
+
+	-1L			    !* Move to start of previous line.!
+
+	<			    !* LOOP backward over buffer!
+
+		.-B"E		    !* IF at beginning of buffer!
+
+			(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"E
+				    !* IF a comment line!
+
+				1L  !* Advance to next line!
+
+				'   !* END IF (not a comment line)!
+
+			WM(M.M ^R_Set/Pop_Mark)
+
+			0;	    !* Exit loop!
+
+
+		'		    !* END IF (at beginning of buffer)!
+
+		(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"E
+				    !* IF a comment line!
+
+			1L	    !* THEN move to start of next line!
+
+			WM(M.M ^R_Set/Pop_Mark)
+				    !* Remember position!
+
+			 0;	    !* and exit loop!
+
+			'	    !* END IF (not a comment line)!
+
+		:L		    !* Go to end of line!
+
+		FS S HPOS-Q2"L	    !* IF too short!
+
+			1L	    !* THEN advance one line!
+
+			WM(M.M ^R_Set/Pop_Mark)
+				    !* set mark!
+			
+			0;	    !* Exit from loop!
+			
+			'	    !* END IF (too short)!
+
+		0L 6C		    !* Position to col. 7!
+
+		<		    !* LOOP over line!
+
+		(-1,1A-32)"N 0;'    !* Exit if not blank!
+
+		:C		    !* Advance one character!
+
+		>		    !* END LOOP over line!
+
+		FS S HPOS-Q2"L	    !* IF indentation less!
+
+			1L	    !* THEN advance one line!
+
+			WM(M.M ^R_Set/Pop_Mark)
+				    !* Set the mark!
+
+			 0;	    !* Exit loop!
+
+			'	    !* END IF (indentation does not match)!
+
+		-1L		    !* Position to start of previous line.!
+
+	>			    !* END LOOP (backward over!
+				    !* buffer)!
+
+	Q1J 1L			    !* Position to line following!
+				    !* one we started in.!
+
+
+	<			    !* LOOP forward over buffer!
+
+	.-Z"E 0;'		    !* Exit loop if at end of buffer!
+	
+	(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"E
+				    !* IF a comment line!
+
+		0L		    !* THEN go to start of line!
+	
+		0;		    !* and exit loop!
+
+		'		    !* END IF (not a comment line)!
+
+	:L			    !* Go to end of line!
+
+	FS S HPOS-Q2"L		    !* IF too short!
+
+		0L		    !* THEN go to start of line!
+	
+		0;		    !* and exit loop!
+
+		'		    !* END IF (too short)!
+
+	0L 6C			    !* Position to col. 7!
+
+	<			    !* LOOP over line!
+
+	(-1,1A-32)"N 0;'	    !* Exit if not blank!
+
+	:C			    !* Advance one character!
+
+	>			    !* END LOOP over line!
+
+	FS S HPOS-Q2"L		    !* IF indentation less!
+
+	0L			    !* THEN go to start of line!
+
+	0;			    !* and exit loop!
+
+	'			    !* END IF (indentation does not match)!
+
+	1L			    !* Position to start of next line.!
+
+	>			    !* END LOOP (forward over buffer)!
+
+'				    !* END IF (comment or statement)!
+
+				    !* Restore registers and return.!
+
+!^R FORTRAN Mark Sentence:! !^R Put point at the end of the current
+statement or sentence and mark at the end.  A subsequent ^R Kill
+Region command, invoked by ^R Kill Region, will then delete
+it.  
+Invoked by ^R FORTRAN Mark Sentence!
+
+[0[1[2				    !* Save Q-registers!
+
+1M(M.M ^R_FORTRAN_Backward_Sentence)W .U0
+
+0L				    !* Move to beginning of initial!
+				    !* line. !
+
+(-1,1A-C)*(-1,1A-c)*(-1,1A-*)U2	    !* Save comment status in Q2!
+					    !* (0 = comment), (NOT 0 =!
+					    !* statement)! 
+
+Q2:"E .U0'			    !* IF line is NOT a comment!
+				    !* THEN put point at beginning of!
+				    !* line. ! 
+
+1M(M.M ^R_FORTRAN_Forward_Sentence)W .U1
+
+Q2:"E 1L .U1'			    !* IF NOT a comment, THEN put mark!
+				    !* at beginning of following line.!
+
+@M(M.M ^R_Set/Pop_Mark)W
+
+Q0J				    !* Move to beginning of statement.!
+
+
+!^R FORTRAN Matching Parenthesis:! !^R Move forward to next closing 
+parenthensis, then put cursor briefly on matching open parenthesis.  All
+characters with the syntax of parentheses are handled.
+Invoked by ^R FORTRAN Matching Parenthesis!
+
+[0				    !* Save Q-registers!
+
+QFORTRAN_Close_ParenthesesU0
+
+:S0				    !* Position to next!
+				    !* closing parenthesis.!
+
+.-Z"L				    !* IF not at end of buffer!
+
+	M(M.M &_Matching_Paren)    !* Show matching open parenthesis!
+
+	'			    !* END IF (not at end of buffer)!
+
+				    !* Return to caller!
+  
+!^R FORTRAN Merge Continuation with Previous:! !^R Kill CRLF and indentation
+Appends current line to previous.
+Invoked by ^R FORTRAN Merge Continuation with Previous.!
+
+[0				    !* Save Q0!
+
+0L				    !* Move to start of line!
+
+.-B"E				    !* IF at beginning of buffer !
+	0			    !* THEN indicate NO change to buffer!
+	'			    !* and return to caller!
+
+.+6U0				    !* Upper bound of changed region.!
+
+-1M(M.M ^R_FORTRAN_Indent)	    !* Delete indentation !
+
+-2D				    !* Delete CRLF !
+
+Z-Q0"G				    !* IF NOT at end of buffer!
+	.,Q0			    !* THEN bound changed region!
+	'			    !*      and return to caller!
+"#				    !* ELSE!
+	.,Z			    !*      bound changed region!
+				    !*      (to end of buffer)!
+	'			    !* Return to caller.!
+
+!^R FORTRAN Minus Constant:! !^R Make FORTRAN  assignment statement to
+decrement word before point.  Saves for UNDO.  Any numeric argument is
+used in place of the default increment of 1.!
+
+FF-2"E 0'			    !* Exit if 2 args !
+
+"E 0'			    !* Exit if arg = 0!
+
+[a .[2 [3			    !* Argument into Q3!
+
+
+<-FWL .@;			    !* Go back over words until out of full !
+  (0A-,"'E)+(0A-("'E)+(0A-)"'E)+(0A-+"'E)+(0A--"'E)+(0A-*"'E)+(0A-/"'E) ;>  !* variable !
+
+.,Q2Xa				    !* Put it in reg A !
+
+Q2J				    !* Jump back to end *! 
+
+.,.M(M.M &_Save_for_Undo)Minus_Constant
+
+Q3"G I_=_ Ga I_-_Q3\'		    !* Insert positive increment!
+
+Q3"L I_=_ Ga I_+_-Q3\'	    !* Insert negative increment!
+
+Q2,.				    !* Fill out the rest of the stmt!
+
+
+!^R FORTRAN Move to Comment Field:! !^R Move to a FORTRAN comment line.
+If on a comment line, move to the head of it. If not on one, use preceding
+line if it is one, else create one. 
+Invoked with ^R FORTRAN Move to Comment Field.!
+
+[0				        !* Save Q0!
+
+[9					!* Put arg in Q9 !
+
+0L					!* Go to beginning of line!
+(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"E	!* IF col. 1 IN [Cc*]!
+	Q9-1U9'				!* THEN Reduce line count by 1!
+					!* END IF!
+
+Q9:"G					!* IF count NOT positive!
+	6C				!* THEN move right 6 characters!
+	0				!*      indicate buffer unchanged!
+	'				!*      Return to caller.!
+					!* END IF!
+
+.[0					!* Save initial point !
+Q9 <					!* LOOP <count> times!!
+	-L				!* Go to beginning of previous line!
+	.-Q0"E				!* IF at initial point!
+		
+
+		1M(M.M ^R_CRLF)W 2R'	    !* THEN insert a CRLF!
+					!* END IF!
+	(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"N
+					!* IF col. 1 NOT IN [Cc*]!
+	        -1,1A-13"E		!* THEN IF next char is CR!
+				        !* THEN insert a comment line!
+			 GFORTRAN_Comment_Prefix '	    
+
+			"#		!* ELSE!
+			 L		!*      move to start of next line!
+					!*      and insert a comment line!
+			 GFORTRAN_Comment_Prefix 
+
+			1M(M.M ^R_CRLF)W 2R''
+>					!* END LOOP over <count>!
+
+.-1,Q0					!* Bound changed region!
+					!* Return to caller!
+
+!^R FORTRAN Move to Next Comment Field:! !^R Move to next comment 
+field.  If there is no other comment field before the end of buffer
+or the next statement, create one on the next line.  
+Invoked by ^R FORTRAN Move to Next Comment Field.!
+
+.-Z"E					!* IF at end of buffer !
+	GFORTRAN_Comment_Prefix 
+
+	1M(M.M ^R_CRLF)W 2R		!* THEN insert comment (leave point!
+					!* at col. 7)! 
+	 .-6,.+2			!* Bound changed region!
+	 '				!* Return to caller!
+					!* END IF!
+
+
+1L					!* Go to start of next line!
+.-Z"E					!* IF at end of buffer!
+	FS S HPOS"N			!* THEN IF column not 0!
+		
+
+		1M(M.M ^R_CRLF)W       !* THEN insert CRLF!
+		GFORTRAN_Comment_Prefix 
+
+		1M(M.M ^R_CRLF)W 2R	        !* followed by comment!
+						!* (leave point at col. 7)!
+		.-9,.+2				!* Bound changed region!
+		'				!* Return to caller!
+
+	"# GFORTRAN_Comment_Prefix 
+
+		1M(M.M ^R_CRLF)W 2R	        !* ELSE insert comment (leave!
+						!* point at col. 7)!
+		.-6,.+1				!* Bound changed region!
+		''				!* Return to caller!
+   "#					!* ELSE!
+	(-1,1a-C)*(-1,1a-c)*(-1,1A-*)"N	!* IF Col. 1 NOT IN [Cc*]!
+		GFORTRAN_Comment_Prefix 
+
+		1M(M.M ^R_CRLF)W 2R	!* THEN Insert comment (leave!
+					!* point at col. 7)!
+ 		.-6,.+2			!* Bound changed region!
+		 '			!* Return to caller!
+	"#				!* ELSE !
+		1M(M.M ^R_FORTRAN_Move_to_Comment_Field)''      
+
+				    !* Return to caller!
+
+!^R FORTRAN Move to Previous Comment Field:! !^R Move to prev comment field
+Moves to previous Comment field. If there is no other comment field between
+point and head of buffer or previous statement, creates one on the next line.
+Invoked by ^R FORTRAN Move to Previous Comment Field.!
+
+0L					!* Move to beginning of line!
+.-B"E					!* IF at beginning of buffer!
+	GFORTRAN_Comment_Prefix 
+
+	1M(M.M ^R_CRLF)W 2R		!* THEN Insert a comment  (leave!
+					!*      point at col. 7)!
+	.-6,.+2				!*      Bound changed region!
+	'				!*      Return to caller!
+					!* END IF!
+-L					!* Move to beginning of!
+					!* previous line!
+(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"N	!* IF col. 1 NOT IN [Cc*]!
+	L				!* THEN move to beginning of!
+					!*      next line!
+	GFORTRAN_Comment_Prefix 
+
+	1M(M.M ^R_CRLF)W 2R		!*      Insert a comment!
+					!*      (leave point at col. 7) !
+	.-6,.+2				!*      Bound changed region!
+	'				!*      Return to caller!
+"#					!* ELSE {line is a comment}!
+	1M(M.M ^R_FORTRAN_Move_to_Comment_Field)'
+
+				    !* Return to caller.!
+
+!^R FORTRAN NAMELIST:! !^R Insert NAMELIST Statement.
+Invoked by ^R FORTRAN NAMELIST!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______NAMELIST_// 
+
+.-1U0				    !* Save continue point.!
+
+WM(M.M ^R_CRLF)W
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+
+!^R FORTRAN Newline:! !^R  Move to the end of the current line.
+Then, if auto fill mode is NOT selected, then simply position to the
+start of the next line. Otherwise if the current line is a  comment,
+set  the  fill  prefix  and   fill  column  to  preserve  the   same
+indentation.  If the current line is not a comment, the new line  is
+indented  to  the  value  set  by  the  variable  FORTRAN  Statement
+Indentation which is updated by the function ^R FORTRAN Indent which
+is invoked by a ^R FORTRAN Indent.
+Invoked with ^R FORTRAN Newline.!
+
+QAuto_Fill_Mode"E		    !* IF auto fill is NOT in effect!
+
+	0UFORTRAN_Statement_Type  !* Indicate auto fill off!
+
+	:L'			    !* THEN move to end of line!
+
+"#				    !* ELSE auto fill selected!
+				    !* (usual case)!
+
+	M(M.M &_Set_FORTRAN_Fill_Prefix)
+				    !* Set fill prefix and statement!
+				    !* type.! 
+
+'				    !* END IF (auto fill selected)!
+
+:L				    !* Move to end of!
+				    !* current line!
+
+M(M.M ^R_Delete_Horizontal_Space)W	    !* Trim trailing!
+					    !* white space! 
+
+M(M.M ^R_CRLF)W		    !* Insert CR LF and flush value.!
+
+QFORTRAN_Statement_Type"L GFill_Prefix '	    
+				    !* IF auto fill and comment,!
+				    !* then insert comment fill!
+				    !* prefix!  
+
+QFORTRAN_Statement_Type"G QFORTRAN_Statement_Column-1<I_>'
+				    !* IF auto fill and FORTRAN!
+				    !* statement, then insert!
+				    !* blanks to position to!
+				    !* current statement column.!
+
+				    !* Restore Q-registers and!
+				    !* return to caller! 
+
+!^R FORTRAN Operator Pad:! !^R Insert padding blanks around FORTRAN
+operators in current statement.  Comment statements are ignored.  A
+positive argument may be used to repeat the function for several
+statements.  On completion, mark is after the last modified line,
+and point is set to its value at entry.  
+Invoked by ^R FORTRAN Operator Pad.!
+
+.[0[1[2[3			    !* Save Q-registers and current!
+				    !* point in Q0.!
+
+:"G '			    !* Return immediately if arg not!
+				    !* positive. !
+
+<				    !* loop arg times!
+
+:L				    !* Position to end of line, then!
+				    !* move to beginning of!
+				    !* statement and collapse any!
+				    !* continuation lines.!
+
+1M(M.M ^R_FORTRAN_Backward_Sentence)W
+
+0L				    !* Position to beginning of line.!
+
+(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"E	    !* IF line is a comment!
+
+	<1L			    !* THEN LOOP skipping comments!
+
+	.-Z"E Q0J '		    !* IF at end-of-buffer, return!
+				    !* to point at entry and return!
+				    !* to caller!
+
+	(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"N 0;'
+				    !* IF line is not a comment,!
+				    !* exit skip loop.!
+
+	>'			    !* END LOOP (skipping comments)!
+
+M(M.M &_Collapse_FORTRAN_Statement)W
+
+QFORTRAN_OperatorsU1		    !* Get operator list in Q1!
+
+:L .U3 0L .U2 W			    !* Save end-of-line position in!
+				    !* Q3 and beginning-of-line!
+				    !* position in Q2.!
+
+<				    !* LOOP over statement!
+
+@:F1R			    !* Search for an operator character!
+
+.-Q3"G 0;'			    !* IF we have gone beyond!
+				    !* end-of-line, exit loop. !
+
+-1,1A-*"E			    !* IF operator is *!
+
+	-1,2A-*"E		    !* THEN IF it is **!
+
+		-1,3A-32"N 2C I_ 3R %3'
+				    !* IF following character is!
+				    !* non-blank, insert a blank and!
+				    !* leave point before the operator.! 
+
+		-1,0A-32"N I_ 2C %3'
+				    !* IF preceding character is!
+				    !* non-blank, insert a blank and!
+				    !* leave point before the operator.! 
+
+		2C !<!>		    !* Advance over ** and cycle loop!
+
+	'			    !* END IF (operator is **)!
+
+'				    !* END IF (operator is *)!
+
+-1,2A-32"N 			    !* IF following character is!
+				    !* non-blank, and operator is not!
+				    !* unary (preceded by one of!
+				    !* [(=,*/]) insert a blank and! 
+				    !* leave point before the operator.! 
+
+	(-1,0A-32)"N		    !* IF preceding character not blank!
+				    !* THEN look at it!
+      
+      		((-1,0A)-()*((-1,0A)-=)*((-1,0A)-,)*((-1,0A)-*)*((-1,0A)-/)"N
+			1C I_ 2R %3'
+		'
+	"#			    !* ELSE look at character before blank!
+
+		((-1,-1A)-()*((-1,-1A)-=)*((-1,-1A)-,)*((-1,-1A)-*)*((-1,-1A)-/)"N
+			1C I_ 2R %3'
+		'
+'
+
+(-1,0A-32)*(-1,0A-()"N I_ 1C %3' !* IF preceding character is!
+				    !* non-blank and not open!
+				    !* parenthesis, insert a blank and! 
+				    !* leave point before the operator.! 
+
+1C				    !* Advance over the operator.!
+
+>				    !* END LOOP (over statement)!
+
+Q2J				    !* Go back to beginning of statement.!
+
+M(M.M &_Generate_Indented_Continued_FORTRAN_Statement)W
+				    !* Expand statement if necessary!
+
+1M(M.M ^R_FORTRAN_Forward_Sentence)W	    !* Advance to end of!
+					    !* current statement.!
+
+1L				    !* Move down a line to next statement.!
+
+>				    !* END LOOP (arg times)!
+
+@M(M.M ^R_Set/Pop_Mark)	    !* Mark last position modified.!
+
+Q0J				    !* Return to point at entry.!
+
+				    !* Restore Q-registers and return.!
+
+!^R FORTRAN PARAMETER:! !^R Insert PARAMETER Statement.
+Invoked by ^R FORTRAN PARAMETER!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______PARAMETER_  
+
+QFORTRAN_Declaration_Indentation-17<I_>
+
+I(_=_)
+
+.-4U0				    !* Save continue point.!
+
+!* WM(M.M ^R_CRLF)W!
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+!^R FORTRAN Plus Constant:! !^R Make FORTRAN  assignment  statement to
+increment word before point.  Saves for UNDO.  Any numeric argument is
+used in place of the default increment of 1.!
+
+FF-2"E 0'			    !* Exit if 2 args !
+
+"E 0'			    !* Exit if arg = 0!
+
+[a .[2 [3			    !* Argument into Q3!
+
+<-FWL .@;			    !* Go back over words until out of full !
+  (0A-,"'E)+(0A-("'E)+(0A-)"'E)+(0A-+"'E)+(0A--"'E)+(0A-*"'E)+(0A-/"'E) ;>  !* variable !
+
+.,Q2Xa				    !* Put it in reg A !
+
+Q2J				    !* Jump back to end *! 
+
+.,.M(M.M &_Save_for_Undo)Plus_Constant
+
+Q3"G I_=_ Ga I_+_Q3\'		    !* Insert positive increment!
+
+Q3"L I_=_ Ga I_-_-Q3\'	    !* Insert negative increment!
+
+Q2,.				    !* Fill out the rest of the stmt!
+
+!^R FORTRAN Quoted to Hollerith Text:! !^R Begin conversion to Hollerith text.
+The search for  a quoted string  begins from the  current point  and
+continues until end-of-buffer is reached,  or a string is found  and
+converted.  The  point is  left  immediately following  the  string.
+Strings inside comment statements  are ignored.  Quotes  represented
+inside strings by two successive  quotes are collapsed to one  quote
+in the Hollerith  string.  Strings  which span  line boundaries  are
+carefully handled  to avoid  counting  columns 1-6  of  continuation
+lines in the length count.  A  non-negative argument may be used  to
+repeat the conversion.  
+Invoked by ^R FORTRAN Quoted to Hollerith Text!
+
+[0[1[2[3[4[5[6[7			    !* Save Q-registers.!
+
+U4				    !* Get argument count.!
+
+Q4:"G'			    !* Exit immediately if!
+				    !* argument count is not!
+				    !* positive. ! 
+
+0U5				    !* Initialize Q5.  It will be!
+				    !* set non-zero at the beginning!
+				    !* of the first string!
+				    !* converted.  It is used at!
+				    !* exit to bound the changed region!
+
+Q4<				    !* LOOP Q4 times!
+
+!begin!				    !* Jump here when a comment!
+				    !* statement is detected.! 
+
+0U3				    !* Zero Q3.  If it is set!
+				    !* non-zero on exit from the!
+				    !* iteration, then we found a!
+				    !* quote inside a comment!
+
+
+
+<(-1,1A)-39"E0;'		    !* IF the character to right of!
+				    !* point is a single quote, THEN!
+				    !* exit the loop !
+
+"#(-1,1A)+1"E			    !* ELSE if we are at end of!
+	Q5,.			    !* buffer, bound the changed!
+	''			    !* region and return to the caller.!
+	    
+
+1C>				    !* ELSE move forward 1 character!
+
+!* We are now positioned at the opening quote.  Save its position in!
+!* Q0, then check to make sure we are not in a comment field.  If we!
+!* are, advance one line and restart the search.  Otherwise begin!
+!* the scan for the closing quote.  In order to correctly handle!
+!* quoted strings which span lines, we merge following continuation!
+!* lines into the current one, do the string conversion, and then!
+!* break up the line again.  Hollerith strings are kept on one line!
+!* where possible.!
+
+.U0				    !* Save position of quote!
+
+Q5"E .U5'			    !* Save the position as the!
+				    !* start of the changed region!
+				    !* if this is the first string!
+				    !* found! 
+
+0L ((-1,1A)-C)*((-1,1A)-c)*((-1,1A)-*)*((-1,1A)-#)"E 1L Obegin'  
+				    !* If we are in a comment!
+				    !* line, restart after moving to!
+				    !* the beginning of the next!
+				    !* line.  By jumping to the!
+				    !* beginning of the loop, we!
+				    !* avoid incrementing the loop!
+				    !* count, since we don't want to!
+				    !* count comments.!  
+
+M(M.M &_Collapse_FORTRAN_Statement)
+
+:L .U7				    !* Remember position of last!
+				    !* character in line!
+
+Q0J				    !* Return to position of quote!
+
+1C				    !* and move past it.!
+
+
+<				    !* LOOP over current line!
+
+.-Q7:"L 0;'			    !* Exit loop if we reach end of!
+				    !* line.! 
+
+(-1,1A)-39"E
+	-1,2A-39"N0;'		    !* IF the character to right of!
+				    !* point is a single quote, and!
+				    !* the next character is not a!
+				    !* quote, THEN exit the loop !
+
+	"#1D1C''		    !* ELSE we have two single!
+				    !* quotes embedded in the!
+				    !* string, so delete one of them!
+				    !* and advance over the next!
+
+"#(-1,1A)+1"E 			    !* ELSE if we are at end of!
+	Q5,.			    !* buffer, bound the changed!
+	'			    !* region and return to the caller.!
+
+'				    !* END IF!
+
+1C  >				    !* Move forward 1 character!
+
+(-1,1A-39)"N Obegin'		    !* Jump to beginning of loop if!
+				    !* we did not find a matching!
+				    !* quote.  We might have seen a!
+				    !* Hollerith string or a!
+				    !* direct-access I/O statement,!
+				    !* either of which could contain!
+				    !* a single quote.!
+
+1D				    !* Delete the closing quote!
+
+.-1U1				    !* Record the final position!
+				    !* (less one because we still!
+				    !* have the opening quote).!
+
+Q0J 1D				    !* Go back and delete the!
+				    !* opening quote!
+
+(Q1-Q0)U2			    !* Save string length in Q2!
+
+.U6				    !* Save location of start of string!
+
+Q2\				    !* Insert into the buffer the!
+				    !* character form of the length!
+				    !* of the string. Subtract 8 from!
+				    !* the string length for each!
+				    !* linefeed we have seen. (CR LF!
+				    !* plus columns 1..6)! 
+
+IH				    !* Put H in buffer.!
+
+Q2 C				    !* Move forward to the end of!
+				    !* the string !
+
+(FS S HPOS-72)U7		    !* Get excess of line length.!
+
+Q7"G				    !* IF string extends beyond col.!
+				    !* 72! 
+
+	Q6J			    !* THEN move back to start of!
+				    !* string! 
+
+	
+
+	1M(M.M ^R_CRLF)W	    !* Insert a CR LF!
+
+	3R			    !* Backup over CR LF and point!
+				    !* to last character on line. !
+
+	FS S HPOS<		    !* LOOP backwards to column 1!
+
+		-1,1A-32"N0;'	    !* IF character non-blank, exit!
+				    !* loop. !
+
+		1R>		    !* Backup 1 character!
+
+	(FS S HPOS-6)U7	    !* Get number of non-blank!
+				    !* statement field columns.!
+
+	Q7:"G			    !* IF last non-blank column NOT!
+				    !* greater than 6!
+
+		0L 1K'		    !* THEN kill entire line so as!
+				    !* to avoid having an empty!
+				    !* continuation line.!
+	"# 1L'			    !* ELSE position to start of!
+				    !* next line.!
+
+	I_____W
+
+	GFORTRAN_Column_6
+				    !* Make a continuation line!
+
+	'			    !* END IF!
+
+M(M.M &_Generate_Continued_FORTRAN_Statement)
+
+
+>				    !* END LOOP (over Q4)!
+Q5,.				    !* Bound the changed region!
+
+				    !* Restore registers and return!
+				    !* to the caller!
+
+!^R FORTRAN READ:! !^R Generate READ Statement at point.
+Invoked by ^R FORTRAN READ!
+
+[0				    !* Save Q0!
+
+IREAD_(5,) 
+
+.-1U0				    !* Save continue point.!
+
+WM(M.M ^R_CRLF)W
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+
+!^R FORTRAN REAL:! !^R Insert REAL Statement.
+Invoked by ^R FORTRAN REAL!
+
+[0				    !* Save Q0!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+0L
+
+I______REAL_ 
+
+QFORTRAN_Declaration_Indentation-12<I_>
+
+.U0				    !* Save continue point.!
+
+!* WM(M.M ^R_CRLF)W !
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+
+
+
+!^R FORTRAN Right-adjust Label:! !^R Right-adjust FORTRAN statement
+label in column 1..5.  Blanks will be inserted to pad through column
+6 if the line is short.  An optional argument is number of lines  to
+process.  Point is left unchanged.   Mark is set following the  last
+label processed.  
+Invoked by ^R FORTRAN Right-adjust Label!
+
+[0[1[2[3			    !* Save Q0, Q1, Q2 and Q3!
+
+.U3				    !* Remember current position.!
+
+U2				    !* Get argument count in Q2!
+
+Q2<				    !* LOOP Q2 times!
+
+!nextline!			    !* Jump here when comment found!
+
+0L				    !* Position to beginning of line.!
+
+.-Z"E 0;'			    !* Exit loop if at!
+				    !* end-of-buffer.! 
+
+((-1,1A)-C)*((-1,1A)-c)*((-1,1A)-*)*((-1,1A)-#)"E 1L Onextline' 
+ 				    !* Advance to next line and!
+				    !* cycle loop if we are on a!
+				    !* comment line.!  
+
+:L				    !* Position to end of line!
+
+FS S HPOS-6"L			    !* IF there are fewer then 6!
+				    !* columns on this line!
+
+	(6-FS S HPOS)<I_>'	    !* THEN pad through column 6!
+
+0L				    !* Position to beginning of line.!
+
+.,.+5F=_____"E 1L Onextline'	    !* Advance to next line and!
+				    !* cycle loop if the label field!
+				    !* is blank!
+
+@:I0// 				    !* Initialize label accumulator,!
+				    !* Q0, to a null string.!
+
+5<				    !* LOOP over columns 1..5!
+
+(-1,1A)U1 			    !* Pick up character into Q1.!
+
+Q1"L				    !* If we hit end-of-buffer!
+
+	@M(M.M ^R_Set/Pop_Mark)    !* THEN put mark at last point!
+
+	Q3J			    !* and point at original point!
+
+	'			    !* and return to caller.!
+
+Q1-9"E 0U0 0;' 			    !* Zero label accumulator and!
+				    !* exit column 1..5 loop if we!
+				    !* have a tab. !
+				    !* Tabs should have been!
+				    !* previously removed by the!
+				    !* Detab FORTRAN function. !   
+
+Q1"D				    !* IF character is a digit!
+
+	.,.+1X1		    !* THEN get it and !
+
+	:I001'		    !* append it to label!
+				    !* accumulator. !
+
+"#				    !* ELSE character is NOT a digit!
+
+	Q1-32"N 1L 0U0 0;'	    !* IF character is NOT a blank,!
+				    !* THEN advance to next line and!
+				    !* exit column 1..5 loop.  This!
+				    !* cannot be a valid label field.! 
+
+'				    !* END IF!
+
+1C				    !* Advance to next column.!
+
+> 				    !* END LOOP over columns 1..5!
+
+0L				    !* Position to beginning of line.!
+
+(FQ0-5)"E 1L 0;'		    !* Advance to next line and!
+				    !* cycle loop if we have a!
+				    !* 5-character label.! 
+
+FQ0:"G 1L 0;'			    !* Advance to next line and!
+				    !* cycle loop if there are no!
+				    !* characters in the label.!
+
+5D				    !* Delete columns 1..5!
+
+(5-FQ0)<I_>			    !* Insert leading blanks.!
+
+I0				    !* Insert the label.!
+
+1L				    !* Advance to next line!
+
+>				    !* END LOOP over Q2 (arg count)!
+
+.U2				    !* Save last modified point.!
+
+@M(M.M ^R_Set/Pop_Mark)	    !* Put mark at last point!
+
+Q3J				    !* Jump back to initial point.!
+
+				    !* Return to caller!
+
+!^R FORTRAN Rigidly Indent:! !^R Indent statements in the region left 
+(arg < 0) or right (arg > 0) to a desired nesting level. M-X UNDO can
+be used to undo the indentation.  
+Invoked by ^R FORTRAN Rigidly Indent!
+
+:I*Indent_RigidlyM(M.M &_Save_Region_and_Query)F"E'
+
+FF-2"E  0'		    !* Exit if 2 args !
+
+"E 0'	   		    !* Exit if arg = 0!
+
+.[0[1				    !* Save Q-reg's and put current point!
+				    !* in Q0.!
+
+U1				    !* Save arg count.!
+
+BJW				    !* Go to beginning of buffer.!
+
+<				    !* LOOP over all lines in buffer.!
+
+.-Z"E 0;'			    !* Exit loop if at end-of-buffer.!
+
+(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"N
+				    !* IF this is not a comment line!
+	1M(M.M &_Collapse_FORTRAN_Statement)W'
+				    !* THEN merge continuation lines.!
+
+1L				    !* Advance one line!
+
+>				    !* END LOOP (over lines in buffer)!
+
+BJW				    !* Go to beginning of buffer.!
+
+<				    !* LOOP over all lines in buffer.!
+
+.-Z"E 0;'			    !* Exit loop if at end-of-buffer.!
+
+:L				    !* Position to end-of-line.!
+
+FS S HPOS-5"G			    !* IF there are at least 6 columns!
+				    !* used!
+
+	0L 6C			    !* THEN position to before column 7!
+
+	@F_	R	    !* Move forward to first non-blank,!
+				    !* non-tab. !
+
+	Q1M(M.M ^R_FORTRAN_Indent)W
+				    !* and indent this line!
+	'			    !* END IF (there are at least 6 col)!
+  
+1L				    !* Move to next line.!    
+
+>				    !* END LOOP (over buffer)!
+
+BJW				    !* Go to beginning of buffer.!
+
+<				    !* LOOP over all lines in buffer.!
+
+.-Z"E 0;'			    !* Exit loop if at end-of-buffer.!
+
+1M(M.M &_Set_FORTRAN_Fill_Prefix)W
+
+0L				    !* Position to beginning of!
+				    !* line.! 
+
+(-1,1A-C)*(-1,1A-c)*(-1,1A-*)"N
+				    !* IF this is not a comment!
+				    !* line! 
+	1M(M.M &_Generate_Indented_Continued_FORTRAN_Statement)W'
+				    !* THEN merge continuation!
+				    !* lines.! 
+
+1L				    !* Advance one line!
+
+>				    !* END LOOP (over lines in buffer)!
+
+ZJ				    !* Move to end of region!
+
+B,Z				    !* Bound changed region!
+
+				    !* Restore Q-registers and return to!
+				    !* caller. !
+
+!^R FORTRAN Set Statement Column:! !^R Set the FORTRAN Statement
+Column to the current column  number if on a  blank line, or to  the
+first non-blank column  in the  statement field.  The  value is  not
+permitted to exceed  the range  7..60.  The fill  prefix is  updated
+simultaneously.  
+Invoked by ^R FORTRAN Set Statement Column!
+
+.[0[1				    !* Save Q-registers and put!
+				    !* current point in Q0!
+
+M(M.M &_Set_FORTRAN_Fill_Prefix)W  !* Determine fill prefix!
+
+:L				    !* Go to end of current line!
+
+FS S HPOSU1			    !* Save line width!
+
+Q1-6"G				    !* If line width at least 7!
+
+	0L 6C			    !* THEN position to start of!
+				    !* statement field.!
+
+	@F_	R	    !* and position to first!
+				    !* non-blank, non-tab!
+
+	FS S HPOS-Q1"E	Q0J'	    !* IF we reached end-of-line,!
+				    !* then return to initial!
+				    !* point.!  
+
+	FS S HPOS+1UFORTRAN_Statement_Column'
+				    !* Set statement column!
+
+"#				    !* ELSE linewidth less than 7!
+
+	7UFORTRAN_Statement_Column
+				    !* Set statement column!
+
+'				    !* END IF (linewidth at least 7)!
+
+QFORTRAN_Statement_Column-60"G 72UFORTRAN_Statement_Column '
+				    !* Reset if larger than 60!
+
+0L				    !* Go to beginning of line!
+
+Q0J				    !* Return to initial point!
+
+				    !* Restore Q-registers and!
+				    !* return to caller! 
+
+!^R FORTRAN Show Columns:! !^R Show current line with FORTRAN column
+markers.  
+Invoked by ^R FORTRAN Show Columns).!
+
+:I*nnnnnC-----+----+----+----+----+----+----+----+----+----+----+----+----+SS...[0
+      [1                           !* Save Q0 and Q1 on Q register pdl  !
+
+      FS TOP LINE[2                !* Save TOP LINE position in Q2 after!
+                                    !* saving it on Q register pdl       !
+
+      FS ^R VPOS "G                !* IF vertical position > 0          !
+           -1U1'                    !*      THEN print 1 line above      !  
+           "#1U1'                   !*      ELSE print 1 line below      !
+
+      FS ^R VPOS+Q1 FS TOP LINE   !* Reset TOP LINE temporarily to     !
+                                    !* vertical position +1 or -2        !
+
+      :FT0                       !* Type column info at new TOP LINE  !
+
+      Q2 FS TOP LINE               !* Restore original TOP LINE value   !
+
+                                  !* Restore Q register pdl--ALL DONE  !
+
+!^R FORTRAN Show Declaration Columns:! !^R Show current line with
+FORTRAN prettyprinted declaration column markers.
+Invoked  by ^R FORTRAN Show Declaration Columns).!
+
+:I*nnnnn6--------------------!------------!------------!------------!------SS...[0
+      [1                           !* Save Q0 and Q1 on Q register pdl  !
+
+      FS TOP LINE[2                !* Save TOP LINE position in Q2 after!
+                                    !* saving it on Q register pdl       !
+
+      FS ^R VPOS "G                !* IF vertical position > 0          !
+           -1U1'                    !*      THEN print 1 line above      !  
+           "#1U1'                   !*      ELSE print 1 line below      !
+
+      FS ^R VPOS+Q1 FS TOP LINE   !* Reset TOP LINE temporarily to     !
+                                    !* vertical position +1 or -2        !
+
+      :FT0                       !* Type column info at new TOP LINE  !
+
+      Q2 FS TOP LINE               !* Restore original TOP LINE value   !
+
+                                  !* Restore Q register pdl--ALL DONE  !
+
+!^R FORTRAN SUBROUTINE:! !^R Insert SUBROUTINE and END Statement.
+Invoked by ^R FORTRAN SUBROUTINE!
+
+[0				    !* Save Q0.!
+
+M(M.M &_Position_for_New_Statement)
+
+7UFORTRAN_Statement_Column	    !* Reset indentation column.!
+
+1,M(M.M &_Read_Line)Enter_subroutine_NAME_and_end_with_CR:_F"E'[0
+
+				    !* Read a line into Q0. The!
+				    !* funny business with F"E etc!
+				    !* is simply a dummy conditional!
+				    !* which extracts the string!
+				    !* argument returned by the!
+				    !* subroutine to get it into Q0.!
+				    !* I found this usage in the!
+				    !* Send Mail command in!
+				    !* <EMACS>TMUCS.EMACS. !
+
+FQ0:"G '			    !* Exit immediately if the!
+				    !* string has no characters in!
+				    !* it.  The user may have!
+				    !* reconsidered and simply typed!
+				    !* a CR in response to the prompt.!
+
+
+I______SUBROUTINE__ G0 I_()  .-1U0
+
+WM(M.M ^R_CRLF)W 
+
+QFORTRAN_Abstract_Format"N	    !* IF abstract format requested!
+
+     GFORTRAN_Comment_Prefix I() !* THEN insert header and date!
+				    !* comment lines.!
+
+     WM(M.M ^R_CRLF)W 
+
+     1M(M.M ^R_FORTRAN_Date_Edit)
+
+     '				    !* END IF!
+
+I______RETURN
+
+WM(M.M ^R_CRLF)W		    !* Go to start of a new line!
+
+I______END
+
+WM(M.M ^R_CRLF)W 
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to insert args!
+
+
+
+!^R FORTRAN WRITE:! !^R Generate WRITE Statement at point.
+Invoked by ^R FORTRAN WRITE!
+
+[0				    !* Save Q0!
+
+IWRITE (6,) 
+
+.-1U0				    !* Save continue point.!
+
+WM(M.M ^R_CRLF)W
+
+0L WM(M.M ^R_Set/Pop_Mark)	    !* Set mark at beginning of next!
+				    !* line to allow the user to!
+				    !* undo the insertion by invoking ^R!
+				    !* Beginning of Line followed by ^R!
+				    !* Kill Region (normally C-A C-W). !
+
+Q0J				    !* Move back to continue point!
+
+				    !* Restore registers and return!
+				    !* to caller.!
+   

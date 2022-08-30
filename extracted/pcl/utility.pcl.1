@@ -1,0 +1,341 @@
+! <PCL.W>UTILITY.PCL.2,  7-Feb-83 11:40:05, Edit by DEBAR
+
+!{+!==================================================================
+L UTILITY:	Library of useful PCL commands
+
+This library groups several generally useful PCL procedures.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+
+!{+!==================================================================
+P TEMP_FILE:	procedure - Returns a temp file name as a string
+
+Returns a unique temporary file name of the form "_Tnn_m.TMP" where nn
+is the job number and m insures the uniqueness.
+
+Usage:
+	string = TEMP_FILE;
+
+Returns:
+	A unique file name
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+string procedure temp_file;
+begin
+
+string tf;
+integer m,ch;
+
+   m = 1;
+loop:
+      tf = "_T" + $string($jobno) + "_" + $string(m) + ".tmp";
+      if $isfile(tf) eql 0 then
+         return tf;
+	! else close opened file and increment counter
+      m = m + 1;
+      goto loop;
+
+   end
+
+
+
+!{+!==================================================================
+P WRITE_ST:	Write a string n times to a file.
+
+This procedure writes  to a  file a  record of  identical repeating  n
+times a given string.  characters.
+
+Usage:
+	call write_st (channel, st, count);
+
+Input:
+channel	channel number of the file for output
+st	string to repeat
+count	number of times st must be repeated
+
+Side Effect:
+	A string  of  count st  is  written  out to  channel,  with  a
+carriage return at  the end. St  is a string  containing at least  one
+character.
+
+
+Remarks:
+	If st is empty or count is zero, nothing happens.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+procedure write_st (integer channel; string st; integer count);
+begin
+   integer
+      i;
+   string
+      record;
+
+   if $length(st) eql 0 then return;
+   if count leq 0 then return;
+   i = count;
+   record = "";
+   while i gtr 0 do {
+      record = record + st;
+      i = i - 1
+      };
+   call $write (channel, record)
+   end;
+
+
+
+
+!{+!==================================================================
+P IS_OLDER:	 Integer Procedure to compare write date of two files.
+
+Is_Older (filea, fileb) checks if filea is older than fileb.
+
+Usage:
+	integer = Is_Older (filea,fileb);
+
+Inputs:
+filea	first file,
+fileb	second file. Filea and Fileb are file names.
+
+Result:
+	1 if filea is older than fileb, else 0
+
+Remarks:
+	The age of  the files  is taken from  the date  the user  last
+wrote the file ($fbwrt), not taking  into account an eventual date  at
+which the file was restored by dumper.
+	If filea does not exist, always return 1 (older).
+	If filea  exists, but  fileb does  not, always  return 0  (not
+older).
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+integer procedure is_older (string filea, fileb);
+begin
+   if $isfile(filea) eql 0 then
+      return 1;
+   if $isfile(fileb) eql 0 then
+      return 0;
+   if $fileinfo_i(filea,$fbwrt) lss $fileinfo_i(fileb,$fbwrt) then
+      return 1
+   else
+      return 0
+   end;
+
+
+
+
+!{+!==================================================================
+P FLT_DIV:	String procedure for floating division of two integers
+
+Usage:
+	string = flt_div (int1, int2, num-decimals)
+Returns a string containing the result of the floating point  division
+of int1/int2, with as  decimals as requested  by the integer  argument
+Num-Decimals.
+
+Example:
+	display flt_div (1, 3, 3)
+will display
+	0.333
+
+Remarks:
+	If Int2 is null, flt_div aborts.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+string procedure flt_div (integer i1,i2,fp);
+
+begin
+   string
+      tmp;
+   integer
+      mod,
+      i;
+   external string procedure
+      add_str;
+
+   if i2 = 0 then abort "Division by zero in flt_div";
+
+   tmp = $string(i1/i2);
+   if fp < 1 then
+      return tmp;
+   tmp = tmp + ".";
+   mod = i1 - (i1/i2) * i2;
+   i = fp;
+   while i > 0 do begin
+      i = i - 1;
+      mod = mod * 10
+      end;
+   mod = mod / i2;
+   return add_str(tmp,$string(mod),fp,"R","0")
+   end
+
+
+!{+!==================================================================
+P ADD_STR:	String procedure catenating strings with justification
+
+Usage:
+	string = add_str (left, right, wid, just, fill-ch);
+where:
+	left,right, just and fill-ch are strings,
+	and wid is an integer.
+
+Returns the  string  formed by  appending  to  left a  string  of  Wid
+characters,  formed  by  justifying  the  string  Right  in  the   wid
+characters requested.
+
+Example:
+	display add_str ("Hello", "Michel", 10, "C", "-");
+displays
+	Hello--Michel--
+
+The JUSTIFICATION is specified by Just as:
+	"C"	center
+	"L"	left justify
+	"R"	right justify
+
+The PADDING is specified by the first character of Fill-Ch.
+
+Remarks:
+	If Wid is less than the actual with of Right, it is  increased
+so that the string fits exactly.
+	If  some  parameters  are  wrong,  Add-Str  makes   reasonable
+assumptions: no fill, or centering, etc.
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+string procedure add_str (string fro,tail;
+	                  integer wid; string cod,fil);
+
+begin
+
+   integer
+      w,
+      nfil,
+      left,
+      right;
+
+   string
+      c,
+      f,
+      out;
+
+				! check width
+   w = wid;
+   if $length(tail) > wid then
+      w = $length(tail);
+				! check code
+   c = "L";
+   if $length(cod) >= 1 then
+      c = cod[1:1];
+				! Check fill character
+   f = " ";
+   if $length(fil) >=1 then
+      f = fil[1:1];
+				! Count fill needed
+   nfil = w - $length(tail);
+   left=0; right=0;
+   select c of begin
+      "l","L": right=nfil;
+      "c","C": begin
+         left = nfil/2;
+	 right = nfil - left
+	 end;
+      "r","R": left=nfil;
+      OTHERWISE: left=nfil;
+      end;
+				! Build output string
+   out = fro;
+   while left>0 do begin
+      left = left - 1;
+      out = out + f
+      end;
+   out = out + tail;
+   while right>0 do begin
+      right = right-1;
+      out = out + f
+      end;
+   return out
+   
+   end
+
+!{+!==================================================================
+C BYT_PTR:	Build byte pointer 440700,,adr-of-string
+
+Usage:
+	integer = byt_ptr (string);
+Returns a byte pointer of the form 440700,,address(string).
+
+Remarks:
+	The string  argument must  be a  string constant  or a  string
+variable,  nothing  else  (no  string  expression,  no  system  string
+procedure).
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+integer procedure byt_ptr (string str);
+return $SetField ($strloc(str), 8%440700000000, 0, 18);
+
+!{+!==================================================================
+C BYT_PTR_A:	Build byte pointer 440700,,adr-of-string
+
+Usage:
+	integer = byt_ptr (address);
+Returns a byte pointer of the form 440700,,address
+
+Remarks:
+	The argument must be an integer giving the address to which we
+want a byte pointer.
+
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+integer procedure byt_ptr_a (integer adr);
+return $SetField (adr, 8%440700000000, 0, 18);
+
+
+!{+!==================================================================
+P PUSH_EXEC:	Push to a kept exec, start it if needed
+
+Allows from within a PCL  command to push to an  exec. If there is  no
+Exec for  PCL,  one  is  started,  and the  fork  is  kept  and  named
+pcl-push-exec. Mind that  if the user  resets that fork  a later  push
+will fail. This may be remedied by:
+	@set integer-variable push_exec_ok -1
+
+Usage:
+	call push_exec;
+
+Author: Michel E Debar      FNDP Computing Centre      +32.81.22 06 31
+-}!!==================================================================
+
+integer push_exec_ok;		! *global*
+
+procedure push_exec;
+begin
+   external integer
+      push_exec_ok;
+
+   if push_exec_ok neq 1234567 then {
+      push_exec_ok = 1234567;
+      docommand original "get system:exec.exe";
+      docommand original "name pcl-push-exec";
+      docommand original "keep pcl-push-exec";
+      docommand original "start"
+
+      }
+   else
+      docommand original "continue pcl-push-exec";
+   end;
+    

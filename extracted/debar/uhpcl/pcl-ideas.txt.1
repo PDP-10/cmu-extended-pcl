@@ -1,0 +1,223 @@
+------------------------------------------------------------
+[29-Oct-80]	Topic: Loop Syntax
+
+In several programming languages,  a WHILE loop is  regarded
+as a loop with the test at the beginning, and an UNTIL  with
+a test at the  end; perhaps PCL should  adhere to this.   At
+present,
+
+UNTIL expression DO statement;
+
+is the same as
+
+WHILE NOT expression DO statement;
+
+rather than being functionally the same as
+
+DO statement UNTIL expression;
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: System File Functions
+
+A set  of built-in  functions for  extraction of  file  name
+components  similar  to  those  in  <BEEBE.PCL>EXEC.PCL   is
+desirable.
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: Boolean Variables
+
+Boolean variables and operations are badly needed.
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: Defining System Functions
+
+There should  be some  means of  defining additional  system
+functions (beginning with $) in PCL (rather than BLISS).
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: Quoting Special Characters
+
+There  needs  to  be  a  quoting  convention  to  allow  the
+introduction of non-standard characters into tokens in  PCL.
+For example, the COMPILE switch 68-COBOL cannot be coded  in
+PCL at present because it does not begin with a letter.
+
+------------------------------------------------------------
+[30-Oct-80]	Topic: Comments
+
+It would be  desirable to have  the possibility of  comments
+appearing inside a line, rather  than just extending to  the
+end of line.  For example,
+
+IF expression THEN !special case! statement;
+
+However, this does not permit multi-line comments.  A better
+approach would be to  use {..} as in  PASCAL, BUT to  permit
+nested {..} pairs;  this would then  allow simple  temporary
+conversion of blocks of code into comments, something  which
+alas is  impossible  in  PASCAL if  the  code  block  itself
+contains comments.  Since  PCL is destined  for use only  on
+DEC machines  which all  use the  ASCII character  set,  and
+since braces are currently unused in PCL, it would seem that
+introduction of  this feature  would be  a relatively  minor
+perturbation on the  PCL compiler,  and would  not run  into
+character set problems that PASCAL users often face.   Thus,
+it probably would not be necessary to permit (* ... *) or /*
+... */ as alternatives to {..}.
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: Internal Procedures / Labelled Blocks
+
+Internal  procedures  would  help  greatly  to  reduce   the
+complexity and  debugging  difficulty  of PCL,  as  well  as
+removing the necessity of redundant code sequences.  When  a
+BEGIN ... END  sequence stretches over  a few hundred  lines
+and contains many nested BEGIN ... END sequences, it can  be
+difficult to find mismatched BEGIN - END pairs.
+
+It would help as well to have the possibility of an optional
+label on  the BEGIN  and the  end which  the compiler  could
+verify correct matching (and flag  as an error in the  event
+of mismatch):
+
+Label: BEGIN
+	...
+	END label;
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: Remembering the Last Command Line
+
+For each PCL command defined by the user, there should be  a
+global string variable, initially null, containing the  last
+command line,  allowing  subsequent command  invocations  to
+remember the  command line.   One possibility  might be  new
+syntax, such as
+
+COMMAND commandname  $LASTCOMMANDLINE {(parameter list)}
+
+which would  supply  the  command  line  from  the  previous
+invocation if  none  were specified.   The  string  variable
+$LASTCOMMANDLINE  would  have  the  same  name  in  any  PCL
+procedure, but would be retrieved from the EXEC symbol table
+entry  for  the  command.   If  the  user  did  not  specify
+$LASTCOMMANDLINE in the argument list, then the command line
+would not be  remembered, so  that existing  PCL code  could
+remain unchanged.
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: CASE/SELECT Tags
+
+It would help to reduce  code duplication if the SELECT  and
+CASE statement  tags  could be  more  than one  constant  or
+expression, i.e. in BNF with {..} meaning one or more of ...
+
+<Tagged-Statement> ::= [<Integer-constant> {,<Integer-constant>}]
+
+
+<Select-value>     ::= [<Expression>{,<Expression>}]
+
+                   ::= [ OTHERWISE ]
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: Symbolic Constants
+
+In order to  assistance in  code maintenance,  it is  highly
+desirable to have symbolic constants of each data type whose
+values cannot be modified, but which can be used anywhere an
+expression or  constant  of  the  same  type  is  permitted,
+including CASE and SELECT tags.  Possible syntax might be
+
+<symbolic-constant> ::= CONSTANT <Simple-type> <constant-declaration>
+
+<constant-declaration> ::= <identifier> = <constant>,
+                           {<identifier> = constant>}
+
+e.g.
+
+CONSTANT INTEGER THREE = 3, ZERO = 1, TRUE = 1, FALSE = 0;
+
+CONSTANT STRING PROMPT = "NextCommand>";
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: FDB Access
+
+$FileInfo_I  and  $File_Info_S  need  to  permit  the  first
+argument to be a file name string to allow access to the FDB
+of  any  file.   For  example,  a  RATFOR  preprocessor  PCL
+procedure should contain something like the following:
+
+IF $FileInfo_I(file_name + ".RAT",12) >
+	$FileInfo_I(file_name + ".FOR",12) THEN
+	BEGIN
+	! Ratfor source has changed since last run, so reprocess
+	...
+	END;
+
+The references to $FileInfo_I  retrieve the last write  date
+of the specified files.  
+
+------------------------------------------------------------
+[30-Oct-80]	Topic: MONITOR Symbols
+
+For  functions  like  $FileInfo_I  and  $FileInfo_S,  it  is
+imperative that there be  system constants corresponding  to
+the MONITOR symbols defining  table entry offsets.  I  would
+suggest that  replacing  MONITOR's  leading  period  with  a
+dollar sign would be suitable.
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: Redundant Parentheses
+
+Redundant parenthesis around expressions should be legal  so
+that exp = (exp) = ((exp)) etc.  This would permit
+
+IF (exp) THEN statement;
+
+for those who wish to code this way; it currently  generates
+a compile error.
+
+------------------------------------------------------------
+[29-Oct-80]	Topic: Compiler Listing and Prettyprinting
+
+With large PCL procedures, it  can be difficult to find  the
+code bugs due to misplaced  END's and semicolons.  It  would
+therefore be convenient to have the option of production  of
+a compiler listing,  showing the block  structure either  by
+numbers, or preferably,  in the SFTRAN3  style in which  the
+start and end of each block is connected with a dotted  line
+and blocks are indented accordingly.  With careful planning,
+this listing could produce a pretty-printed source file.   I
+believe  that  it  would  contribute  to  coding   standards
+significantly  if  right  from  the  start  a  DEC-supported
+prettyprinter were  available  and required  for  DEC's  own
+production of PCL code.  The  power of PCL is so  impressive
+that I think we  may well see the  size of EXEC diminish  in
+the future, to  be replaced  by PCL  procedures.  Look,  for
+example, at the variety of flavors of the DIRECTORY  command
+which currently are provided at the assembly code level.  It
+would be highly desirable for new PCL to adhere to  rigorous
+coding and documentation standards.
+
+------------------------------------------------------------
+[04-Nov-80]	Topic: Date and Time Conversion
+
+The function $INPUTTAD  needs to be  more lenient about  the
+acceptable argument strings; in  particular, a missing  time
+or a missing date should  default to the current one.   This
+is important  when  the  strings  are  user-supplied.   Some
+practice with  parsing date  and time  fields indicates  the
+desirability for a higher-level parse function in PCL.   For
+example, to  allow  a user  to  input  a date  (==>  time  =
+00:00:01), a date and time, a time (==> date = today), or  a
+token like TODAY  requires four parse  fields; more will  be
+required to support days of the  week.  It would be nice  to
+have a single parse option which  took care of all of  these
+possibilities  (see  the  DIRECTORY  subcommands  SINCE  and
+BEFORE for my wish list).
+
+------------------------------------------------------------
+[04-Nov-80]     Topic: Octal and binary output
+
+Some facility  is required  for supporting  output of  digit
+strings in other than base-10 format.
+    

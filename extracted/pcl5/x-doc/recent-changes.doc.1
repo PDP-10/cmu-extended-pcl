@@ -1,0 +1,91 @@
+
+
+
+
+
+
+
+
+
+
+
+                                    TOPS-20
+                    Extended PROGRAMMABLE COMMAND LANGUAGE
+                        Version CMU 5(100) / FNDP 5(66)
+
+                                RECENT CHANGES
+                   Reflects changes since version FNDP 5(63)
+
+                                   Ray SCOTT
+                         Extensions by Michel E. DEBAR
+
+                               10 February 1983
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       Copyright (C) 1983 Carnegie Mellon University Computation Center
+                     FNDP Computing Centre, Namur Belgium
+  The  following  changes  have  been made to the Extended version of PCL since
+version FNDP 5(63).
+
+                             $TAB SYSTEM VARIABLE
+
+  Edit 64 introduced the $tab system variable:
+
+$Tab            STRING - A string containing a Tab character.
+
+                           $STRFIX SYSTEM PROCEDURE
+
+  Edit 65 introduced the $strfix system procedure:
+
+$Strfix (address)
+                STRING - Returns a string copied from the Asciz string found at
+                Address. This  is  necessary  for  JSYSs'  that  produce  Asciz
+                strings:  
+
+        integer number,dummy;
+        string username;
+        ...
+                                        ! allocate memory to store user nam
+        dummy = $get_mem(50);
+                                        ! do DIRST, storing name at dummy
+        if $jsys(8%41 !{DIRST
+
+                !  , byt_ptr_a(dummy), number) eql 0 then abort "dirst failure"
+                + $lasterror; ! make a PCL string  username  =  $strfix(dummy);
+                call $ret_mem(dummy,50); ! Memory is no longer needed.  display
+                $username; }
+
+                           $VERSION SYSTEM VARIABLE
+
+  Edit 66 introduced the $version system variable:
+
+$Version        STRING - A string containing the current version of PCL as:  
+                PCL - 10FEB83 - CMU 5(100)/FNDP 5(66)
+                         |             |           |
+                    Date created   CMU edit    FNDP edit
+
+
+
+Index
+
+          $Strfix   1
+          $Tab   1
+          $version   1
+
+
+
+                               Table of Contents
+
+Index                                                                         2
