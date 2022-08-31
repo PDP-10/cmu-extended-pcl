@@ -1,0 +1,78 @@
+COMMAND library;
+!------------------------------------------------------------------------
+!
+! Purpose:
+!	Update a load library by  replacement of one or more  routines
+!	using MAKLIB.
+!
+! Usage:
+!	LIBRARY libname modulelist
+!
+! Remarks:
+!	Libname is a  standard file specifier  with default  extension
+!	".REL".  Modulelist is a  list of one  or more files  (default
+!	extension ".REL") whose names are the same as the modules they
+!	contain.  Each  specified  module  will  be  replaced  in  the
+!	library and an  index to  the library  will be  reconstructed.
+!	The  intermediate  replacements  are   done  in  files   named
+!	"SCR:libname.MKL"; the  final  indexed  library  will  be  one
+!	generation higher of the original library, and will be in  the
+!	same directory as the original library.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	SalT Lake City, UT 84112.
+!
+! Date:
+!	[16-Jan-83]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER	initialized;
+STRING	extension,
+	library_extension,
+	library_file,
+	library_name,
+	module_name,
+	scratch_directory,
+	temporary_library;
+
+initialized = 0;
+scratch_directory = "SCR:";
+extension = ".MKL";
+
+GUIDE "to be updated";
+
+PARSE(FILE (HELP "Name of library to be updated",DEFAULT_EXT "REL") : NOP);
+
+library_file = $FILEL;
+library_name = $File_Nam($Parse);
+library_extension = "." + $File_Typ($Parse);
+temporary_library = scratch_directory + library_name + extension;
+
+
+PARSE(FILELIST(
+	INPUT,
+	HELP "List of modules to be replaced",
+	DEFAULT_EXT "REL") : 
+	BEGIN
+	IF initialized = 0 THEN BEGIN
+		DOCOMMAND "COPY " + library_file + " " + temporary_library;
+		INVOKE "SYS:MAKLIB";
+		initialized = 1
+	END;
+	module_name = $File_Nam($Parse);
+	TYPEIN temporary_library + "=" 
+		+ temporary_library + "/MASTER:" + module_name
+		+ "," + $FILES + "/REPLACE:" + module_name
+	END);
+
+TYPEIN library_name + library_extension + "="
+		 + temporary_library + "/INDEX";
+TYPEIN "";
+!CLEARTYPEOUT;
+DOCOMMAND "DELETE  " + temporary_library;
+!CLEARTYPEOUT;
+DOCOMMAND "EXPUNGE " + scratch_directory;
+!CLEARTYPEOUT
+END;	! LIBRARY

@@ -1,0 +1,61 @@
+COMMAND ZAP_FOR_DATE;
+!-----------------------------------------------------------------------
+! Purpose:
+!	This PCL command is written to  be used to set file write  dates
+!	of .FOR files to the same date as their matching .SF3 files.  It
+!	was prepared to avoid a  large PLOT79 distribution tape after  a
+!	major change in SF3 resulted in preprocessing of all SF3  files.
+!
+! Usage:
+!	ZAP-FOR-DATE  filespecs
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[04-Feb-86]
+!	
+!-----------------------------------------------------------------------
+BEGIN
+
+STRING 
+    Name_FOR,
+    Name_SF3;
+
+INTEGER
+    Date_FOR,
+    Date_SF3;
+
+PARSE (FILELIST 
+    (HELP "List of .SF3 files whose .FOR file dates are to be changed",
+    DEFAULT_DEV "DSK",
+    DEFAULT_NAM "*",
+    DEFAULT_EXT "SF3",
+    DEFAULT_GEN 0) : NOP);
+
+DO
+    SELECT $File_Typ($Parse) OF 
+    BEGIN
+    ["SF3"]:
+	BEGIN
+            Name_SF3 = $File_Nam($Parse);
+            Date_SF3 = $Fileinfo_I($Parse, $FBWRT);
+            Name_FOR = $File_Dev($Parse) + ":<" +
+                $File_Dir($Parse) + ">" + 
+                $File_Nam($Parse)+".FOR.0";
+            IF $Isfile(Name_FOR) = 1 THEN
+	    BEGIN
+                call $FileSet (Name_FOR,$FBCRV,-1,Date_SF3);
+                call $FileSet (Name_FOR,$FBWRT,-1,Date_SF3);
+		DISPLAY Name_FOR + $CVITC(9) + $OutputTad(Date_SF3)
+            END
+	END;
+
+    [OTHERWISE]:    NOP;
+    END
+UNTIL $Nextfile = 0;
+
+DISPLAY $CRLF + "[done]";
+
+END;   ! ZAP_FOR_DATE

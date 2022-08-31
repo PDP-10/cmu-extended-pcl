@@ -1,0 +1,290 @@
+COMMAND augment;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute the AUGMENT preprocessor, which supports non-standard
+!	arithmetic types in FORTRAN, and also provides a useful
+!	precision conversion facility.
+!
+! Usage:
+!	AUGMENT {switches} inputfile outputfile listingfile
+!
+! Remarks:
+!	
+!	The default  extensions  for  the three  files  are  ".AUG",
+!	".FOR", and ".LST".  The input file name will be assumed for
+!	the output and/or  listing files if  they are omitted.   The
+!	input file is copied to temporary file, and is therefore not
+!	subject to the restrictions  on file names normally  present
+!	with FORTRAN.  The temporary files created in the  connected
+!	directory are of the  form FORnn.DAT with nn  = 05, 06,  20,
+!	and 21. The switches are  supplied only if a conversion  run
+!	is desired:
+!	
+!
+!	
+!	/FROM:type
+!		  Conversion from  the  specified  arithmetic  type.
+!		  Type   may   be   INTEGER,   REAL,   COMPLEX,   or
+!		  DOUBLEPRECISION.
+!			    
+!	/TO:type
+!		  Conversion to the specified arithmetic type.  Type
+!		  may be INTEGER, REAL, COMPLEX, or DOUBLEPRECISION.
+!	
+!	/DBLCOMPLEX
+!		  Include system  definitions  of  double  precision
+!		  complex data type.
+!	
+!	/ENABLE:ALL or ENTER or OUTPUT or SOURCE or SUMMARY 
+!		  Insert *ENABLE keyword  command in AUGMENT  input.
+!		  /ENABLE:ENTER (default) forces each variable  into
+!		  the   symbol   table   as   it   is   encountered.
+!		  /ENABLE:SOURCE    (default)    makes    translated
+!		  statements be echoed as comments.  /ENABLE:SUMMARY
+!		  (default) requests that  the symbol table,  common
+!		  block table, and data type table be printed at the
+!		  end of each program unit.  /ENABLE:OUTPUT requests
+!		  that the translated program appear in the listing.
+!		  /ENABLE:ALL selects all of the other keywords.
+!	
+!	/DISABLE:ALL or ENTER or OUTPUT or SOURCE or SUMMARY
+!		  Turns  off  the   indicated  switch.   OUTPUT   is
+!		  disabled by default.
+!	
+!	/PRINT:ALL or COMMON or TYPE or SYMBOL
+!		  This  switch  may   be  given   more  than   once.
+!		  /PRINT:ALL selects COMMON, TYPE, and SYMBOL.
+!	
+!	It is permissible and useful to have the same type names for
+!	/FROM and /TO; in such a case, AUGMENT will insert  explicit
+!	type declarations for all  undeclared variables, and  remove
+!	all mixed-mode expressions, enhancing the portability of the
+!	code.
+!	
+!	The input file  is assumed  to be a  standard FORTRAN  file,
+!	with no other AUGMENT commands embedded in it.
+!	
+!	If the switches  are omitted,  then it is  assumed that  the
+!	input file contains all necessary AUGMENT commands.
+!	
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[20-Nov-81]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL STRING PROCEDURE
+	filenode,
+	filedevice,
+	filedirectory,
+	filename,
+	systemlog;
+
+INTEGER done,
+	InFileId,
+	OutFileId;
+
+STRING	dblcomplex,
+	from_type,
+	to_type,
+	print_command,
+	enable_command,
+	disable_command,
+	file_name,
+	input_file,
+	listing_file,
+	new_source_file,
+	record;
+
+! Initialize commands with extra trailing character which will be
+! stripped before output.
+
+print_command = "*PRINT ";
+enable_command = "*ENABLE ENTER, SOURCE, SUMMARY,";
+disable_command = "*DISABLE ";
+
+from_type = "";
+to_type = "";
+dblcomplex = "";
+done = 0;
+
+GUIDE "FORTRAN preprocessor";
+
+WHILE done = 0 DO PARSE(
+SWITCH	(HELP "optional switches",
+	STDHELP,
+	WORDS(
+	FROM::1,
+	TO::2,
+	DBLCOMPLEX:3,
+	ENABLE::4,
+	DISABLE::5,
+	PRINT::6)) : 
+	BEGIN
+	CASE $VALUE FROM 1 TO 6 OF BEGIN
+	[1]:	PARSE(KEYWORD(
+		WORDS(
+			INTEGER:1,
+			COMPLEX:2,
+			REAL:3,
+			DOUBLEPRECISION:4),
+		DEFAULT "REAL",
+		STDHELP,
+		HELP "arithmetic data type (default REAL)") : 
+		from_type = $ATOM);
+	[2]:	PARSE(KEYWORD(
+		WORDS(
+			INTEGER:1,
+			COMPLEX:2,
+			REAL:3,
+			DOUBLEPRECISION:4),
+		DEFAULT "DOUBLEPRECISION",
+		STDHELP,
+		HELP "arithmetic data type (default DOUBLEPRECISION)") : 
+		to_type = $ATOM);
+	[3]:	BEGIN
+		dblcomplex = $ATOM;
+		from_type = "";
+		to_type = ""
+		END;
+	[4]:	PARSE(KEYWORD(
+		WORDS(	ENTER:1,
+			OUTPUT:2,
+			SOURCE:3,
+			SUMMARY:4,
+			ALL:5)):IF $VALUE < 5 
+				THEN enable_command = enable_command +
+					" " + $ATOM + ","
+				ELSE enable_command = enable_command +
+					" ENTER, OUTPUT, SOURCE, SUMMARY,");
+	[5]:	PARSE(KEYWORD(
+		WORDS(	ENTER:1,
+			OUTPUT:2,
+			SOURCE:3,
+			SUMMARY:4,
+			ALL:5)):IF $VALUE < 5 
+				THEN disable_command = disable_command +
+					" " + $ATOM + ","
+				ELSE disable_command = disable_command +
+					" ENTER, OUTPUT, SOURCE, SUMMARY,");
+	[6]:	PARSE(KEYWORD(
+		WORDS(	ALL:1,
+			COMMON:2,
+			TYPE:3,
+			SYMBOL:4)) : print_command = print_command + 
+				" " + $ATOM + ",")
+	END
+	END;
+
+OTHERWISE : done = 1
+);
+
+PARSE(
+FILE (HELP "input file",
+	DEFAULT_DEV "DSK",
+	DEFAULT_EXT "AUG",
+	INPUT) : 
+	input_file = $FILEL);
+
+file_name = filename($FILEL);
+listing_file = filenode($FILEL) + filedevice($FILEL) + 
+	filedirectory($FILEL) + filename($FILEL) + ".LST";
+new_source_file =  filenode($FILEL) + filedevice($FILEL) + 
+	filedirectory($FILEL) + filename($FILEL) + ".FOR";
+
+PARSE(
+FILE (HELP "output source file",
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM file_name,
+	DEFAULT_EXT "FOR", 
+	OUTPUT) : new_source_file = $FILEL;
+
+EOL : NOP);
+
+PARSE(
+FILE (HELP "AUGMENT listing file",
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM file_name,
+	DEFAULT_EXT "LST", 
+	OUTPUT) : listing_file = $FILEL;
+EOL : NOP);
+
+record = systemlog("PS:<SUBSYS.UTAH>AUGMENT.USERS");
+
+IF dblcomplex <> "" 
+THEN	DOCOMMAND ORIGINAL "COPY SYS:AUGMENT-DBLCOMPLEX.DESCRIPTION FOR05.DAT"
+ELSE	BEGIN
+	OutFileId = $Open ("FOR05.DAT",$Output);
+	CALL $Close (OutFileId)
+	END;
+
+OutFileId = $Open ("FOR06.DAT",$Output);
+
+CALL $Write (OutFileId,"*BEGIN");
+
+! Strip trailing blank or comma from command strings.
+
+print_command = print_command[1:$LENGTH(print_command)-1];
+enable_command = enable_command[1:$LENGTH(enable_command)-1];
+disable_command = disable_command[1:$LENGTH(disable_command)-1];
+
+IF print_command <> "*PRINT" THEN CALL $Write (OutFileId,print_command);
+IF enable_command <> "*ENABLE" THEN CALL $Write (OutFileId,enable_command);
+IF disable_command <> "*DISABLE" THEN CALL $Write (OutFileId,disable_command);
+
+IF to_type <> "" THEN IF from_type <> "" 
+THEN 	CALL $Write("*CONVERT RESET," + from_type + " - " + to_type);
+
+InFileId = $Open (input_file,$Input);
+
+record = $Read (InFileId);
+WHILE $EOF = 0 DO BEGIN
+	CALL $Write (OutFileId,record);
+	record = $Read (InFileId)
+	END;
+
+CALL $Close (OutFileId);
+CALL $Close (InFileId);
+
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT FOR05.DAT";
+
+IF dblcomplex <> "" 
+THEN	DOCOMMAND ORIGINAL "APPEND SYS:AUGMENT-DBLCOMPLEX.BASIC FOR05.DAT";
+
+OutFileId = $Open ("FOR06.DAT",$Output);
+
+CALL $Write (OutFileId,"*END");
+
+CALL $Close (OutFileId);
+
+DOCOMMAND ORIGINAL "APPEND FOR06.DAT FOR05.DAT";
+
+DOCOMMAND ORIGINAL "DELETE FOR06.DAT";
+
+DOCOMMAND ORIGINAL "DEFINE 5: DSK";
+DOCOMMAND ORIGINAL "DEFINE 6: DSK";
+DOCOMMAND ORIGINAL "DEFINE 20: DSK";
+DOCOMMAND ORIGINAL "DEFINE 21: DSK";
+
+DOCOMMAND ORIGINAL "SYS:AUGMENT";
+
+DOCOMMAND ORIGINAL "RENAME FOR06.DAT " + filenode($FILEL) +
+	filedevice($FILEL) + filedirectory($FILEL) + filename($FILEL) +
+	".LST";
+
+DOCOMMAND ORIGINAL "RENAME FOR20.DAT " + new_source_file;
+
+DOCOMMAND ORIGINAL "DELETE FOR05.DAT";
+
+DOCOMMAND ORIGINAL "DELETE FOR21.DAT";
+
+DOCOMMAND ORIGINAL "DEFINE 5:";
+DOCOMMAND ORIGINAL "DEFINE 6:";
+DOCOMMAND ORIGINAL "DEFINE 20:";
+DOCOMMAND ORIGINAL "DEFINE 21:"
+
+END; !AUGMENT

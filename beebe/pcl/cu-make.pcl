@@ -1,0 +1,65 @@
+!-----------------------------------------------------------------------
+!SRC:<5.EXEC.NEW>MAKE.PCL.7, 20-Mar-83 20:05:38, Edit by CHRIS
+! don't break if object file doesn't exist yet
+!SNARK:<5.MON.US>MAKE.PCL.3,  1-Feb-83 20:35:58, EMACSed by Sy.Bill
+! added global make-verbose-flag
+!CU:<SY.BILL>MAKE.PCL.17,  1-Feb-83 17:34:08, EMACSed by Sy.Bill
+! Make this command to help with the monitor.
+!
+! make (file) fesrv.rel -
+!	(from files) klpre.mac,fesrv.mac,prolog.unv,prokl.unv -
+!	(using command) compile klpre.mac+fesrv.mac fesrv
+
+string make_verbose_flag;
+
+COMMAND MAKE;
+BEGIN
+ STRING rsltfnm,cmd,hlptxt;
+ INTEGER nocompile, debug, rslttim, file_exists, tmpchn, tmptim;
+ EXTERNAL STRING make_verbose_flag;
+
+ Debug = 0;
+
+ GUIDE "file";
+ PARSE FILE (help "name of file to be created");
+ rsltfnm = $FileS;
+ rslttim = $FileInfo_I($parse,$FBWRT);
+ NoCompile = 1;				! assume no compile necessary;
+ GUIDE "from files";
+ PARSE FILELIST (help "list of composite files", INPUT);
+
+ GUIDE "using command";
+ hlptxt = "command to use to create "+rsltfnm;
+ PARSE TEXT (help hlptxt);
+ cmd = $atom;
+
+ PARSE EOL;
+
+ IF make_verbose_flag="TRUE" THEN
+   IF rslttim = 0 THEN DISPLAY "Output file does not yet exist"
+     ELSE DISPLAY "Last write for "+rsltfnm+" was "+$OutputTAD(rslttim);
+
+ IF NoCompile <> 0 THEN
+   DO BEGIN
+     tmpchn = $Open($FILEL,$INPUT);
+     tmptim = $FileInfo_I(tmpchn,$FBWRT);
+     call $close(tmpchn);
+
+     IF tmptim > rslttim THEN
+       BEGIN
+	 DISPLAY rsltfnm+" source "+$FileS+" has changed";
+         NoCompile = 0;
+	 IF make_verbose_flag="TRUE" THEN
+	   DISPLAY "%Older Constituent "+$FILEL+" "+$OutputTAD(tmptim);
+       END 
+     ELSE
+       IF make_verbose_flag="TRUE" THEN
+         DISPLAY "%Younger Constituent "+$FILEL+" "+$OutputTAD(tmptim);
+
+   END UNTIL $NextFile*NoCompile = 0;
+
+ IF NoCompile=0 THEN
+  IF debug=1 THEN DISPLAY "%Would issue: "+cmd
+   ELSE DCM ORIGINAL cmd;
+END;
+

@@ -1,0 +1,153 @@
+COMMAND FOREACH (
+	NOISE "filename reference token (FOO is used as $FOO in commands)";
+	FIELD;
+	NOISE "filelist";
+	FILELIST (INPUT,
+	HELP "give list of files,
+followed by commands to work on them (with $FOO representing file name),
+followed by ""end"" to terminate the command list",
+		DEFAULT_DEV "DSK",
+		DEFAULT_NAM "*",
+		DEFAULT_EXT "*")
+	);
+!------------------------------------------------------------------------
+! Purpose:
+!	Given a  file substitution  name, and  a list  of  files,
+!	execute  a  sequence  of  commands.   The  commands   are
+!	prompted  for,  and   will  usually   contain  the   file
+!	substitution name prefixed by  $; such instances will  be
+!	replaced by the full filename.	 Letter case in the  file
+!	substitution name is not significant.
+!
+!	The command sequence is ended  by a line containing  only
+!	the word  "end"  (letter case  is  insignificant).   This
+!	command is inspired by the Unix csh foreach command.   As
+!	a  bonus,   several  additional   escape  sequences   are
+!	recognized in the  command text, and  substituted for  as
+!	follows:
+!
+!	\1	file device field (e.g. "DSK")
+!	\2	file directory field (e.g "MA.561.MA-JONES")
+!	\3	file name field (e.g. "MYPROG")
+!	\4	file extension field (e.g. "FOR")
+!	\5	file generation number field (e.g. "23")
+!	\D	current date in the form "dd-mon-yy"
+!	\F	the complete filename (same as $FOO)
+!	\P	page mark (ASCII formfeed)
+!	\R	last read date and time of the current file
+!	\T	current time in the form "hh:mm:ss"
+!	\W	last write date and time of the current file
+!	\\	single backslash
+!
+!	The   complete	 filename   can   be   reconstructed   as
+!	"\1:<\2>\3.\4.\5" The case  of the  letter following  the
+!	backslash is not significant; \W and \w are equivalent.
+!
+!	For convenience in  communication with  Unix, file  names
+!	are converted to lower-case  in the output; TOPS-20  does
+!	not mind.
+!
+! Examples:
+!	@foreach F a*.for
+!	cmd>echo $F
+!	cmd>copy $F scr:
+!	cmd>end
+!
+!	@foreach F a*.for
+!	cmd>echo $F
+!	cmd>copy $F scr:b-\3.new
+!	cmd>end
+!
+!	@foreach F a*.for
+!	cmd>echo $f -- last read on \r
+!	cmd>end
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[13-Jul-89]
+!
+!------------------------------------------------------------------------
+BEGIN
+EXTERNAL STRING PROCEDURE strlower, strsub;
+STRING	commands,
+	filename,
+	filelist,
+	keyname,
+	line,
+	this_command;
+INTEGER k;
+
+keyname = "$" + $Atom;
+
+commands = "";
+
+!
+! Because we need to use PARSE to read the commands ($READ does not allow
+! command-line editing), we save the file list with CR LF separators;
+!
+filelist = "";
+DO 
+	filelist = filelist + $FILEL + $CRLF
+UNTIL $NextFile = 0;
+
+!
+! Collect the command lines in a single string with CR LF separators
+!
+PROMPT "cmd>";
+PARSE TEXT;
+PARSE EOL;
+line = $Atom;
+WHILE strlower(line) <> "end" DO
+	BEGIN
+		commands = commands + line + $CRLF;
+		PROMPT "cmd>";
+		PARSE TEXT;
+		PARSE EOL;
+		line = $Atom
+	END;
+!
+! Perform filename-independent escape substitutions outside of
+! file loop.
+!
+commands = strsub(commands,"\D",$Date);
+commands = strsub(commands,"\T",$Time);
+commands = strsub(commands,"\P",$CVITC(12));
+commands = strsub(commands,"\\","\");
+
+!
+! Main loop over files.
+!
+
+filelist = strlower(filelist);	! make lower-case for Unix;
+DO
+BEGIN
+	k = $SEARCH(filelist,$CRLF);
+	IF k > 0 THEN 
+	BEGIN
+	   filename = filelist[1:k-1];
+	   filelist = filelist[k+2:*];
+
+	   this_command = strsub(commands,keyname,filename);
+	   this_command = strsub(this_command,"\F",filename);
+	   this_command = strsub(this_command,"\1",
+	       strlower($File_Dev(filename)));
+	   this_command = strsub(this_command,"\2",
+	       strlower($File_Dir(filename)));
+	   this_command = strsub(this_command,"\3",
+	       strlower($File_Nam(filename)));
+	   this_command = strsub(this_command,"\4",
+	       strlower($File_Typ(filename)));
+	   this_command = strsub(this_command,"\5",$File_Gen(filename));
+	   this_command = strsub(this_command,"\R",
+	       $OutputTaD($FileInfo_I(filename,$FBREF)));
+	   this_command = strsub(this_command,"\W",
+	       $OutputTaD($FileInfo_I(filename,$FBWRT)));
+           DISPLAY this_command;
+	   DOCOMMAND this_command
+	END
+END
+UNTIL k = 0;
+END; !foreach

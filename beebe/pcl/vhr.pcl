@@ -1,0 +1,46 @@
+PROCEDURE Blink(INTEGER flag; STRING text);
+{
+	IF flag = 0 THEN
+		DISPLAY BINARY "[5m[7m";
+	DISPLAY BINARY text;
+	IF flag = 0 THEN
+		DISPLAY BINARY "[m[1m";
+}
+
+INTEGER PROCEDURE Bump(INTEGER value,step,low,high);
+{
+	INTEGER result;	
+
+   	result = value + step;
+	IF result > high THEN
+		result = low
+	ELSE IF result < low THEN
+		result = high;
+        RETURN result;
+}
+
+PROCEDURE Box(INTEGER edge_color,fill_color; INTEGER x,y,w,h);
+{
+	DISPLAY BINARY "H," + $String(fill_color) + ",U,4,2," + 
+		$string(x) + "," +
+		$string(y) + "," +
+		$string(w) + ",0,0," +
+		$string(h) + ",-" +
+		$string(w) + ",0,0,-" +
+		$string(h);
+	DISPLAY BINARY "H," + $String(edge_color) + ",<," +
+		$string(x) + "," +
+		$string(y) + "," +
+		$string(x+w) + "," +
+		$string(y+h) + ",";
+}
+
+STRING PROCEDURE Getc;
+{
+	STRING answer;
+	DISPLAY BINARY "?A";
+	answer = $ReadBinary(1,$CR,0);
+	DISPLAY BINARY "BT";
+	Return answer;
+};
+

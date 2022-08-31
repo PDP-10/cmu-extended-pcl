@@ -1,0 +1,63 @@
+COMMAND update_alert;
+!------------------------------------------------------------------------
+! Purpose:
+!	Update the ALERT.CMD file (created by ALERT) by discarding
+!	alerts which have already passed.
+!
+! Usage:
+!	UPDATE-ALERT
+!
+! Remarks:
+!	The ALERT.CMD file is read and copied to a new generation.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[20-Nov-81]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER
+	alert_time,
+	InFileId,
+	now,
+	OutFileId;
+
+STRING
+	alert_file,
+	record;
+
+GUIDE "file named ALERT.CMD by discarding passed alerts";
+
+alert_file = "PS:<" + $USERNAME + ">ALERT.CMD";
+
+now = $CURTAD;
+
+InFileId = $Open (alert_file,$Input);
+
+OutFileId = $Open (alert_file,$Output);
+
+record = $READ(InFileId);
+
+WHILE $EOF(InFileId) = 0 DO ! Copy the old file to the new file.
+	BEGIN
+	alert_time = $INTEGER(record[$SEARCH(record,"=")+1:*]);
+	IF now > alert_time 
+	THEN 	! Discard the outdated alert.
+		record = $READ(InFileId)
+	ELSE	BEGIN	! Copy the alert.
+		CALL $Write (OutFileId,record);
+		record = $READ(InFileId);
+		CALL $Write (OutFileId,record)
+		END;
+	record = $READ(InFileId)
+	END; ! WHILE
+
+CALL $Close (InFileId);
+
+CALL $Close (OutFileId);
+
+END; !UPDATE_ALERT

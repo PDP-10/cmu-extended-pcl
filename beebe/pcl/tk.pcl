@@ -1,0 +1,214 @@
+COMMAND TK;
+!------------------------------------------------------------------------
+! Purpose:
+!	Display one or more Tektronix 4105 graphics files.
+!
+! Usage:
+!	TK	{/COUNT:n} -
+!		{/CVT240} -
+!		{/EVERY:n} -
+!		{/PAUSE} -
+!		{/STARTFILE:file} -
+!		{/VT240} -
+!		{/WAIT:milliseconds} filelist
+!
+! Remarks:
+!	The  filespecs   field   may   contain  any   list   of   file
+!	specifications.   The  default  extension  is  "CRT"  and  the
+!	default generation is "0".  The switches are all optional.
+!
+!	The  /COUNT   switch  specifies   the  number   of  times   to
+!	successively redisplay each file; the default is 1.
+!
+!	The /EVERY switch specifies the filelist interval; every  n-th
+!	file will be selected, so that files 1, 1+n, 1+2n, 1+3n,  etc.
+!	will be displayed.
+!
+!	The /PAUSE  switch requests  arbitrary keyboard  input  before
+!	continuing.  It is equivalent to specifying a negative wait.
+!
+!	The /STARTFILE switch specifies  the file to  start at in  the
+!	filelist.  It is useful for resuming an interrupted display in
+!	of a large number of files.
+!
+!	The /VT240  switch is  required  if the  plot  file is  to  be
+!	displayed on a  DEC VT240  terminal in  monochrome mode.   The
+!	/CVT240 switch should  be used  if the  plot file  is for  the
+!	color version in Regis mode.
+!	
+!	The /WAIT  switch may  be used  to request  a real-time  pause
+!	between successive  plots.   X-ON/X-OFF  is  enabled  and  the
+!	dialog area made  invisible before each  plot, and after  each
+!	plot, the  terminal  mode  is  restored  to  alphanumeric  and
+!	X-ON/X-OFF disabled.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[24-Sep-84]
+!
+!------------------------------------------------------------------------
+{
+INTEGER count,
+	cvt240,
+	done,
+	every,
+	k,
+	m,
+	NO,
+	tk4105,
+	wait,
+	vt240,
+	YES;
+
+STRING	def_count,
+	def_every,
+	def_wait,
+	junk,
+	start_file;
+
+def_count = "1";
+def_every = "1";
+def_wait = "2000";
+
+count = $INTEGER(def_count);
+every = $INTEGER(def_every);
+start_file = "";
+wait = 0;
+YES = 1;
+NO = 0;
+tk4105 = NO;
+vt240 = NO;
+cvt240 = NO;
+
+WHILE done = NO
+DO PARSE (
+SWITCH(WORDS(COUNT::1,EVERY::2,PAUSE:3,STARTFILE::4,VT240:5,WAIT::6,CVT240:7,
+	TK4105:8),STDHELP):
+	CASE $Value FROM 1 TO 8 OF
+	{
+	1: PARSE (NUMBER (STDHELP, HELP "repeat count", DEFAULT def_count):
+		{
+		count = $Value;
+		done = NO;
+		});
+
+	2: PARSE (NUMBER (STDHELP, HELP "filelist step interval",
+		DEFAULT def_every):
+		{
+		every = $Value;
+		done = NO;
+		});
+
+	3: wait = -2; ! -1 should have worked, but gets assigned as +47
+
+	4: PARSE (FILE (INPUT,	STDHELP,
+		HELP "Tektronix-4105 CRT file",
+		DEFAULT_DEV "DSK",
+		DEFAULT_NAM "*",
+		DEFAULT_EXT "CRT",
+		DEFAULT_GEN 0) : start_file = $FILEL
+		);
+
+	5: vt240 = YES;
+
+	6: PARSE (NUMBER (STDHELP,
+		HELP "delay in milliseconds", DEFAULT def_wait):
+		{
+		wait = $Value;
+		done = NO;
+		});
+
+	7: cvt240 = YES;
+
+	8: tk4105 = YES;
+	};
+
+OTHERWISE: PARSE(FILELIST (INPUT,
+	STDHELP,
+	HELP "Tektronix-4105/VT240 CRT file",
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "CRT",
+	DEFAULT_GEN 0) : done = YES)
+);
+
+
+display "
+";
+
+IF cvt240 = NO THEN
+	IF vt240 = NO THEN
+		tk4105 = YES;
+
+done = NO;
+IF start_file <> "" THEN DO
+	{
+	IF $FILEL = start_file THEN
+		done = YES
+	ELSE IF $NextFile = 0 THEN
+		ABORT "?Start file not included in filelist";
+	}
+	UNTIL done = YES;
+
+DO
+{
+	k = 0;
+	WHILE k < count DO
+	{
+		k = k + 1;
+		IF tk4105 = yes THEN
+		{
+			display binary "%!0"; !Select CODE TEK
+			display binary  "LV0";	!Set dialog area invisible
+			display binary "NF3"; !Set XON/XOFF flagging in both directions
+		}
+		ELSE IF vt240 = YES THEN ! VT240
+		{
+			display binary "[?38h";	!Select Tek mode
+		};
+
+		docommand original "COPY " + $FILEL + " TTY:,
+		BYTE 8
+
+		";
+		IF tk4105 = YES THEN
+		{
+			display binary "NF0"; 		!Remove XON/XOFF
+			display binary  "%!3";	!US to get to alpha mode, then
+							!select code VT52
+		};
+		IF wait > 0 THEN
+			CALL $Wait(wait)
+		ELSE IF wait < 0 THEN
+			junk = $ReadBinary(1,$CR,0);
+		IF VT240 = YES THEN
+		{	! Stupid VT240 clears graphics on exit to VT100 mode
+			display binary "[?38l[61""p";
+		};
+
+
+		m = 1;
+		WHILE m < every DO	! Skip every-1 files in list
+		{
+			m = m + 1;
+			IF $Nextfile = 0 THEN m = 34359738367; ! 2**35-1
+		}
+	}
+} UNTIL $NextFile = 0;
+IF tk4105 = YES THEN
+{
+	display binary "%!0"; 		!Select CODE TEK
+	display binary  "LV1";		!Set dialog area visible
+	display binary  "%!3";	!US to get to alpha mode, then
+					!select code VT52
+}
+ELSE IF vt240 = YES THEN
+{
+	display binary "[?38l[61""p";
+};
+display "
+";
+}

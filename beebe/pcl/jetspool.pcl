@@ -1,0 +1,13 @@
+command jetspool (filelist (input,
+	default_dev "dsk",
+	default_nam "*",
+	default_ext "dvi-jep")
+	);
+begin
+do
+	docommand original "COPY " + $FILEL + " tty26:,
+	byte 8
+
+	"
+until $nextfile = 0
+end;

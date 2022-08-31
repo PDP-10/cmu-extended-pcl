@@ -1,0 +1,63 @@
+!-----------------------------------------------------------------------
+! Miscellaneous string procedures:
+!	strlower(s)		return lower-case copy of s
+!	strupper(s)		return upper-case copy of s
+!	strsub(s,old,new)	return copy of s with all substrings old
+!				changed to new
+! [25-Sep-88]
+!-----------------------------------------------------------------------
+STRING PROCEDURE
+strlower(STRING s);	! Return a lower-cased copy of s, leaving s intact;
+BEGIN
+    STRING scopy;
+    INTEGER index;
+
+    scopy = s;
+    index = 1;
+    WHILE index <= $Length(scopy) DO
+    BEGIN
+	IF scopy[index:1] >= "A" THEN
+	IF scopy[index:1] <= "Z" THEN
+	    scopy = scopy[1:index-1] + $CvItC($CvCtI(scopy[index:1]) + 32) +
+	        scopy[index+1:*];
+	index = index + 1
+    END;
+    RETURN scopy
+END; !strlower
+
+! Return a copy of s with instances of old replaced by new.  Letter case
+! in old is ignored; letter case of new is preserved.
+STRING PROCEDURE
+strsub(STRING s; STRING old; STRING new);
+BEGIN
+    STRING scopy;
+    INTEGER index;
+
+    scopy = s;
+    index = $SEARCHRAISED(scopy,old);
+    WHILE index > 0 DO
+	BEGIN
+	    scopy = scopy[1:index-1] + new + scopy[index+$Length(old):*];
+	    index = $SEARCHRAISED(scopy,old)
+	END;
+    RETURN scopy
+END; !strsub
+
+STRING PROCEDURE
+strupper(STRING s);	! Return an upper-cased copy of s, leaving s intact;
+BEGIN
+    STRING scopy;
+    INTEGER index;
+
+    scopy = s;
+    index = 1;
+    WHILE index <= $Length(scopy) DO
+    BEGIN
+	IF scopy[index:1] >= "a" THEN
+	IF scopy[index:1] <= "z" THEN
+	    scopy = scopy[1:index-1] + $CvItC($CvCtI(scopy[index:1]) - 32) +
+	        scopy[index+1:*];
+	index = index + 1
+    END;
+    RETURN scopy
+END; !strupper

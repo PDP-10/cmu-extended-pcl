@@ -1,0 +1,48 @@
+INTEGER PROCEDURE DELTA_TIME (INTEGER old_time_and_date,
+	delta_days, delta_seconds);
+!------------------------------------------------------------------------
+! Purpose:
+!	Add a positive or negative delta time in days and seconds
+!	to a  date  and time  field  in internal  system  format,
+!	returning the result  as the function  value in  internal
+!	system format.
+!
+! Usage:
+!	Insert in the declaration statement group the statement
+!
+!	EXTERNAL INTEGER PROCEDURE delta_time;
+!
+!	Then where a delta time must be computed, do for example,
+!
+!	new_date_and_time = DELTA_TIME(old_date_and_time,0,-120);
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[29-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER date_half,
+	time_half;
+
+date_half = old_time_and_date/262144;
+time_half = old_time_and_date - 262144*date_half;
+!
+! The time  half contains  the fraction  of a  day relative  to 2**18  =
+! 262144.  Thus, the increment to the time half is given by
+!
+! delta_half = ((2**18)*delta_seconds)/(24*60*60)
+!	     = ((2**18)*delta_seconds)/(2**3 * 3 * 4 * 15 * 4 * 15)
+!	     = ((2**18)*delta_seconds)/(2**7 * 3 * 15 * 15)
+!	     = ((2**11)*delta_seconds)/675
+!	     = (2048*delta_seconds)/675
+! 
+! The last result  avoids integer  overflow which would  occur with  the
+! first expression.
+! 
+return	(time_half + (2048*delta_seconds)/675) + 
+	(date_half + delta_days)*262144
+END;

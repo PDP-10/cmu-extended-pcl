@@ -1,0 +1,39 @@
+command lines;
+{
+	integer maxx,maxy,i;
+
+	maxx = 1023;
+	maxy = 767;
+
+	display binary "[1m";	! White letters on black
+	display binary "A[H[J";	! ANSI screen clear
+	display binary "C";	! Tektronix screen clear
+	display binary "BTIE,0,H,1,";	! Graphics mode
+
+
+	i = maxy;
+	while i >= 0 do
+	{
+		display binary "H,7,/,0," + 
+			$string(maxy) + "," + 
+			$string(maxx) + "," +
+			$string(i) + ",";
+		display binary "H,0,/," + 
+			$string(maxx) + "," +
+			$string(i) + ",0," +
+			$string(maxy) + ",";
+		i = i - 1;
+	};
+	i = maxx;
+	while i >= 0 do
+	{
+		display binary "H,4,/,0," + 
+			$string(maxy) + "," + 
+			$string(i) + ",0,";
+		display binary "H,0,/," + 
+			$string(i) + ",0,0," +
+			$string(maxy) + ",";
+		i = i - 1;
+	};
+	display binary "H,7,?A[H";
+}

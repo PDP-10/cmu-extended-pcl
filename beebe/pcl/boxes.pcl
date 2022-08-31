@@ -1,0 +1,134 @@
+COMMAND boxes;
+{
+	INTEGER 
+		blue,
+		color,
+		green,
+		height,
+		hue,
+		lightness,
+		r,
+		red,
+		saturation,
+		width,
+		x,
+		xmax,
+		xspace,
+		y,
+		ymax;
+
+	color = 0;
+	xmax = 1023;
+	ymax = 767;
+	DISPLAY BINARY "B";
+	height = (3*ymax)/4;
+	width = (xmax+1)/12;
+	xspace = (xmax+1)/8;
+	r = ymax/7;
+
+	x = width;
+	y = ymax/8;
+
+	DISPLAY BINARY "A[1m[H[JCBTI";
+
+	WHILE xmax >= (x+xspace) DO
+	{
+		DISPLAY BINARY "H,";
+		DISPLAY BINARY $STRING(color+1);
+		display binaRY ",";
+
+		DISPLAY BINARY "D,4,2,";
+
+		DISPLAY BINARY $STRING(X) + ",";
+		DISPLAY BINARY $STRING(Y) + ",";
+
+		DISPLAY BINARY $STRING(X+width) + ",";
+		DISPLAY BINARY $STRING(Y) + ",";
+
+		DISPLAY BINARY $STRING(X+width) + ",";
+		DISPLAY BINARY $STRING(y+height) + ",";
+
+		DISPLAY BINARY $STRING(X) + ",";
+		DISPLAY BINARY $STRING(y+height) + ",";
+
+		color = $AND(color + 1,7);
+
+		x = x + xspace;
+	};
+
+	x = (3*width)/2;
+	y = ymax - r;
+	color = 0;
+	WHILE xmax >= (x+xspace) DO
+	{
+		DISPLAY BINARY "H,";
+		DISPLAY BINARY $STRING(color+1);
+		DISPLAY BINARY ",";
+
+		DISPLAY BINARY "M,2,";
+
+		DISPLAY BINARY $STRING(X) + ",";
+		DISPLAY BINARY $STRING(Y) + ",";
+		DISPLAY BINARY $STRING(r) + ",0,360,";
+
+		color = $AND(color + 1,7);
+
+		x = x + xspace;
+	};
+
+	red = 1;
+	WHILE red < 16 DO
+	{
+		green = 1;
+		WHILE green < 16 DO
+		{
+			blue = 1;
+			color = 0;
+			WHILE blue < 16 DO
+			{
+				DISPLAY BINARY "J," + $STRING(color+1) +
+					"," + $STRING(red) + 
+					"," + $STRING(green) +
+					"," + $STRING(blue) + ",";
+				DISPLAY BINARY "?A[H[KRGB:" + 
+					$String(red) + "	" +
+					$string(green) + "	" + 
+					$string(blue) + "BT";
+				blue = blue + 2;
+				color = $AND(color+1,7);
+			};
+			CALL $Wait(200);
+			green = green + 2;
+		};
+		red = red + 2;		
+	};
+
+	DISPLAY BINARY "?A[HBTI";
+	hue = 0;
+	WHILE hue < 360 DO
+	{
+		saturation = 0;
+		WHILE saturation  < 100 DO
+		{
+			lightness = 20;
+			color = 0;
+			WHILE lightness < 100 DO
+			{
+				DISPLAY BINARY "G," + $STRING(color+1) +
+					"," + $STRING(hue) + 
+					"," + $STRING(lightness) +
+					"," + $STRING(saturation) + ",";
+				DISPLAY BINARY "?A[H[KHLS:" + 
+					$String(hue) + "	" +
+					$string(lightness) + "	" + 
+					$string(saturation) + "BT";
+				lightness = lightness + 10;
+				color = $AND(color+1,7);
+			};
+			CALL $Wait(200);
+			saturation = saturation + 25;
+		};
+		hue = hue + 20;		
+	};
+	DISPLAY BINARY "?A[H";
+}

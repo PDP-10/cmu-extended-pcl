@@ -1,0 +1,126 @@
+STRING	repeat_command_string;	! global
+INTEGER	repeat_command_count;	! values
+INTEGER	repeat_command_wait;
+
+COMMAND REPEAT;
+!-----------------------------------------------------------------------
+! Purpose:
+!	Repeat a command a specified number of times, or indefinitely.
+!
+! Usage:
+!	REPEAT {/COUNT:nnn /PAUSE /WAIT:nnn} commandstring
+!
+! Remarks:
+!	If the /COUNT switch is not given  a value, or is given a  value
+!	<= 0,  the  command  will  repeat  forever.
+!
+!	The /PAUSE  switch  requests  arbitrary  keyboard  input  before
+!	continuing.  It is equivalent to specifying a negative wait.
+!	
+!	The /WAIT switch  requests a delay  of nnn milleseconds  between
+!	iterations of the command.
+!
+!	The last count, wait time, and command string are remembered and
+!	used as the default  values for the  next invocation of  REPEAT.
+!	The sequence \n can  be used to introduce  line breaks into  the
+!	commandstring.
+!	
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[28-Dec-83]
+!
+!------------------------------------------------------------------------
+{
+EXTERNAL STRING  repeat_command_string;
+EXTERNAL INTEGER repeat_command_count;
+EXTERNAL INTEGER repeat_command_wait;
+
+INTEGER count,
+	done,
+	k,
+	NO,
+	wait,
+	YES;
+
+STRING	command_string,
+	def_count,
+	def_wait,
+	junk;
+
+GUIDE "a command";
+
+YES = 1;
+NO = 0;
+
+command_string = repeat_command_string;	! Start with previous values
+count = repeat_command_count;		! for string, count and wait.
+wait = repeat_command_wait;
+
+def_count = $STRING(count);
+def_wait = $STRING(wait);
+done = NO;
+
+WHILE done = NO 
+DO PARSE (
+SWITCH(WORDS(COUNT::1,PAUSE:2,WAIT::3),STDHELP): 
+	CASE $Value FROM 1 TO 3 OF
+	{
+	1: PARSE (NUMBER (STDHELP, HELP "repeat count", DEFAULT def_count):
+		{
+		count = $Value;
+		done = NO;
+		});
+
+	2: wait = -2; ! -1 should have worked, but gets assigned as +47
+
+	3: PARSE (NUMBER (STDHELP,
+		HELP "delay in milliseconds", DEFAULT def_wait):
+		{
+		wait = $Value;
+		done = NO;
+		});
+	};
+
+EOL: 
+	{
+	command_string = repeat_command_string;
+	done = YES;
+	};
+
+TEXT(DEFAULT repeat_command_string, HELP "command string") :
+	{
+	command_string = $Atom;
+	IF command_string <> "" 
+	THEN done = YES
+	ELSE done = NO;
+	};
+);
+
+k = $SEARCHRAISED(command_string,"\n");
+WHILE k > 0 DO	! Change \n to CR LF sequences
+{
+	command_string = command_string[1:k-1] + $CRLF +
+		command_string[k+2:*];
+	k = $SEARCHRAISED(command_string,"\n");
+};
+
+repeat_command_string = command_string;	!Update global saved string
+repeat_command_count = count;		!and count
+repeat_command_wait = wait;		!and wait.
+
+IF count <= 0 THEN count = 34359738367;	! 2**35 - 1
+
+IF command_string <> ""
+THEN WHILE count > 0 DO 
+	{
+	DOCOMMAND command_string;
+	count = count - 1;
+	IF wait > 0 THEN 
+		CALL $Wait(wait)
+	ELSE IF wait < 0 THEN
+		junk = $ReadBinary(1,$CR,0)
+	};
+}

@@ -1,0 +1,62 @@
+COMMAND grid;
+!------------------------------------------------------------------------
+! Purpose:
+!	Display an n x m grid on the Intecolor VHR-19 screen.
+!
+! Usage:
+!	grid nnn mmm
+!
+! Remarks:
+!	None.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[24-Sep-88]
+!
+!------------------------------------------------------------------------
+{
+	integer nx,ny,x,y,dx,dy,xmax,ymax,color;
+	xmax = 1023;
+	ymax = 1023;
+	parse (number (stdhelp,help "x cells",default "16") : nx = $value);
+	parse (number (stdhelp,help "y cells",default "16") : ny = $value);
+	parse (eol : nop);
+
+	display binary "[1m";	! White letters on black
+	display binary "A[H[J";	! ANSI screen clear
+	display binary "C";	! Tektronix screen clear
+	display binary "BTE,0,H,1,?";	! Graphics mode
+
+	if nx <= 0 then nx = 1;
+	if ny <= 0 then ny = 1;
+	dx = (xmax+1)/nx;
+	dy = (ymax+1)/ny;
+
+	display binary "T";
+
+	x = 0;
+	color = 0;
+	while x <= xmax do
+	{
+		display binary "/," + $string(x) + ",0," + $string(x) +
+			"," + $string(ymax) + ",";
+		x = x + dx;
+	        display binary "H," + $string(color+1) + ",";
+		IF color < 6 THEN color = color+1 ELSE color = 0;
+	};
+
+	y = 0;
+	color = 0;
+	while y  <= ymax do
+	{
+		display binary "/,0," + $string(y) + "," +
+			$string(xmax) + "," + $string(y) + ",";
+	        display binary "H," + $string(color+1) + ",";
+		y = y + dy;
+		IF color < 6 THEN color = color+1 ELSE color = 0;
+	};
+	display binary "?A[H";
+}

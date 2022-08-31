@@ -1,0 +1,15 @@
+command ugtek;
+{
+	parse (filelist(stdhelp,
+		default_dev "dsk",
+		default_ext "sli",
+		default_gen 0));
+	do 
+		{
+		docommand "delete " + $File_Nam($Parse) + ".CRT.*";
+		docommand "delete " + $File_Nam($Parse) + ".LST.*";
+		docommand "define crt: " + $File_Nam($Parse) + ".CRT";
+		docommand "rsl:slidet " + $FileS;
+		}
+	until $NextFile = 0;
+}

@@ -1,0 +1,414 @@
+COMMAND MYHELP;
+!------------------------------------------------------------------------
+! Purpose:
+!	Expanded HELP command
+!
+! Usage:
+!	HELP [topic]
+!
+! Remarks:
+!	The standard DEC-20 EXEC HELP  command is too restrictive,  in
+!	that it essentially does nothing more than a TYPE of a file on
+!	HLP:, and only the first directory on the HLP: definition list
+!	is ever examined.  This makes it impossible to manage separate
+!	groups of HELP files.
+!
+!	This command is intended to  remedy this defect.  The  current
+!	PCL implementation has a limit  of 100 keywords in any  single
+!	KEYWORD list, so it has been necessary to break up the list of
+!	about 240 entries in HLP: into three groups of about 80;  this
+!	makes it simple to insert new keywords in this file each  time
+!	new HELP files are introduced.
+!	
+!	Note that because of a PCL restriction, hyphens in file  names
+!	must be replaced by underscores when the names are used in the
+!	keyword list, and leading  hyphens (underscores) are  illegal.
+!	At present, this excludes a single file from the display,  and
+!	it is commented and marked with the prefix ****.
+!
+!	It seems reasonable  to have several  categories of HELP,  and
+!	these should be structured  after what the  user sees when  he
+!	types ? to the EXEC.  On our system, this gives the response
+!	
+!	@?
+!	 Local PCL command, one of the following:
+!	 ...
+!	 or command, one of the following:
+!	 ...
+!	 or kept fork, one of the following:
+!	 ...
+!	 or ^E,  {if the user is enabled}
+!	 ...
+!	 or system program name.
+!
+!	We therefore divide  the HELP response  into categories  named
+!	"local PCL command", "system EXEC command", and "program  name
+!	or subject".  As is conventional with the system HELP command,
+!	simply typing a carriage return selects the file HLP:HELP.HLP.
+!	
+!	Other categories  may eventually  be useful,  and perhaps  the
+!	response should be  tree-structured, so  that to  see any  one
+!	keyword table, the user would have  to identify it first by  a
+!	selecting keyword.   This has  the disadvantage,  however,  of
+!	requiring the user  to make  several attempts if  he does  not
+!	know exactly what he is looking for.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[05-Jan-83]
+!
+!------------------------------------------------------------------------
+BEGIN 
+
+STRING
+	Help_File_Name;
+
+INTEGER	
+	done,
+	NO,
+	YES;
+
+NO = 0;
+YES = 1;
+
+GUIDE "about";
+
+done = NO;
+Help_File_Name = "PS:<SUBSYS.HLP>HELP";
+
+DO PARSE (
+
+KEYWORD(HELP "local PCL command,",STDHELP,WORDS(
+	FINGER:1,
+	LOCAL_HELP:1,
+	PCC:1,
+	QSPELL:1,
+	RECORD:1,
+	REPORT:1,
+	SEND:1,
+	TEST:1)):	Help_File_Name = "PS:<SUBSYS.PCL>" + $ATOM;
+
+KEYWORD(HELP "system EXEC command,",STDHELP,WORDS(
+	ALGOL:1,
+	APPEND:1,
+	ASSIGN:1,
+	BACKSPACE:1,
+	BASIC:1,
+	BATCH:1,
+	BREAK:1,
+	CLOSE:1,
+	COBDDT:1,
+	COBOL:1,
+	COMPILE:1,
+	CONNECT:1,
+	CONTINUE:1,
+	COPY:1,
+	CREATE:1,
+	CREF:1,
+	DAYTIME:1,
+	DDT:1,
+	DDT_PROGRAM:1,
+	DEASSIGN:1,
+	DEBUG:1,
+	DEFINE:1,
+	DELETE:1,
+	DIRECTORY:1,
+	DUMPER:1,
+	EDIT:1,
+	EDIT_PROGRAM:1,
+	EOF:1,
+	EXECUTE:1,
+	EXPUNGE:1,
+	FDIRECTORY:1,
+	FILCOM:1,
+	FORDDT:1,
+	FORTRAN:1,
+	GET:1,
+	HELP:1,
+	INFORMATION:1,
+	LOAD:1,
+	LOGIN:1,
+	LOGOUT:1,
+	MACRO:1,
+	MAIL:1,
+	MAKLIB:1,
+	MERGE:1,
+	PLEASE:1,
+	POP:1,
+	PRINT:1,
+	PUSH:1,
+	RDMAIL:1,
+	REENTER:1,
+	RENAME:1,
+	RESET:1,
+	REWIND:1,
+	RUN:1,
+	SAVE:1,
+	SET:1,
+	SKIP:1,
+	SORT:1,
+	START:1,
+	SYSTAT:1,
+	TALK:1,
+	TDIRECTORY:1,
+	TERMINAL:1,
+	TRANSL:1,
+	TYPE:1,
+	UNDELETE:1,
+	UNLOAD:1,
+	VDIRECTORY:1,
+	XINFO:1)):	Help_File_Name = "CH:<COS.HELP-FROM-INFO>" + $ATOM;
+
+KEYWORD(HELP "program name or subject,",STDHELP,WORDS(
+! ****	_SUBSYS_DIRS:1,
+	A_UTILITY_SUMMARY:1,
+	ABOUT_HELP:1,
+	ACCESS_BITS:1,
+	ACTGEN:1,
+	ARCHIVE:1,
+	ARCHIVE_SYSTEM:1,
+	BADLPT:1,
+	BASIC:1,
+	BATCH:1,
+	BATCH_MSG:1,
+	BBOARD:1,
+	BCPL:1,
+	BCPL_DDT:1,
+	BIGCOM:1,
+	BIGTXT:1,
+	BLIS10:1,
+	C:1,
+	CACM:1,
+	CALC:1,
+	CHECKD:1,
+	CHKPNT:1,
+	CNVDSK:1,
+	COM:1,
+	CONV20:1,
+	COPLPT:1,
+	COPYPAGE:1,
+	CREF:1,
+	CROSS:1,
+	CVTSTR:1,
+	DAVE:1,
+	DDT:1,
+	DEC20_TO_RSX11M:1,
+	DEC20_TO_UNIVAC:1,
+	DEINCL:1,
+	DESEQ:1,
+	DETAB:1,
+	DIALUP:1,
+	DIFFEQ:1,
+	DIRCDT:1,
+	DIRCMD:1,
+	DIRCOM:1,
+	DIRFMT:1,
+	DIRPFO:1,
+	DIRPNT:1,
+	DIRSF3:1,
+	DLUSER:1,
+	DMPLST:1,
+	DMPSUM:1,
+	DO:1,
+	DOCIDX:1,
+	DOCMNT:1,
+	DOCUMENT:1,
+	DOWNLD:1,
+	DSKUSE:1,
+	DSR:1,
+	DSRINP:1,
+	DUMPER:1,
+	EDIT:1,
+	EISPAC:1,
+	EMACS:1,
+	EPSLN:1,
+	ERRSET:1,
+	EXCMAP:1,
+	EXEC:1,
+	EXPDIR:1,
+	EXPSCR:1,
+	FAIL:1,
+	FE:1,
+	FILCOM:1,
+	FILEIO:1,
+	FINGER:1,
+	FMTFOR:1,
+	FNLIB:1,
+	FORDDT_V5A:1,
+	FORDDT_V6:1,
+	FORDDT_V7:1,
+	FORMAT:1,
+	FORPRT:1,
+	FORPTX:1)):	Help_File_Name = "PS:<SUBSYS.HLP>" + $ATOM;
+
+KEYWORD(HELP "program name or subject,",STDHELP,WORDS(
+	FORSTA:1,
+	FORTIO:1,
+	FORTLX:1,
+	FORTRAN_V5A:1,
+	FORTRAN_V6:1,
+	FORTRAN_V7:1,
+	FTP:1,
+	GAMES:1,
+	GETCH:1,
+	GETTL:1,
+	GLOB:1,
+	GRAPH:1,
+	GRAPH3:1,
+	GRIPE:1,
+	HARWELL:1,
+	HELP:1,
+	IBTRTN:1,
+	IMLAC:1,
+	IMSL:1,
+	INFSCR:1,
+	ITPACK:1,
+	JRSCAN:1,
+	KARRTN:1,
+	KEEPN:1,
+	LABELS:1,
+	LIBREF:1,
+	LINK:1,
+	LINK_V5P1:1,
+	LINPAC:1,
+	LLOGIN:1,
+	MACRO:1,
+	MAIL:1,
+	MAKCTL:1,
+	MAKFIL:1,
+	MAKLIB:1,
+	MAKRAM:1,
+	MAKVFU:1,
+	MATHLIB:1,
+	MATLAB:1,
+	MFEXEC:1,
+	MIC:1,
+	MINPAC:1,
+	MLTCOL:1,
+	MM:1,
+	MS:1,
+	MTACPY:1,
+	N5510:1,
+	NETSTAT:1,
+	NODMP:1,
+	NOTIFY:1,
+	NPRIME:1,
+	OPNIO:1,
+	OPR:1,
+	PASC20:1,
+	PASCAL:1,
+	PASSGO:1,
+	PASSWORDS:1,
+	PCL:1,
+	PCROSS:1,
+	PDP11_TAPE:1,
+	PFORT:1,
+	PHONES:1,
+	PHOTO:1,
+	PIECHT:1,
+	PLAN:1,
+	PLEASE:1,
+	PLOT:1,
+	PLTAPE:1,
+	POET:1,
+	PORT:1,
+	PRETTY:1,
+	PRIME:1,
+	PRINT:1,
+	PROTECTION_SYSTEM:1,
+	PRTADD:1,
+	PRX:1,
+	PTYCON:1,
+	RATFOR:1,
+	RDMAIL:1)):	Help_File_Name = "PS:<SUBSYS.HLP>" + $ATOM;
+
+KEYWORD(HELP "program name or subject,",STDHELP,WORDS(
+	REAPER:1,
+	REDIT:1,
+	REINCL:1,
+	REV:1,
+	RR:1,
+	RSXFMT:1,
+	RT11_TO_DEC20:1,
+	RUNINP:1,
+	RUNOFF:1,
+	RUNTIM:1,
+	SAIL:1,
+	SCRIBE:1,
+	SECOND:1,
+	SEDIT:1,
+	SEND:1,
+	SEQDEK:1,
+	SETACT:1,
+	SETTRM:1,
+	SF3:1,
+	SF3STA:1,
+	SFTRAN:1,
+	SHFT60:1,
+	SIGNS:1,
+	SIMULA:1,
+	SITESELECT:1,
+	SLIDES:1,
+	SLINK:1,
+	SND11:1,
+	SNDCH:1,
+	SNDMSG:1,
+	SORT:1,
+	SPACE:1,
+	SPACEWAR:1,
+	SPELL:1,
+	SPLITS:1,
+	STAT80:1,
+	SUB_DIRECTORIES:1,
+	SYMAP:1,
+	SYSCMD:1,
+	SYSDPY:1,
+	SYSGDI:1,
+	SYSGPI:1,
+	SYSINM:1,
+	SYSJOB:1,
+	TAB_STOPS:1,
+	TAKE:1,
+	TALK:1,
+	TECO:1,
+	TELNET:1,
+	TELRAY:1,
+	TERMINALS:1,
+	TEX:1,
+	TK4662:1,
+	TKCOPY:1,
+	TKTOPX:1,
+	TKVECS:1,
+	TNET:1,
+	TOMS:1,
+	TOSCIP:1,
+	TOUCH:1,
+	TPUTIL:1,
+	TRAK20:1,
+	TRIM72:1,
+	TROUBLE:1,
+	TSTAGE:1,
+	TV:1,
+	TVIFN:1,
+	UHELP:1,
+	ULIST:1,
+	UPDATE:1,
+	USRLST:1,
+	WATCH:1,
+	WHODMP:1,
+	XED:1,
+	XINFO:1,
+	XREF:1,
+	YESDMP:1)):	Help_File_Name = "PS:<SUBSYS.HLP>" + $ATOM;
+ 
+EOL:	done = YES
+)
+
+UNTIL done = YES;
+
+DOCOMMAND ORIGINAL "TYPE "+ Help_File_Name + ".HLP";
+
+END; !MYHELP 

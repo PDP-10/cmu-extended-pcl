@@ -1,0 +1,144 @@
+COMMAND print;
+!------------------------------------------------------------------------
+! Purpose:
+!	Print a list of files using one of the College of Science 
+!	printers (default Physics Printronix 600).
+!
+! Usage:
+!	PRINT {/switches} filespecs
+!
+! Remarks:
+!	The filespecs field may contain any list of file specifications.
+!	The available switches are as follows:
+!	/COPIES:nn	Number of copies desired (default = 1)
+!	/FORTRAN	Files contain ASA carriage control in column 1.
+!	/INDENT:nn	Indent the file right (nn > 0) or left (nn < 0;
+!			nn characters lost on each line) immediately
+!			prior to printing.
+!	/NOHEAD		Header suppression for UAC printer only.
+!	/SIXLPI		Six lines/inch printing.
+!	/EIGHTLPI	Eight lines/inch printing (default).
+!	/B129		Mathematics Annex printer.
+!	/CHEMISTRY	Chemistry Printronix 300 printer.
+!	/PHYSICS	Physics Printronix 600 printer (default).
+!	/MATHEMATICS	Mathematics printer.
+!	/UAC		Utah Archaelogical Center Decision Data 6540.
+!
+!	When /INDENT or /FORTRAN are specified, temporary files are
+!	created in the connected directory named FOOPTX.LST and/or
+!	the filename to the extension of which is appended the string
+!	"terminalnumberTMP"; these temporary files are deleted before
+!	completion of execution.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER done,indent,copies,count;
+STRING fortran,header,lpi,printer,suffix;
+
+fortran = "";
+lpi = "";
+printer = "SYS:PRX";
+done = 0;
+copies = 1;
+indent = 0;
+header = "";
+
+GUIDE "files";
+
+WHILE done = 0 DO PARSE (
+SWITCH(WORDS(
+	FORTRAN:1,
+	SIXLPI:2,
+	EIGHTLPI:3,
+	INDENT::4,
+	COPIES::5,
+	B129:6,
+	CHEMISTRY:7,
+	MATHEMATICS:8,
+	PHYSICS:9,
+	UAC:10,
+	NOHEAD:11),
+	STDHELP,
+	HELP "Defaults: /EIGHTLPI /COPIES:1 /INDENT:0 /PHYSICS") : 
+	CASE $VALUE FROM 1 TO 11
+ OF BEGIN
+	[1] : fortran = $ATOM;
+	[2] : lpi = "6";
+	[3] : lpi = "";
+	[4] : PARSE (NUMBER (DEFAULT "10",STDHELP) : indent = $VALUE);
+	[5] : PARSE (NUMBER (DEFAULT "1",STDHELP) : copies = $VALUE);
+	[6] : printer = "SYS:COPLPT";
+	[7] : printer = "SYS:P300";
+	[8] : printer = "SYS:COPY53";
+	[9] : printer = "SYS:PRX";
+	[10]: printer = "SYS:UACPRT";
+	[11]: header = "/NOHEAD";
+	END;
+
+EOL (HELP "file specifications") : ABORT "No files specified";
+
+OTHERWISE : done = 1);
+
+PARSE (FILELIST (HELP "List of files to print",DEFAULT_EXT "LST") : NOP);
+
+IF printer <> "SYS:UACPRT" THEN header = "";
+
+IF indent = 0
+THEN IF fortran = "" 
+	THEN suffix = ""
+	ELSE suffix = "-" + $STRING($TERMNUMBER) + "TMP"
+ELSE suffix = "-" + $STRING($TERMNUMBER) + "TMP";
+
+DO SELECT $File_Typ($Parse) OF BEGIN
+
+["REL"]: NOP;
+["EXE"]: NOP;
+["BIN"]: NOP;
+[OTHERWISE]:
+IF fortran = "" THEN BEGIN
+	IF indent <> 0 THEN DOCOMMAND "INDENT-FILE /INDENT:" +
+			$STRING(indent) + " " + $FILES + " "
+			+ $FILES + suffix;
+	DISPLAY printer[5:*] + ":	" + $FILES;
+	INVOKE printer;
+	count = copies;
+	WHILE count > 0 DO BEGIN
+		count = count - 1;
+		TYPEIN $FILES + suffix + " " + lpi + header
+		END;
+	TYPEIN "";
+	IF indent <> 0 THEN DOCOMMAND ORIGINAL "DELETE " + $FILES + suffix
+	END
+ELSE BEGIN
+	DOCOMMAND ORIGINAL "COPY " + $FILEL + " FOOPTX.LST";
+	DISPLAY "FORPTX:	" + $FILES;
+	INVOKE "SYS:FORPTX";
+	TYPEIN "FOOPTX.LST";
+	TYPEIN "FOOPTX.LST";
+	DOCOMMAND ORIGINAL "OPR:WAIT";
+	KILLPROGRAM;
+	DOCOMMAND ORIGINAL "RENAME FOOPTX.LST " + $FILES + suffix + " ";
+	IF indent <> 0 THEN DOCOMMAND "INDENT-FILE /INDENT:" +
+			$STRING(indent) + " " + $FILES + suffix + " "
+			 + $FILES + suffix;
+	DISPLAY printer[5:*] + ":	" + $FILES;
+	INVOKE printer;
+	count = copies;
+	WHILE count > 0 DO BEGIN
+		count = count - 1;
+		TYPEIN $FILES + suffix + " " + lpi + header
+		END;
+	TYPEIN "";
+	DOCOMMAND ORIGINAL "DELETE " + $FILES + suffix
+END
+END
+UNTIL $Nextfile = 0;
+DISPLAY "[Done]"
+END;

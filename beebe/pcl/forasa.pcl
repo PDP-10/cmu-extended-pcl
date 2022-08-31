@@ -1,0 +1,61 @@
+COMMAND FORASA;
+!------------------------------------------------------------------------
+! Purpose:
+!	Convert FORTRAN listing file to ASCII listing file.
+!
+! Usage:
+!	FORASA inputfile [outputfile]
+!
+! Remarks:
+!	If the outputfile is omitted, a new generation of the inputfile
+!	is created.  The processing is done by FORPTX on a temporary
+!	file, so that arbitrary file names can be supported by FORASA.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[21-Nov-80]
+!
+!------------------------------------------------------------------------
+BEGIN
+STRING
+	input_file,
+	output_file,
+	temporary_file;
+
+temporary_file = "SCR:ASA" + $STRING($TERMNUMBER) + ".LST";
+
+GUIDE "File for FORPTX processing";
+
+PARSE (FILE (DEFAULT_DEV "DSK",
+	DEFAULT_EXT "LST",
+	HELP "File to convert",
+	INPUT,
+	STDHELP) : input_file = $FILEL);
+
+output_file = $FILEL;
+
+PARSE (
+FILE	(DEFAULT_DEV "DSK",
+	DEFAULT_EXT "LST",
+	HELP "Output listing file (default = inputfile)",
+	OUTPUT,
+	STDHELP) : output_file = $FILEL;
+
+EOL : output_file = input_file);
+
+DOCOMMAND ORIGINAL "COPY " + input_file + " " + temporary_file;
+
+INVOKE "SYS:FORPTX";
+TYPEIN  temporary_file;
+TYPEIN  temporary_file;
+
+DOCOMMAND ORIGINAL "OPR:WAIT";
+
+DOCOMMAND ORIGINAL "COPY " + temporary_file + " " + output_file;
+
+DOCOMMAND ORIGINAL "DELETE " + temporary_file
+
+END; !FORASA

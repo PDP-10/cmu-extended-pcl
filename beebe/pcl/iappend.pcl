@@ -1,0 +1,83 @@
+COMMAND IAPPEND;
+!------------------------------------------------------------------------
+! Purpose:
+!	Append files with optional header.
+!
+! Usage:
+!	IAPPEND [switches] outputfile filelist
+!
+! Remarks:
+!	If the file specification is omitted, then *.*.* is assumed.
+!	This replacement for the system command APPEND gives options
+!	defined by the optional switches:
+!
+!	/IBM	- Insert "./   ADD   NAME=filename"
+!	/CDC	- Insert "*DECK filename"
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER 
+	InFileId,
+	OutFileId;
+STRING
+	command_echo,
+	header,
+	output_file,
+	record,
+	temporary_file;
+
+header = "";
+temporary_file = $STRING($TERMNUMBER) + "-APPEND.TMP;T";
+
+GUIDE "files";
+
+PARSE(
+SWITCH(WORDS(
+	CDC:1,
+	IBM:2),
+	HELP "output file, or switch defining style of file separator,",
+	STDHELP) : header = $ATOM;
+
+OTHERWISE : NOP);
+
+PARSE (
+FILE	(HELP "Output file",
+	OUTPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "FOO",
+ 	DEFAULT_EXT "DAT") : output_file = $FILEL);
+
+PARSE (
+FILELIST (HELP "List of files to be appended",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*") : NOP);
+
+DO
+	BEGIN
+	IF header = "CDC" 
+	THEN record = "*DECK " + $File_Nam($Parse) + "     " + $FILEL
+	ELSE IF header = "IBM"
+	THEN record = "./   ADD   NAME=" + $File_Nam($Parse) + "     " +
+		$FILEL;
+	IF header <> "" 
+	THEN	BEGIN
+		OutFileId = $Open (temporary_file,$Output);
+		CALL $Write (OutFileId,record);
+		CALL $Close (OutFileId);
+		DOCOMMAND ORIGINAL "APPEND " + temporary_file + " " + 
+			output_file TO command_echo
+		END;
+	DOCOMMAND ORIGINAL "APPEND " + $FILEL + " " + output_file
+	END
+UNTIL $Nextfile = 0
+END; ! IAPPEND

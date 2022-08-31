@@ -1,0 +1,139 @@
+STRING	file_indent_input_file;
+
+STRING	file_indent_output_file;
+
+INTEGER	file_indent_indentation;
+
+COMMAND file_indent;
+!------------------------------------------------------------------------
+! Purpose:
+!	Indent lines of a file;
+!
+! Usage:
+!	file_indent /INDENT:nn infile outfile
+!
+! Remarks:
+!	The switch may occur before,  between, or after the file  names.
+!	If the switch is omitted, a default indentation of 15 columns is
+!	assumed.  If the output file is omitted, a new generation of the
+!	input  file  is   assumed.   Arguments   are  remembered   (with
+!	generation numbers  removed)  so that  they  may be  omitted  on
+!	successive calls.  Indentation may be positive (right  shifting)
+!	or negative  (left shifting  with  deletion) or  zero  (straight
+!	copy).  Default file extensions are both ".LST".
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[29-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL STRING
+	file_indent_input_file,
+	file_indent_output_file;
+
+EXTERNAL INTEGER
+	file_indent_indentation;
+
+STRING
+	blanks,
+	default_indentation,
+	input_file,
+	output_file,
+	record;
+
+INTEGER
+	i,
+	indent,
+	InFileId,
+	OutFileId;
+
+default_indentation = "15";
+
+GUIDE "right or left";
+
+indent = $INTEGER(default_indentation);
+input_file = "";
+output_file = "";
+
+WHILE output_file = "" DO PARSE(
+
+SWITCH(WORDS(INDENT::1)) : PARSE(NUMBER (DEFAULT default_indentation) :
+	BEGIN
+	indent = $VALUE;
+	file_indent_indentation = indent ! replace previous value
+	END);
+
+EOL :	IF input_file = "" 
+	THEN BEGIN ! Supply previous values
+		input_file = file_indent_input_file;
+		output_file = file_indent_output_file;
+		indent = file_indent_indentation;
+		IF input_file = "" THEN ABORT "No saved arguments";
+		IF output_file = "" THEN ABORT "No saved arguments"
+		END
+	ELSE IF output_file = "" 
+	THEN output_file = input_file;
+
+FILE	(HELP "input file name",DEFAULT_EXT "LST",INPUT) : 
+	BEGIN
+	input_file = $FILEL;
+	file_indent_input_file = $FileS + ".0";
+	PARSE(
+
+	SWITCH(WORDS(INDENT::1)) : 
+		PARSE(NUMBER (DEFAULT default_indentation) : indent = $VALUE);
+
+	FILE	(HELP "output file name",DEFAULT_EXT "LST",OUTPUT) :
+		BEGIN
+		output_file = $FILEL;
+		file_indent_output_file = $FileS + ".-1";
+		file_indent_indentation = indent
+		END;
+
+	EOL	(HELP "carriage return if output file same as input file") :
+		BEGIN
+		output_file = input_file;
+		output_file = $FileS + ".-1";
+		file_indent_output_file = $FileS + ".-1";
+		file_indent_indentation = indent
+		END)
+	END);
+
+
+DISPLAY "Input file  = " + input_file;
+DISPLAY NORETURN  "Output file = " + output_file;
+DISPLAY " indented " + $STRING(indent) + " column(s)";
+
+InFileId = $Open (input_file,$Input);
+OutFileId = $Open (output_file,$Output);
+
+IF indent > 0 THEN
+	BEGIN
+	blanks = "";
+	i = 0;
+	WHILE i < indent DO 
+		BEGIN
+		i = i + 1;
+		blanks = " " + blanks
+		END
+	END;
+
+record = $Read (InFileId);
+WHILE $EOF(InFileId) = 0 DO
+	BEGIN
+	IF indent > 0
+	THEN record = blanks + record
+	ELSE IF indent < 0 THEN record = record[1-indent:*];
+	CALL $Write (OutFileId,record);
+	record = $Read (InFileId)
+	END;
+
+CALL $Close (InFileId);
+CALL $Close (OutFileId)
+
+END;

@@ -1,0 +1,48 @@
+COMMAND DROP;
+!-------------------------------------------------------------------
+!Purpose:
+!	The DROP command deletes all generations of files between the
+!	first and the last generation, and in some senses is like the
+!	delete subcommand keep-2-generations, but keeps the first and
+!	last generations instead of the two most recent ones.
+!
+!Usage:
+!	DROP wildcard-file-specification
+!
+!Remarks:
+!	The command  is extremely  useful  for maintaining  only  two
+!	copies of source code for a program under development.
+!
+!--------------------------------------------------------------------
+!Author:
+!	Cedric Griss, Dec-14-81
+!	Updated (NHFB): 18-Jul-83
+!--------------------------------------------------------------------
+{
+  INTEGER first;
+  STRING drpfil,oldfileS,echo;
+
+  GUIDE "files between first and last gen";
+  PARSE FILELIST(INPUT,HELP "list of files",Default_gen *,
+		 Default_nam "*",Default_ext "*");
+  PARSE EOL;
+
+  first = 1;
+  oldfileS = " ";
+  do 
+  	{
+	IF oldfileS <> $FileS THEN 
+		first=1
+ 	ELSE IF first = 1 THEN 
+		first=0
+        ELSE 
+		{
+		DOCOMMAND ORIGINAL "DELETE "+ drpfil TO echo;
+    	        DISPLAY drpfil + "	[dropped]";
+		first=0
+		};
+        oldfileS = $FileS;
+        drpfil = $FileL
+        }
+     UNTIL $NextFile = 0
+}; !DROP

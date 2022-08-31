@@ -1,0 +1,388 @@
+! <BEEBE.PCL>PQ.PCL.93,  6-Dec-85 12:03:04, Edit by BEEBE;
+! Added missing BS in some header lines
+! <BEEBE.PCL>PQ.PCL.92, 29-Nov-85 13:13:03, Edit by BEEBE;
+! Move BS to end-of-line instead of start of line to get around
+! problem with LPtoPS
+COMMAND PQ;
+!------------------------------------------------------------------------
+! Purpose:
+!	Append files with header for submission to printer queue.
+!
+! Usage:
+!	PQ [switches] filelist
+!
+! Remarks:
+!	If the  file  specification  is omitted,  then  *.*.0  is
+!	assumed.
+!
+!	The switches  /BEGINFILE:filename  and  /ENDFILE:filename
+!	can be used to limit the filelist selection; they default
+!	to the first and last file in the list if not given.
+!
+!	The   switch   /BIGTEXT:"string"   requests   the   lines
+!	containing "string" (with letter case ignored) be printed
+!	in double size letters.
+!
+!	The switch /COPIES:nnn may be given if more than one copy
+!	of each file is required.
+!
+!	The switch /HEADER:nn will cause the insertion of a  page
+!	header every nn  lines (nn  = 62 by  default if  omitted)
+!	containing the file name and page number.
+!
+!	The switch /NUMBER requests output  of a line number  for
+!	each file line; /NONUMBER (the default) suppresses this.
+!
+!	The       switches        /SINCE:date_and_time        and
+!	/BEFORE:date_and_time may  be  used to  select  files  by
+!	write date and time.  The switch values may be any  valid
+!	DEC-20 date  and time  strings, or  YESTERDAY, TODAY,  or
+!	TOMORROW (time 00:00:01), or past day of week (MONDAY  ..
+!	SUNDAY), or NOW (current time).  The defaults are
+!
+!	/SINCE:first_day_and_time_of_clock
+!	and
+!	/BEFORE:NOW
+!
+!	Normally, PQ will ignore  any file whose bytesize  is not 7,  on
+!	the assumption that it is a binary file.  The  /IGNORE-BYTE-SIZE
+!	switch  suppresses  this  action.   /NOIGNORE-BYTE-SIZE  is  the
+!	default.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[06-DEC-85]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+INTEGER
+     append,
+     before_time_and_date,
+     copies,
+     copy_count,
+     curtad,
+     done,
+     ff_loc,
+     file_count,
+     file_line,
+     footer,
+     header,
+     ignore_byte_size,
+     InFileId,
+     line_count,
+     line_number,
+     k,
+     NO,
+     number,
+     OutFileId,
+     page_number,
+     page_size,
+     print,
+     select_time_and_date,
+     since_time_and_date,
+     total_line_count,
+     total_page_count,
+     YES;
+
+STRING
+     begin_file,
+     bigtext,
+     bs,
+     clock_start,
+     command_echo,
+     date_string,
+     default_file,
+     end_file,
+     ext,
+     ff,
+     number_string,
+     output_file,
+     page_header,
+     printed_by_line,
+     record,
+     temporary_file;
+
+
+NO = 0;
+YES = 1;
+curtad = $CURTAD;
+
+before_time_and_date = curtad;
+begin_file = "";
+bigtext = "";
+bs = $CVITC(8);
+clock_start = $OUTPUTTAD(0);
+copies = 1;
+default_file = $STRING($TERMNUMBER) + ".LST.-1;P770000";
+done = NO;
+end_file = "";
+ff = $CVITC(12);
+file_count = 0;
+header = NO;
+footer = NO;
+ignore_byte_size = NO;
+number = NO;
+output_file = "";
+page_header = "";
+print = YES;
+page_size = 62;
+select_time_and_date = NO;
+since_time_and_date = 0;
+total_line_count = 0;
+total_page_count = 0;
+
+GUIDE "files";
+
+WHILE done = NO DO PARSE(
+SWITCH( WORDS(
+     BEFORE::1,
+     SINCE::2,
+     COPIES::3,
+     PRINT:4,
+     NOPRINT:5,
+     HEADER::6,
+     NOHEADER:7,
+     FOOTER:8,
+     NOFOOTER:9,
+     BIGTEXT::10,
+     NUMBER:11,
+     NONUMBER:12,
+     IGNORE_BYTE_SIZE:13,
+     NOIGNORE_BYTE_SIZE:14,
+     OUTPUT::15,
+     BEGINFILE::16,
+     ENDFILE::17),STDHELP):
+     BEGIN
+     CASE $VALUE FROM 1 TO 17 OF BEGIN
+     [1]:	BEGIN
+		before_time_and_date =
+			GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+		select_time_and_date = YES
+		END;
+     [2]:	BEGIN
+		since_time_and_date =
+			GENERAL_TIME_AND_DATE_PARSE(curtad,"TODAY",0);
+		select_time_and_date = YES
+		END;
+     [3] : PARSE (NUMBER (DEFAULT "1",STDHELP) : copies = $VALUE);
+     [4] : print = YES;
+     [5] : print = NO;
+     [6] : PARSE (NUMBER (DEFAULT "60",HELP "lines/page") :
+	       page_size = $VALUE);
+     [7] : page_size = 0;
+     [8] : footer = YES;
+     [9] : footer = NO;
+     [10]: PARSE (QUOTEDSTRING (DEFAULT "",
+               HELP "lines containing this string appear in double size") :
+               bigtext = $ATOM);
+     [11]: number = YES;
+     [12]: number = NO;
+     [13]: ignore_byte_size = YES;
+     [14]: ignore_byte_size = NO;
+     [15]: PARSE (OUTPUTFILE (DEFAULT default_file) : output_file = $FILEL);
+     [16]: PARSE (FILE (HELP "starting file in filelist",INPUT) :
+		 begin_file = $FILEL);
+     [17]: PARSE (FILE (HELP "final file in filelist",INPUT) :
+		 end_file = $FILEL)
+     END; ! CASE
+     END; ! SWITCH
+
+EOL (HELP "file specifications") : ABORT "No files specified";
+
+OTHERWISE : done = YES);
+
+PARSE (
+FILELIST (HELP "List of files to be appended",
+     INPUT,
+     DEFAULT_DEV "DSK",
+     DEFAULT_NAM "*",
+     DEFAULT_EXT "*",
+     DEFAULT_GEN 0) : NOP);
+
+temporary_file = $STRING($TERMNUMBER) + "-APPEND.TMP;T;P777777";
+IF output_file = "" THEN
+BEGIN
+    output_file = $STRING($TERMNUMBER) + ".LST.-1;P777777";
+    OutFileId = $Open (output_file,$Output);
+    IF OutFileId = 0 THEN
+	ABORT "Cannot open listing file [" + output_file + "].";
+    CALL $Close (OutFileId);
+    output_file = $STRING($TERMNUMBER) + ".LST.0";
+END;
+printed_by_line = " " + "Printed by " + $USERNAME +
+     " on " + $DATE + " " + $TIME + bs + $CRLF;
+
+
+IF page_size > 0 THEN
+     BEGIN
+     IF page_size < 15 THEN page_size = 15;
+     header = YES;
+     IF footer = YES THEN page_size = page_size - 3
+     END;
+IF select_time_and_date = YES THEN
+DISPLAY "Print files written SINCE " + $OUTPUTTAD(since_time_and_date) +
+" and BEFORE " + $OUTPUTTAD(before_time_and_date);
+
+IF begin_file <> "" THEN	! Position to starting file in list
+BEGIN
+	done = NO;
+	DO
+		IF begin_file = $FILEL THEN
+			done = YES
+		ELSE IF end_file = $FILEL THEN
+			ABORT "EndFile " + end_file + " precedes BeginFile "
+			+ begin_file + " in file list"
+		ELSE IF $Nextfile = 0 THEN
+			ABORT begin_file + " not found in file list"
+	UNTIL done = YES
+END;
+
+done = NO;
+
+DO 
+BEGIN
+   IF $FileInfo_I($Parse,$FBWRT) >= since_time_and_date
+   THEN IF $FileInfo_I($Parse,$FBWRT) < before_time_and_date
+   THEN IF $FileInfo_I($Parse,$FBADR) <> 0
+   THEN BEGIN ! file selected and online
+	  IF ignore_byte_size = NO
+		THEN IF $AND($FileInfo_I($Parse,$FBBYV),
+		    8%007700000000)/8%100000000 <> 7
+			THEN GOTO cycle; ! skip if bytesize not 7
+	  ext = $file_typ($parse);
+	  IF ext = ":EJ" THEN GOTO cycle;
+	  IF ext = "BIN" THEN GOTO cycle;
+	  IF ext = "DIRECTORY" THEN GOTO cycle;
+	  IF ext = "EXE" THEN GOTO cycle;
+	  IF ext = "REL" THEN GOTO cycle;
+	  IF ext = "UNV" THEN GOTO cycle;
+          DISPLAY NORETURN $FILEL;
+	  copy_count = 0;
+	  WHILE copy_count < copies DO
+	       BEGIN ! make next copy
+	       file_count = file_count + 1;
+	       page_header = " " + 
+		    $FileInfo_S(-1,64+9816770569) + "   Page ";
+	       record = page_header + "1" + bs + $CRLF + printed_by_line +
+	           " " + 
+"------------------------------------------------------------------------------------------------------------------------"[1:($Length(page_header)-1)] + bs + $CRLF;
+	       IF file_count > 1 THEN record = ff + record;
+	       OutFileId = $Open (temporary_file,$Output);
+	       IF OutFileId = 0 THEN
+	           ABORT "Cannot open temporary file [" + temporary_file + "].";
+	       CALL $Write (OutFileId,record);
+	       CALL $Close (OutFileId);
+	       copy_count = copy_count + 1;
+	       DOCOMMAND ORIGINAL "APPEND " + temporary_file + " " +
+		    output_file TO command_echo;
+	       IF number = YES THEN
+	           append = NO
+	       ELSE IF header = NO THEN
+	           append = YES
+	       ELSE
+	           append = NO;
+	       IF append = YES
+	       THEN DOCOMMAND ORIGINAL "APPEND " + $FILEL + " " + output_file
+	       ELSE BEGIN ! Copy file inserting page headers
+		    InFileId = $Open($FILEL,$Input);
+		    IF InFileId = 0 THEN
+		        ABORT "Cannot open input file [" + $FILEL + "].";
+		    file_line = 1000000;
+		    record = $Read(InFileId);
+		    file_line = file_line + 1;
+		    OutFileId = $Open(output_file,$Append);
+		    IF OutFileId = 0 THEN
+		        ABORT "Cannot open listing file [" + output_file + "].";
+                    line_count = 6;
+		    page_number = 1;
+		    line_number = 6;
+		    WHILE $Eof(InFileId) = 0 DO
+			 BEGIN
+			 ff_loc = $SEARCH(record,ff);
+			 IF ff_loc > 0 THEN
+			      BEGIN ! remove FF
+			      IF page_number > 1 THEN
+                                   WHILE line_number < page_size DO
+                                        BEGIN
+                                        CALL $Write (OutFileId,"");
+                                        line_count = line_count + 1;
+                                        line_number = line_number + 1
+                                        END;
+			      record = record[1:ff_loc-1] + record[ff_loc+1:*]
+			      END;
+			 IF line_number >= page_size THEN
+			      BEGIN ! print page header
+			      IF footer = YES THEN CALL $Write (OutFileId,
+				   $CRLF + page_header + $STRING(page_number) + bs);
+			      page_number = page_number + 1;
+			      line_number = 3;
+			      CALL $Write (OutFileId,ff + page_header +
+				   $STRING(page_number) + bs + $CRLF)
+			      END;
+			 IF bigtext <> ""
+			 THEN IF $SEARCHRAISED(record,bigtext) > 0
+			 THEN BEGIN
+                              line_count = line_count + 1;
+			      line_number = line_number + 1;
+			      record = record + bs
+			 END;
+                         line_count = line_count + 1;
+			 line_number = line_number + 1;
+			 IF number = YES THEN
+			     BEGIN
+			         number_string = $String(file_line);
+				 record = number_string[2:*] + $CVITC(9)
+				     + record
+			     END;
+			 CALL $Write (OutFileId,record);
+			 record = $Read(InFileId);
+			 file_line = file_line + 1
+			 END;
+		    IF footer = YES THEN
+			 BEGIN
+			 WHILE line_number < page_size DO
+			      BEGIN
+			      CALL $Write (OutFileId,"");
+                              line_count = line_count + 1;
+			      line_number = line_number + 1
+			      END;
+			 CALL $Write (OutFileId,$CRLF + page_header +
+			       $STRING(page_number) + bs)
+			 END;
+                    total_line_count = total_line_count + line_count;
+	            total_page_count = total_page_count + page_number;
+		    CALL $Close (InFileId);
+		    CALL $Close (OutFileId)
+		    END; ! Copy file inserting page headers
+	  IF line_count > 0 THEN
+          DISPLAY "	Lines: " + $STRING(line_count) +
+               " 	Pages: " + $STRING(page_number) + "	[OK]"
+	  END;  ! make next copy
+     cycle: NOP
+     END;
+     IF end_file = $FILEL THEN
+	done = YES
+     ELSE IF $Nextfile = 0 THEN
+	done = YES
+END
+UNTIL done = YES;
+
+DOCOMMAND ORIGINAL "DELETE " + temporary_file TO command_echo;
+
+DOCOMMAND ORIGINAL "SET FILE GENERATION-RETENTION-COUNT " + output_file
+     + " 0" TO command_echo;
+
+IF total_line_count > 0 THEN
+DISPLAY "Totals:	Lines: " + $STRING(total_line_count) +
+      "	Pages: " + $STRING(total_page_count);
+
+IF print = YES
+THEN DOCOMMAND ORIGINAL "PRINT /DELETE /AFTER:+0:0:10 /NOHEADER " + output_file
+ELSE DISPLAY " Listings on file " + output_file
+END; ! PQ

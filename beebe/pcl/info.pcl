@@ -1,0 +1,35 @@
+COMMAND INFORMATION;
+BEGIN STRING cmd;
+   GUIDE "about";
+   PARSE KEYWORD (WORDS(
+	DEFAULTS:2,
+	DISK_USAGE:3,
+	FORK_STATUS:1,
+	JOB_STATUS:1,
+	LOGICAL_NAMES:4,
+	MAIL:5,
+	MEMORY_USAGE:1,
+	PROGRAM_STATUS:1,
+	TERMINAL_MODE:1,
+	VERSION:1)) : cmd=$atom+" ";
+   CASE $VALUE FROM 1 TO 5 OF BEGIN
+	[1]:	nop;
+	[2]:	begin guide "for";				!DEFAULTS
+		   parse keyword(words(PRINT:1,SUBMIT:1,COMPILE_SWITCHES:1,
+				       TAKE:1)) : cmd=cmd+$atom
+		   end;
+	[3]:	begin guide "of directory";			!DISK-USAGE
+		   parse directory(default $connecteddirectory):cmd=cmd+$atom
+		   end;
+	[4]:	begin guide "of";				!LOGICAL-NAMES
+		   parse(keyword(words(all:1,job:1,system:1)): cmd=cmd+$atom;
+			device(help "specific logical name"):cmd=cmd+$atom+":")
+		   end;
+	[5]:	begin guide "for user";				!MAIL
+		   parse username(default $username): cmd=cmd+$atom
+		   end;
+
+	END; !CASE
+  PARSE eol:nop;
+  DOCOMMAND ORIGINAL "INFORMATION "+cmd;
+END; !INFORMATION

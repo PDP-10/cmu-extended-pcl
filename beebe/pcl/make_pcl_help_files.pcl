@@ -1,0 +1,144 @@
+COMMAND MAKE_PCL_HELP_FILES;
+!-----------------------------------------------------------------------
+! Purpose:
+!	Automatically construct PCL help files from system PCL command
+!	internal documentation.
+!
+! Usage:
+!	MAKE-PCL-HELP-FILES filespecs
+!
+! Remarks:
+!	The  filespecs   field  may   contain  any   list  of   file
+!	specifications which would  be acceptable  to the  DIRECTORY
+!	command.  The default file extension  is .PCL, and for  each
+!	file processed, a file with  extension .HLP is created.   In
+!	order for this to  work properly, PCL  commands must have  a
+!	standard format:
+!	
+!	* line 1 = COMMAND name
+!	* line 2..k = optional command statement continuation
+!	* line k+1 = !------etc
+!	* lines k+2..n = ! comments
+!	* line n+1 = !------etc
+!	
+!	The remainder of the file is ignored.  Lines k+1 and n+1 are
+!	stripped, and the exclamation  point in column 1 is removed.
+!	This PCL command provides an example of the expected form of
+!	internal  documentation.   The  HELP files  generated always 
+!	have  the same  generation number as their corresponding PCL
+!	files, and the same last write time.
+!
+! Author:
+!	Nelson H.F. Beebe, Center for Scientific Computing, South
+!	Physics Building, University of Utah, Salt Lake City,  UT
+!	84112.
+!
+! Date:
+!	[24-Sep-88]
+!
+!-----------------------------------------------------------------------
+BEGIN
+
+INTEGER
+	InFileId,
+	OutFileId;
+STRING
+	command_echo,
+	record,
+	help_file;
+
+GUIDE "from internal documentation in PCL files";
+
+PARSE (FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "PCL",
+	INPUT,
+	HELP "list of files (default DSK:*.PCL.*)") : NOP);
+
+DO ! Until $Nextfile = 0
+BEGIN
+	help_file = $File_Dev($Parse) + ":<" + $File_Dir($Parse) + 
+		">" + $File_Nam($Parse) + ".HLP";
+	DOCOMMAND ORIGINAL "DELETE " + help_file + ".*" TO command_echo;
+	help_file = help_file + "." + 
+		$STRING($FileInfo_I($Parse,$FBGEN)/262144);
+	InFileId = $Open ($FILEL,$Input);
+	IF InFileId = 0 THEN
+	BEGIN
+             DISPLAY $CRLF + "?Open-for-read failure on " + $FILEL;
+	     GOTO nextfile
+	END;
+	OutFileId = $Open (help_file,$Output);
+	IF OutFileId = 0 THEN
+	BEGIN
+             DISPLAY $CRLF + "?Open-for-write failure on " + help_file;
+	     GOTO nextfile
+	END;
+	DISPLAY NORETURN help_file;
+	DO 
+	BEGIN
+		record = $Read(InFileId);
+		IF $EOF(InFileId) <> 0 THEN 
+		BEGIN
+		    DISPLAY $CRLF + "?Empty PCL file" + $CRLF + "Bad file = "
+		        + $FILEL; 
+		    GOTO nextfile
+		END;
+	END
+	UNTIL record[1:7] = "COMMAND";
+	IF $SEARCHRAISED(record,"COMMAND") <> 1 THEN 
+	BEGIN
+	    DISPLAY $CRLF + "?COMMAND not found in column 1" +
+		" - unacceptable PCL file format." +
+		$CRLF + "Bad file = " + $FILEL +
+		$CRLF + "Bad record = """ + record + "";
+	    GOTO nextfile
+	END;
+	CALL $Write (OutFileId, " Command:" + $CRLF + 
+		$CvItC(9) + record[9:*] + $CRLF + $CRLF);
+	DO 
+	BEGIN ! Skip to ----- line
+		record = $Read(InFileId); 
+		IF $EOF(InFileId) <> 0 THEN 
+		BEGIN
+		    DISPLAY $CRLF + 
+	           "?First  !---- line not found before end-of-file" +
+			" - unacceptable PCL file format." +
+			$CRLF + "Bad file = " + $FILEL;
+		    GOTO nextfile
+		END;
+		IF record[1:5] <> "!----" THEN
+		    CALL $Write (OutFileId,"        " + record)
+	END
+	UNTIL record[1:5] = "!----";	
+	CALL $Write (OutFileId, " PCL command source file:" + $CRLF +
+		$CvItC(9) + $FILEL + " [" +
+		$OutputTad($FileInfo_I(OutFileId,$FBWRT)) + "]" +
+		$CRLF); 
+	record = $Read(InFileId);
+	WHILE record[1:5] <> "!----" DO
+	BEGIN
+		IF $LENGTH(record) > 1
+		THEN CALL $Write (OutFileId,record[2:*])
+		ELSE CALL $Write (OutFileId," ");
+		record = $Read(InFileId);
+		IF $EOF(InFileId) <> 0 THEN 
+		BEGIN
+		    DISPLAY $CRLF + 
+		    "?Second !---- line not found before end-of-file" +
+			" - unacceptable PCL file format." +
+			$CRLF + "Bad file = " + $FILEL;
+		    GOTO nextfile
+		END
+	END;
+	CALL $FileSet(OutFileid,$FBWRT,8%777777777777,
+		$FileInfo_I(InFileId,$FBWRT)); !match .pcl and .hlp file times
+	DISPLAY " [OK]";
+
+nextfile:
+	CALL $Close (InFileId);
+	CALL $Close (OutFileId)
+END
+UNTIL $Nextfile = 0
+END; !Make_pcl_help_Files

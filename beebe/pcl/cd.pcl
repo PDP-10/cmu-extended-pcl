@@ -1,0 +1,333 @@
+! <BEEBE.PCL>CD.PCL.73, 30-Nov-85 12:54:57, Edit by BEEBE;
+! Insert check in CRACK_DIR_STRING for 0-length name caused by bad directory syntax
+! <BEEBE.PCL>CD.PCL.56, 11-Nov-85 16:20:14, Edit by BEEBE;
+! Complete rewrite of directory parsing into a clean list-based approach
+! influenced by LISP.  Support for both TOPS-20 and Unix-style directory
+! naming, including Unix relative directories.
+! <BEEBE.PCL>CD.PCL.38,  8-Nov-85 12:05:12, Edit by BEEBE
+! Make dir_ring hold a chain of the visited directories, allowing
+! a PUSH/POP mechanism.  The implementation is actually of a ring,
+! so that the entry popped off the front goes to the back.
+! <BEEBE.PCL>CD.PCL.30,  1-Nov-85 10:31:56, Edit by BEEBE;
+! Add definition of logical name D: for current directory, and L: for;
+! last directory, so we always have an explicit name for it in EMACS,
+! which; otherwise thinks DSK: is its most recently visited; directory,
+! instead of TOPS-20's current one.
+
+COMMAND CD;
+!------------------------------------------------------------------------
+! Purpose:
+!	Connect to directory.
+!
+! Usage:
+! TOPS-20 like:
+!	CD <directory>		| Go to specific directory
+!	CD /LAST		| Go to previous connected directory,
+!                               | exchanging current with top
+!	CD /POP  		| Go to previous connected directory,
+!                               | popping top
+! Unix-like:
+!	CD subdirectory		| Go to subdirectory of current one
+!	CD ./subdirectory	| Go to subdirectory of current one
+!	CD ..			| Go to superior directory
+!	CD ../subdirectory	| Go to brother directory
+!	CD sub/subsub/subsubsub	| Go to nested directory
+!	CD /root/sub/subsub	| Go to root:<sub.subsub>
+!
+! Remarks:
+!       An INFORMATION (ABOUT) JOB command is issued after connecting to
+!       verify  which  directory  one  has  connected  to,  and  a  TAKE
+!       UNCONNECT.CMD is issued before leaving.
+!
+!       The visited directories are saved on a ring to support the /LAST
+!       and /POP  switches,  so  repeated CD  /LAST  commands  alternate
+!       between a pair  of directories,  and repeated  CD /POP  commands
+!       retrace a  chain  of  directory visits.   Because  of  the  ring
+!       implementation, enough  CD /POP  commands will  eventually  come
+!       back to the starting directory.
+!
+!       The last directory visited  is DEFINEd as  the logical name  L:,
+!       and the  current one  to  D:, for  convenience in  EMACS,  which
+!       otherwise does  not  correctly  translate DSK:  to  the  current
+!       TOPS-20 directory, but rather to the directory of the last  file
+!       visited.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[30-Nov-85]
+!
+!------------------------------------------------------------------------
+BEGIN
+EXTERNAL STRING
+    dir_ring,
+    list_delimiter;
+
+EXTERNAL STRING PROCEDURE
+    all_but_last,
+    crack_dir_string,
+    first,
+    rest,
+    reverse;
+
+INTEGER
+    done,
+    K,
+    NO,
+    option,
+    YES;
+
+STRING
+    command_echo,
+    current_dir_name,
+    dir_name,
+    dir_top,
+    login_directory,
+    prefix;
+
+option = 0;
+NO = 0;
+YES = 1;
+list_delimiter = " | ";	! set global delimiter symbol
+login_directory = "PS:<" + $USERNAME + ">";
+current_dir_name = $ConnectedDirectory;
+
+dir_top = FIRST(dir_ring);
+
+GUIDE "connect to directory";
+
+PARSE(
+SWITCH (WORDS(LAST:1,POP:2),STDHELP,HELP dir_top) :
+    BEGIN
+        option = $Value;
+        CASE option FROM 1 TO 2 OF
+	BEGIN
+	[1]: dir_name = dir_top;
+	[2]: dir_name = dir_top
+	END
+    END;
+
+DIRECTORY (DEFAULT login_directory,STDHELP) : dir_name = $Atom;
+
+TEXT (HELP "OR Unix-style directory name:
+	subdirectory
+	sub.subsub
+	/root/sub/subsub (to go to root:<sub.subsub>)
+	./subdirectory
+	.. (to go up to parent directory)
+	../subdirectory (to go to brother directory)") :
+    BEGIN
+        dir_name = $Atom;
+        IF dir_name = " " ! TEXT matches EOL, so we get here instead
+            THEN dir_name = login_directory
+        ELSE IF dir_name = "" ! just in case
+            THEN dir_name = login_directory
+        ELSE IF dir_name = "~" ! Unix-style home directory
+            THEN dir_name = login_directory
+        ELSE IF dir_name = "$HOME" ! Unix-style home directory
+            THEN dir_name = login_directory
+        ELSE IF dir_name = "$home" ! Unix-style home directory
+            THEN dir_name = login_directory;
+
+        current_dir_name = CRACK_DIR_STRING(current_dir_name);
+        dir_name = CRACK_DIR_STRING(dir_name);
+
+!debug  DISPLAY "REVERSE(" + dir_name + ") ==> " + REVERSE(dir_name);
+!debug  DISPLAY "ALL_BUT_LAST(" + dir_name + ") ==> " + ALL_BUT_LAST(dir_name);
+!debug  DISPLAY "dir_name = {" + dir_name + "}";
+
+        IF FIRST(dir_name) = "." THEN
+            dir_name = current_dir_name + REST(dir_name)
+        ELSE IF FIRST(dir_name) = ".." THEN
+            BEGIN
+                WHILE FIRST(dir_name) = ".." DO
+                    BEGIN
+                       current_dir_name = ALL_BUT_LAST(current_dir_name);
+                       dir_name = REST(dir_name)
+                    END;
+                dir_name = current_dir_name + dir_name
+            END;
+
+!debug  DISPLAY "dir_name = {" + dir_name + "}";
+
+        ! Now reformat the list back into a TOPS-20 directory name
+        prefix = FIRST(dir_name);
+        IF prefix = "/" THEN    ! at master file directory root
+            prefix = "PS";
+        dir_top = prefix + ":<";
+        dir_name = REST(dir_name);
+        prefix = FIRST(dir_name);
+        WHILE prefix <> "" DO
+            BEGIN
+                dir_name = REST(dir_name);
+                IF dir_name = "" THEN
+                    dir_top = dir_top + prefix + ">"
+                ELSE
+                    dir_top = dir_top + prefix + ".";
+                prefix = FIRST(dir_name)
+            END;
+	dir_name = dir_top
+
+!debug  DISPLAY "dir_top = {" + dir_top + "}";
+!debug  ABORT "Debug done";
+
+    END;
+
+EOL (STDHELP,HELP "to connect to login directory"):
+    dir_name = login_directory
+);
+
+current_dir_name = $ConnectedDirectory;
+DOCOMMAND ORIGINAL "BLANK";
+DOCOMMAND ORIGINAL "ENABLE";
+IF $Isfile("UNCONNECT.CMD") = 1 THEN
+	DOCOMMAND ORIGINAL "TAKE UNCONNECT.CMD" TO command_echo;
+DOCOMMAND ORIGINAL "CONNECT " + dir_name;
+DOCOMMAND ORIGINAL "INFORMATION JOB";
+DOCOMMAND ORIGINAL "DEFINE L: " + current_dir_name;
+DOCOMMAND ORIGINAL "DEFINE D: " + $ConnectedDirectory;
+DOCOMMAND ORIGINAL "DISABLE";
+
+CASE option FROM 0 TO 2 OF
+    BEGIN
+    [0]: ! PUSH
+         dir_ring = current_dir_name + list_delimiter + dir_ring;
+
+    [1]: ! LAST
+         dir_ring = current_dir_name + list_delimiter + REST(dir_ring);
+
+    [2]: ! POP
+	begin
+!	 display "dir_ring = " + dir_ring;
+!	 display "REST(dir_ring) = " + REST(dir_ring);
+!	 display "REST(REST(dir_ring)) = " + REST(REST(dir_ring));
+         dir_ring = REST(dir_ring);
+	 end
+
+    END
+
+END; !CD
+
+STRING dir_ring;	! Global variable
+STRING list_delimiter;	! Global variable
+
+STRING PROCEDURE crack_dir_string (STRING dir_string);
+! Parse TOPS-20 or Unix style directory path into a list of separate
+! names.  For example
+!
+! str:<dir.subdir.subsubdir> ==> / | str | dir | subdir | subsubdir |
+! /str/dir/subdir/subsubdir/ ==> / | str | dir | subdir | subsubdir |
+! dir/subdir/subsubdir/      ==>       . | dir | subdir | subsubdir |
+! ../dir/subdir/subsubdir/   ==>      .. | dir | subdir | subsubdir |
+!
+BEGIN
+    INTEGER k;
+    EXTERNAL STRING list_delimiter;
+    STRING list,temp_string;
+
+!debug  DISPLAY NORETURN "CRACK_DIR_STRING(" + dir_string + ") ==> ";
+
+    temp_string = dir_string;
+    list = "";
+    IF $Search(temp_string,":")
+        + $Search(temp_string,"<") > 0 THEN ! TOPS-20 style
+        BEGIN
+            k = $Search(temp_string,":");
+            IF k > 0 THEN
+               list = temp_string[1:k-1] + list_delimiter;
+            IF temp_string[k+1:1] = "<" THEN   ! discard initial "<"
+               k = k + 1;
+            temp_string = temp_string[k+1:*];
+            k = $Length(temp_string);
+	    IF k = 0 THEN
+	        ABORT "Unrecognized directory name [" + dir_string + "]";
+            IF temp_string[k:1] = ">" THEN       ! change final ">" to "."
+               temp_string = temp_string[1:k-1] + ".";
+            k = $Search(temp_string,".");
+            WHILE k > 1 DO
+                BEGIN
+                    list = list + temp_string[1:k-1] + list_delimiter;
+                    temp_string = temp_string[k+1:*];
+                    k = $Search(temp_string,".")
+                END
+        END
+    ELSE        ! Unix style
+        BEGIN
+            IF temp_string[1:1] <> "/" THEN   ! standardize name
+               IF temp_string[1:1] <> "." THEN
+                   temp_string = "./" + temp_string;
+            k = $Length(temp_string);
+            IF temp_string[k:1] <> "/" THEN   ! standardize name
+               temp_string = temp_string + "/";
+            IF temp_string[1:1] = "/" THEN
+               BEGIN
+                    list = "/" + list_delimiter;
+                    temp_string = temp_string[2:*];
+               END;
+            k = $Search(temp_string,"/");
+            WHILE k > 1 DO
+                BEGIN
+                    list = list + temp_string[1:k-1] + list_delimiter;
+                    temp_string = temp_string[k+1:*];
+                    k = $Search(temp_string,"/")
+                END
+        END;
+
+!debug    DISPLAY "{" + list + "}";
+
+    RETURN list
+END;
+
+! ======================================================================
+! LISP-like first,rest (CAR,CDR) functions for handling lists
+! implemented as string variables containing
+! <text><delimiter><text><delimiter><text><delimiter>...
+! The delimiter may be any unique string sequence.
+
+STRING PROCEDURE all_but_last (STRING list);
+BEGIN
+    EXTERNAL STRING PROCEDURE rest,reverse;
+
+    RETURN REVERSE(REST(REVERSE(list)))
+END;
+
+STRING PROCEDURE first (STRING list);
+BEGIN
+    EXTERNAL STRING list_delimiter;
+    INTEGER k;
+
+    k = $Search(list,list_delimiter);
+    IF k = 0 THEN ! list = (first)
+        RETURN list
+    ELSE ! list = (first,rest)
+        RETURN list[1:k-1]
+END;
+
+STRING PROCEDURE rest (STRING list);
+BEGIN
+    EXTERNAL STRING list_delimiter;
+    INTEGER k;
+
+    k = $Search(list,list_delimiter);
+    IF k = 0 THEN ! list = (first)
+        RETURN ""
+    ELSE ! list = (first,rest)
+        RETURN list[k+$Length(list_delimiter):*]
+END;
+
+STRING PROCEDURE reverse (STRING list);
+BEGIN
+    EXTERNAL STRING PROCEDURE first,rest,reverse;
+    EXTERNAL STRING list_delimiter;
+
+    IF list = "" THEN
+        RETURN ""
+    ELSE IF REST(list) = "" THEN
+        RETURN list
+    ELSE
+        RETURN REVERSE(REST(list)) + FIRST(list) + list_delimiter
+
+END;
+

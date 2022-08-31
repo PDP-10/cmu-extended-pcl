@@ -1,0 +1,199 @@
+COMMAND TVHR;
+!------------------------------------------------------------------------
+! Purpose:
+!	Display one or more Intecolor VHR-19 graphics files.
+!
+! Usage:
+!	TVHR	{/COUNT:n} -
+!		{/EVERY:n} -
+!		{/PAUSE} -
+!		{/STARTFILE:file} -
+!		{/TEKTRONIX} -
+!		{/WAIT:milliseconds} filelist
+!
+! Remarks:
+!	The  filespecs   field   may   contain  any   list   of   file
+!	specifications.   The  default  extension  is  "CRT"  and  the
+!	default generation is "0".  The switches are all optional.
+!
+!	The  /COUNT   switch  specifies   the  number   of  times   to
+!	successively redisplay each file; the default is 1.
+!
+!	The /EVERY switch specifies the filelist interval; every  n-th
+!	file will be selected, so that files 1, 1+n, 1+2n, 1+3n,  etc.
+!	will be displayed.
+!
+!	The /PAUSE  switch requests  arbitrary keyboard  input  before
+!	continuing.  It is equivalent  to specifying a negative  wait.
+!	The terminal will  be left in  graphics mode to  allow use  of
+!	local zoom and pan facilities.
+!
+!	The /STARTFILE switch specifies  the file to  start at in  the
+!	filelist.  It is useful for resuming an interrupted display in
+!	of a large number of files.
+!
+!	The /TEKTRONIX switch  specifies that  the plot  files are  in
+!	Tektronix-4010 or -4014 format, rather than Intecolor format.
+!
+!	The /WAIT  switch may  be used  to request  a real-time  pause
+!	between successive  plots.   X-ON/X-OFF  is  enabled  and  the
+!	dialog area made  invisible before each  plot, and after  each
+!	plot, the  terminal  mode  is  restored  to  alphanumeric  and
+!	X-ON/X-OFF disabled.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[08-Jun-85]
+!
+!------------------------------------------------------------------------
+{
+INTEGER count,
+	done,
+	every,
+	k,
+	m,
+	NO,
+	wait,
+	tektronix,
+	YES;
+
+STRING	def_count,
+	def_every,
+	def_wait,
+	junk,
+	start_file;
+
+def_count = "1";
+def_every = "1";
+def_wait = "2000";
+
+count = $INTEGER(def_count);
+every = $INTEGER(def_every);
+start_file = "";
+wait = 0;
+YES = 1;
+NO = 0;
+tektronix = NO;
+
+WHILE done = NO
+DO PARSE (
+SWITCH(WORDS(COUNT::1,EVERY::2,PAUSE:3,STARTFILE::4,TEKTRONIX:5,WAIT::6),
+	STDHELP):
+	CASE $Value FROM 1 TO 6 OF
+	{
+	1: PARSE (NUMBER (STDHELP, HELP "repeat count", DEFAULT def_count):
+		{
+		count = $Value;
+		done = NO;
+		});
+
+	2: PARSE (NUMBER (STDHELP, HELP "filelist step interval",
+		DEFAULT def_every):
+		{
+		every = $Value;
+		done = NO;
+		});
+
+	3: wait = -2; ! -1 should have worked, but gets assigned as +47
+
+	4: PARSE (FILE (INPUT,	STDHELP,
+		HELP "Intecolor VHR-19 CRT file",
+		DEFAULT_DEV "DSK",
+		DEFAULT_NAM "*",
+		DEFAULT_EXT "CRT",
+		DEFAULT_GEN 0) : start_file = $FILEL
+		);
+
+	5: tektronix = YES;
+
+	6: PARSE (NUMBER (STDHELP,
+		HELP "delay in milliseconds", DEFAULT def_wait):
+		{
+		wait = $Value;
+		done = NO;
+		});
+	};
+
+OTHERWISE: PARSE(FILELIST (INPUT,
+	STDHELP,
+	HELP "Intecolor VHR-19 CRT file",
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "CRT",
+	DEFAULT_GEN 0) : done = YES)
+);
+
+
+display "
+";
+
+done = NO;
+IF start_file <> "" THEN DO
+	{
+	IF $FILEL = start_file THEN
+		done = YES
+	ELSE IF $NextFile = 0 THEN
+		ABORT "?Start file not included in filelist";
+	}
+	UNTIL done = YES;
+
+DO
+{
+	k = 0;
+	WHILE k < count DO
+	{
+		k = k + 1;
+		display binary "[1m";	! White letters on black
+		display binary "A[H[J";	! ANSI screen clear
+		IF wait < 0 THEN
+		{
+			display binary "Type Z to zoom and pan," +
+				" Q to quit, anything else to continue";
+			CALL $Wait(1000);
+		};
+		display binary "C";	! Tektronix screen clear
+		IF tektronix = NO THEN
+			display binary "BTH,7,\,?";	! Graphics mode
+		docommand original "COPY " + $FILEL + " TTY:,
+		BYTE 8
+
+		";
+		IF tektronix = NO THEN
+			display binary "B";	! Graphics mode
+		IF wait > 0 THEN
+			CALL $Wait(wait)
+		ELSE IF wait < 0 THEN
+	        {
+			junk = $ReadBinary(1,$CR,0);
+			IF junk = "z" THEN junk = "Z";
+			IF junk = "q" THEN junk = "Q";
+			WHILE junk = "Z" DO
+			{
+				DOCOMMAND "zoom 2";
+				junk = $ReadBinary(1,$CR,0);
+				IF junk = "z" THEN junk = "Z";
+				IF junk = "q" THEN junk = "Q";
+			};
+			if junk = "Q" THEN
+			{	! Exit graphics and then exit
+			    display binary "?A[H[2J[r";
+			    Exit
+			}
+		};
+		display binary "?A[H[2J[r";	! exit graphics (if
+						! necessary), select
+						! ANSI mode, full screen
+						! scrolling, screen clear
+		m = 1;
+		WHILE m < every DO	! Skip every-1 files in list
+		{
+			m = m + 1;
+			IF $Nextfile = 0 THEN m = 34359738367; ! 2**35-1
+		}
+	}
+} UNTIL $NextFile = 0;
+display binary "[H";	!Home cursor and clear line
+}

@@ -1,0 +1,112 @@
+COMMAND BBDSPLIT (
+	NOISE "large mail file(s)";
+	FILELIST (INPUT,
+		DEFAULT_DEV "DSK",
+		DEFAULT_NAM "*",
+		DEFAULT_EXT "TXT")
+	);
+!-----------------------------------------------------------------------
+! Purpose:
+!	Split mail or  bulletin board  files which are  larger than  250
+!	disk pages.  The MSPLIT utility  will split FOO.TXT into  FOO.1,
+!	FOO.2, ... (each of size ~240 pages), + FOO.TXT (the  remainding
+!	most recent messages). FOO.1 is copied to OLDBBD:FOO_yymmdd.TXT,
+!	so that successive such archives will by named  chronologically;
+!	yymmdd is the year, month, day  of the first message in  FOO.TXT
+!	(and presumably close  to the  last message in  FOO.1).  If  the
+!	creation of  the  archive  file is  successful,  then  FOO.1  is
+!	expunged.  It is expected that this command will be executed  in
+!	a nightly batch job  to ensure that  bulletin board files  never
+!	get much over 250 pages.
+!
+! Usage:
+!	MSPLIT filelist (default *.TXT)
+!
+! Remarks:
+!	There is no provision  for handling FOO.2 et  al, but if such  a
+!	file is found to  exist, the procedure will  abort, and the  job
+!	can be handled manually.
+!
+! Author:
+!	Nelson H.F. Beebe, Center for Scientific Computing, South 
+!	Physics Building, University of Utah, Salt Lake City, UT 84112.
+!
+! Date:
+!	[15-Dec-87]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER count;
+INTEGER handle;
+INTEGER tad_value;  ! internal date and time value;
+INTEGER year,month,month_day,week_day,hour,minute;
+
+STRING arc_file;
+STRING line;
+STRING old_file;
+STRING second_file;
+
+DO
+    IF $FileInfo_I($FILEL, $FBSIZ) > (5 * 512 * 250) THEN
+    BEGIN
+	DISPLAY "[Splitting " + $FILES + "]";
+	INVOKE "BBD:MSPLIT.EXE";
+	TYPEIN $FILEL;
+	old_file = $File_Dev($FILEL) + ":" +
+	    "<" + $File_Dir($FILEL) + ">" +
+	    $File_Nam($FILEL) + ".1";
+	second_file = $File_Dev($FILEL) + ":" +
+	    "<" + $File_Dir($FILEL) + ">" +
+	    $File_Nam($FILEL) + ".2";
+!	display "%%% Debug: old_file = " + old_file;
+	count = 0;
+	DO	!Wait for completion; PCL lacks a fork wait, sigh...
+	    BEGIN
+		CALL $Wait(5);
+		count = count + 1;
+		IF count > 12 THEN
+		    ABORT "MSPLIT apparently did not create " + old_file
+	    END
+	UNTIL $IsFile(old_file) <> 0;
+
+	IF $IsFile(second_file) <> 0 THEN
+	    ABORT "MSPLIT: Cannot handle split into more than one file--found "
+		+ second_file;
+
+	DOCOMMAND ORIGINAL "UNIX:HEAD -1 " + $FILEL + " >msplit.tmp";
+
+	handle = $Open("msplit.tmp",$Input);
+	line = $Read(handle);
+	call $Close(handle);
+	DOCOMMAND ORIGINAL "delete msplit.tmp";
+
+!	DISPLAY "%%% Debug: first line = " + line;
+
+	call $ExpandTad($InputTad(line),
+	    year,month,month_day,week_day,hour,minute);
+
+!	DISPLAY "%%% Debug: " +
+! 	    " year: " + $String(year) +
+!	    " month: " + $String(month) +
+!	    " month_day: " + $String(month_day) +
+!	    " week_day: " + $String(week_day) +
+!	    " hour: " + $String(hour) +
+!	    " minute: " + $String(minute);
+
+	arc_file = "OLDBBD:" +
+	    $File_Nam($FILEL) + "_" + $String(year - 1900) +
+	    $String(100 + month + 1)[2:*] +
+	    $String(100 + month_day + 1)[2:*] + ".txt";
+	DOCOMMAND ORIGINAL "COPY " + old_file + " " + arc_file;
+	IF $IsFile(arc_file) <> 0 THEN
+	    DOCOMMAND ORIGINAL "DELETE " + old_file + ",
+EXPUNGE
+
+
+"
+	ELSE
+	    ABORT "MSPLIT: could not save " + old_file + " as " + arc_file
+    END
+UNTIL $NextFile = 0
+END; ! MSPLIT

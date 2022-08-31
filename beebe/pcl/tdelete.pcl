@@ -1,0 +1,89 @@
+COMMAND TDELETE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Delete files written between specified dates and times.
+!
+! Usage:
+!	TDELETE /SINCE:time_and_date /BEFORE:time_and_date filespecs
+!
+! Remarks:
+!	The switch values may be  any valid DEC-20 date and  time
+!	strings,  or   YESTERDAY,   TODAY,  or   TOMORROW   (time
+!	00:00:01), or a past week  day, or a file  specification,
+!	which causes the file's  last write date  and time to  be
+!	used.             The            defaults             are
+!	/SINCE:first_day_and_time_of_clock and /BEFORE:NOW.   Use
+!	of the default switches will then make this equivalent to
+!	a DELETE command.
+!
+!	The  filespecs  field  may  contain  any  list  of   file
+!	specifications which would  be acceptable  to the  DELETE
+!	command.  Because of a limitation in the current  version
+!	of  PCL,  SINCE  and  BEFORE  cannot  be  implemented  as
+!	subcommands, nor can  any other subcommands  be read  for
+!	use by DELETE.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[08-Mar-86]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+INTEGER	before_time_and_date,
+	curtad,
+	done,
+	NO,
+	since_time_and_date,
+	YES;
+
+STRING	clock_start,
+	date_string;
+
+NO = 0;
+YES = 1;
+curtad = $CURTAD;
+
+clock_start = $OUTPUTTAD(0);
+before_time_and_date = curtad;
+since_time_and_date = 0;
+done = NO;
+
+GUIDE "files";
+
+WHILE done = NO DO 
+PARSE (
+SWITCH(	WORDS(BEFORE::1,SINCE::2),STDHELP):
+	CASE $VALUE FROM 1 TO 2 OF BEGIN
+	[1]:	before_time_and_date = 
+			GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+	[2]:	since_time_and_date =
+			GENERAL_TIME_AND_DATE_PARSE(curtad,clock_start,0);
+	END; ! CASE
+OTHERWISE : done = YES);
+
+PARSE (
+FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	DEFAULT_GEN *,
+	HELP "list of files (default DSK:*.*.*)") : NOP;
+);
+
+DISPLAY "Deletion of files written 
+SINCE " + $OUTPUTTAD(since_time_and_date) + " and 
+BEFORE " + $OUTPUTTAD(before_time_and_date);
+
+DO 	IF $FileInfo_I(-1,12) >= since_time_and_date 
+	THEN IF $FileInfo_I(-1,12) < before_time_and_date
+	THEN DOCOMMAND ORIGINAL "DELETE " + $FILEL
+UNTIL $Nextfile = 0
+
+END;
+

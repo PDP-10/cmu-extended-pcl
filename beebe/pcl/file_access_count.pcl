@@ -1,0 +1,166 @@
+COMMAND File_Access_Count;
+!------------------------------------------------------------------------
+!
+! Purpose:
+!	List read/write access counts of specified files.	
+!
+! Usage:
+!	FILE-ACCESS-COUNT [switches] filelist;
+!
+! Remarks:
+!	If the  file  specification  is  omitted,  then  DSK:*.EXE  is
+!	assumed.  The switches /LARGER:nnn and/or /SMALLER:nnn may  be
+!	given to select only files with average read counts larger  or
+!	smaller than nnn, where nnn is in units of 0.01 day.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	SalT Lake City, UT 84112.
+!
+! Date:
+!	[28-Dec-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER	average_per_day,
+	count,
+	days,
+	done,
+	do_sort,
+	larger,
+	lh_div,
+	no,
+	OutFileId,
+	reads,
+	smaller,
+	SortFileId,
+	writes,
+	yes;
+
+STRING	blanks,
+	filename,
+	output_file,
+	record,
+	s_average_per_day,
+	s_days,
+	s_reads,
+	sort_file_in,
+	sort_file_out;
+
+GUIDE "of files";
+
+no = 0;
+yes = 1;
+
+blanks = "                                        ";
+do_sort = no;
+done = no;
+larger = 0;
+lh_div = 262144; ! 2**18
+output_file = "TTY:";
+smaller = 34359738367; ! 2**35-1
+sort_file_in = "PS:<TEMP>" + $STRING($TERMNUMBER) + "-FILE-ACCESS.SORT-IN;T";
+sort_file_out = "PS:<TEMP>" + $STRING($TERMNUMBER) + "-FILE-ACCESS.SORT-OUT;T";
+
+
+WHILE done = no DO 
+	PARSE(
+	SWITCH (WORDS(LARGER::1,OUTPUT::2,SMALLER::3,SORT:4),STDHELP):
+		BEGIN
+		CASE $VALUE FROM 1 TO 4 OF BEGIN
+		[1] : PARSE (NUMBER (DEFAULT "0",
+			HELP "than average read count in hundredths of a day"
+			) : larger = $VALUE);
+		[2] : PARSE (FILE(
+			HELP "Output file",
+			OUTPUT,
+			DEFAULT_DEV "DSK:",
+			DEFAULT_NAM "FILE-ACCESS",
+		 	DEFAULT_EXT "LST") : output_file = $FILEL);
+		[3] : PARSE (NUMBER (DEFAULT "34359738367",!2**35-1
+			HELP "than average read count in hundredths of a day"
+			) : smaller = $VALUE);
+		[4] : do_sort = yes
+		END; ! CASE
+	END; ! SWITCH
+
+	EOL (HELP "file specifications") : ABORT "No files specified";
+
+	OTHERWISE : done = yes);
+
+PARSE (
+FILELIST (HELP "List of files",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "EXE") : NOP);
+
+OutFileId = $Open (output_file,$Output);
+SortFileId = $Open (sort_file_in,$Output);
+
+IF do_sort = yes 
+	THEN record =  "File Read Access Listing (Sorted by Reads/Day) "
+		+ $OUTPUTTAD($CURTAD)
+	ELSE record =  "File Read Access Listing (Sorted by Name) "
+		+ $OUTPUTTAD($CURTAD);
+CALL $Write (OutFileId,record);
+record =  "------------------------------------------------------------------";
+CALL $Write (OutFileId,record);
+record =  "File                                     | Reads | Age | Reads/Day";
+CALL $Write (OutFileId,record);
+record =  "------------------------------------------------------------------";
+CALL $Write (OutFileId,record);
+DO
+	BEGIN
+	count = $FileInfo_I($Parse,$FBCNT);
+	writes = count/lh_div;
+	reads = count - writes*lh_div;
+	days = 1 + $CURTAD/lh_div - $FileInfo_I($Parse,$FBCRV)/lh_div;
+	average_per_day = (100*reads)/days;
+	IF average_per_day <= smaller THEN
+	IF average_per_day >= larger THEN
+		BEGIN ! File has been selected for output
+		filename = $FILEN + blanks[1:40-$LENGTH($FILEN)];
+		s_days = $STRING(days);
+		s_days = blanks[1:6-$LENGTH(s_days)] + s_days;
+		s_reads = $STRING(reads);
+		s_reads = blanks[1:9-$LENGTH(s_reads)] + s_reads;
+		IF average_per_day < 10 
+			THEN	s_average_per_day = "0" + 
+					$STRING(average_per_day)
+			ELSE	s_average_per_day = $STRING(average_per_day);
+		s_average_per_day = 
+			s_average_per_day[1:$LENGTH(s_average_per_day)-2]
+			+ "." + 
+			s_average_per_day[$LENGTH(s_average_per_day)-1:2];
+		s_average_per_day = blanks[1:9-$LENGTH(s_average_per_day)] +
+			s_average_per_day;
+		record =  filename + s_reads + s_days + s_average_per_day;
+		IF do_sort = YES THEN CALL $Write (SortFileId,record)
+				 ELSE CALL $Write (OutFileId,record)
+		END
+	END
+UNTIL $Nextfile = 0;
+IF do_sort = yes THEN
+	BEGIN
+	CALL $Close (SortFileId);
+	INVOKE "SYS:SORT.EXE";
+	TYPEIN "SORT /RECORD:80 /KEY:57,8,FORMAT:F8.2,DESCENDING " + 
+		sort_file_in + " " + sort_file_out;
+	TYPEIN "EXIT";
+	CLEARTYPEOUT;
+	SortFileId = $Open(sort_file_out,$Input);
+	record = $Read(SortFileId);
+	WHILE $Eof(SortFileId) = 0 DO 
+		BEGIN
+		CALL $Write (OutFileId,record);
+		record = $Read(SortFileId)
+		END;
+	CALL $Close(SortFileId)
+	END;
+record = 
+"------------------------------------------------------------------";
+CALL $Write (OutFileId,record);
+CALL $Close (OutFileId);
+DOCOMMAND "DELETE " + sort_file_in + "," + sort_file_out TO record
+END; ! File_Access_Count

@@ -1,0 +1,85 @@
+COMMAND ZOOM;
+!------------------------------------------------------------------------
+! Purpose:
+!	Zoom and pan an Intecolor VHR-19 plot.
+!
+! Usage:
+!	ZOOM {factor}
+!
+! Remarks:
+!	The zoom factor may be from 1 to 8, with the default being  2.
+!	The command  will  clear  the alpha  screen,  apply  the  zoom
+!	factor, switch  to pan  mode,  and then  wait for  a  carriage
+!	return from the keyboard before returning to command level, at
+!	which time it will restore the picture to zoom factor 1 in its
+!	original pan orientation.  The  keypad digits 12346789 pan,  5
+!	and LineFeed zoom up and down, "," and "-" change the pan step
+!	up and down, and  "." and "0" change  the pan distance up  and
+!	down.  The  top line  of the  screen records  the current  pan
+!	distance, step, and zoom factor.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[11-Aug-84]
+!
+!------------------------------------------------------------------------
+{
+	EXTERNAL INTEGER PROCEDURE Bump;
+	INTEGER direction,zoom_factor,pan_step,pan_distance;
+	STRING answer;
+
+	GUIDE "Intecolor VHR-19 plot by factor";
+
+	PARSE (NUMBER (STDHELP,HELP "zoom factor 1..7",DEFAULT "2") 
+		: zoom_factor = $value);
+
+	zoom_factor = Bump(zoom_factor,0,1,8);
+
+	DISPLAY BINARY "A[H[2JBTZ" + $string(zoom_factor) + ",N,0,0,";
+
+	answer = $ReadBinary(1,$CR,0);
+	pan_step = 16;
+	pan_distance = pan_step;
+	WHILE answer <> $CR DO
+	{
+		SELECT answer OF
+		{
+		"-"	: IF pan_step > 1 THEN
+				pan_step = pan_step/2;
+		","	: pan_step = pan_step*2;
+		"."	: pan_distance = pan_distance + pan_step;
+		"0"	: IF pan_distance > pan_step THEN
+				pan_distance = pan_distance - pan_step;
+		"1"	: DISPLAY BINARY "N" + $String(pan_distance) + ",7,";
+		"2"	: DISPLAY BINARY "N" + $String(pan_distance) + ",0,";
+		"3"	: DISPLAY BINARY "N" + $String(pan_distance) + ",1,";
+		"4"	: DISPLAY BINARY "N" + $String(pan_distance) + ",6,";
+		"5"	: 
+			{
+				zoom_factor = Bump(zoom_factor,1,1,8);
+				DISPLAY BINARY "Z" + $String(zoom_factor)
+					+ ",";
+			};
+		"6"	: DISPLAY BINARY "N" + $String(pan_distance) + ",2,";
+		"7"	: DISPLAY BINARY "N" + $String(pan_distance) + ",5,";
+		"8"	: DISPLAY BINARY "N" + $String(pan_distance) + ",4,";
+		"9"	: DISPLAY BINARY "N" + $String(pan_distance) + ",3,";
+		"
+"	: 
+			{
+				zoom_factor = Bump(zoom_factor,-1,1,8);
+				DISPLAY BINARY "Z" + $String(zoom_factor)
+					+ ",";
+			};
+		OTHERWISE : NOP;
+		};
+		DISPLAY BINARY "?A[H[K     dist: " + $String(pan_distance) +
+			"  step: " + $String(pan_step) +
+			"  zoom: " + $String(zoom_factor) + "BT";
+		answer = $ReadBinary(1,$CR,0);
+	};
+	DISPLAY BINARY "N,0,0,Z,1,?A[H[K";
+}

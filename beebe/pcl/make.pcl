@@ -1,0 +1,506 @@
+STRING Task_List;		! Global between command procedures
+STRING Default_Make_Rules;	! Global so user can override.
+STRING Dep_File;		! Global between command procedures
+STRING Make_Rules;		! Global between command procedures
+STRING Tab;			! Global between command procedures
+STRING Word_Delimiters;		! Global between command procedures
+
+
+COMMAND Make;
+!------------------------------------------------------------------------
+! Purpose:
+!	Implement a Unix-like Make command allowing a dependency  file
+!	to specify how files are  to be constructed from one  another,
+!	and to list one or more action groups which can be selected by
+!	this command.
+!
+! Usage:
+!	@MAKE	{/ACTION:"commandstring"}-
+!		{/DRY-RUN}-
+!		{/SHOW-DEFAULT-RULES}-
+!		{/TASK:name}-
+!		{/VERBOSE:value}-
+!		MakeFileName
+!
+! Remarks:
+!	If the  /ACTION  switch defines  a  command string,  the  name
+!	specified by any /TASK  switch is ignored,  and the action  is
+!	performed as specified in the command string, rather than from
+!	a value in the MakeFile.
+!
+!	The  /DRY_RUN	switch  selects   a  check   run.   The   file
+!	dependencies will be checked normally, but the action  strings
+!	will just be echoed to the terminal instead of executing them.
+!
+!	The /SHOW-DEFAULT-RULES may be  issued to display the  default
+!	rules  stored	in   the   user-modifiable   global   variable
+!	Default_Make_Rules.
+!
+!	The /TASK:name switch defines  a name tag to  be found in  the
+!	MakeFile whose  associated action  string is  to be  executed.
+!	The default name is "Make" which  is assumed to be present  in
+!	every MakeFile.
+!
+!	These switches may be given more than once, but only the  last
+!	value specified takes effect.  If  both /ACTION and /TASK  are
+!	specified, /the value of TASK is ignored.
+!
+!	The default MakeFile is "DSK:MAKEFILE..".
+!
+! MakeFile Format:
+!	A MakeFile is a text file containing lines in one of at  least
+!	four five classes:
+!
+!	(1) Comment lines  beginning with  an exclamation  point or  a
+!	semicolon.  A comment begun by an exclamation point  continues
+!	to end-of-line, or  to the next  exclamation point,  whichever
+!	appears first.	 Comments begun  by  a semicolon  continue  to
+!	end-of-line.  Comments  may  also appear  at  the end  of  any
+!	statement, or if delimited by exclamation points, embedded  in
+!	statements (but not inside quoted strings).
+!
+!	(2) Blank lines; these are ignored and may be freely used for
+!	improved readability.
+!
+!	(3) Rule lines of the form:
+!
+!	/MAKE:extension /FROM:extension /HOW:"how to do it"
+!
+!	Obviously a  built-in  set of  rules  can be  trivially  added
+!	inside the  MAKE PCL  command  so that  users rarely  need  to
+!	specify this sort of thing.
+!
+!	(4) Dependency lines of the form:
+!
+!	filename list-of-files-on-which-the-first-depends
+!
+!	(5) Task lines for performing a given action
+!
+!	/TASK:name /ACTION:"what to do"
+!
+!	As usual with TOPS-20 commands, a line may be continued to the
+!	next line by terminating it with a hyphen IMMEDIATELY followed
+!	by a carriage return.  This convention MUST be adhered to  for
+!	dependency lines,  which  are expected  to  be complete  on  a
+!	single line.   File  lists  can of  course  contain  wild-card
+!	specifications.
+!
+!	The general idea is that the userfile will type
+!
+!	@MAKE /TASK:name {makefile}
+!
+!	which will cause the MakeFile  to be processed, the rules  and
+!	file dependencies  parsed, and  then the  first matching  task
+!	name in the MakeFile will be selected.  The action string  for
+!	that task will then be executed after ensuring that all  files
+!	that it  refers  to  are  up-to-date  according  to  the  file
+!	dependency lists; when a file is found to be out of date,  the
+!	first matching rule for which a /FROM file exists is  selected
+!	and used to bring the file up to date.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[23-Sep-84]
+!------------------------------------------------------------------------
+
+{
+    EXTERNAL INTEGER PROCEDURE
+	Check_File_Dependency,
+	Isolate_Token;
+
+    EXTERNAL STRING
+	Default_Make_Rules,
+	Dep_File,
+	Make_Rules,
+	Tab,
+	Task_List,
+	Word_Delimiters;
+
+    STRING
+	Action,
+	Legal_File_Chars,
+	Make_Line,
+	Make_File,
+	Rule,
+	Task_Name;
+
+    INTEGER
+	done,
+	Dry_Run,
+	K,
+	K1,
+	K2,
+	K3,
+	K4,
+	K5,
+	L1,
+	L2,
+        L3,
+	Make_File_Id,
+	NO,
+	Okay,
+	Verbose_Flag,
+	YES;
+
+    NO = 0;
+    YES = 1;
+
+    Action = "";
+    Dep_File = $CRLF;
+    Dry_Run = NO;
+    Make_Rules = "";
+    Tab = $CvItC(9);
+    Task_List = "";
+    Task_Name = "Make";
+    Verbose_Flag = 2;		! Full debugging information for awhile
+
+    IF Default_Make_Rules = "" ! user did not provide any
+    THEN Default_Make_Rules = ! Note that order is such that the first
+			      ! matching will be used
+    "/MAKE:REL /FROM:SF3 /HOW:""SF3 \3\nCOMPILE \3""" + $CRLF +
+    "/MAKE:REL /FROM:FOR /HOW:""COMPILE \3""" + $CRLF +
+    "/MAKE:REL /FROM:MAC /HOW:""COMPILE \3""";
+
+    Legal_File_Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789" +
+	"-_$:.;<>[]";	!These are set by Monitor but not documented.
+			!Any other is legal if quoted by CTL-V.  Case
+			!is ignored.
+
+    Word_Delimiters = " ,\" + $CR + $LF + Tab;
+
+    GUIDE "according to dependencies in file";
+    done = NO;
+
+    DO PARSE (
+    SWITCH (WORDS(ACTION::1,DRY_RUN:2,SHOW_DEFAULT_RULES:3,TASK::4,VERBOSE::5),
+	STDHELP) :
+	CASE $Value FROM 1 TO 5 OF
+	{
+	1:  PARSE (QUOTEDSTRING(HELP "command string be executed",
+		DEFAULT """""",STDHELP) : Action = $Atom);
+	2:  Dry_Run = YES;
+	3:  DISPLAY " Default Rules = {" + Default_Make_Rules + "}";
+	4:  PARSE (FIELD (HELP "Task tag name in MakeFile",
+		DEFAULT "Make",STDHELP) : Task_Name = $Atom);
+	5:  PARSE (NUMBER (DEFAULT "1",HELP
+		"0 for silent operation, 1 for command echoing, 2 for debug output",
+		STDHELP) : Verbose_Flag = $Value)
+	};
+
+    FILE (HELP "MAKE dependency/action/rule file",STDHELP,INPUT,
+	DEFAULT_DEV "DSK",DEFAULT_NAM "Makefile",DEFAULT_EXT "",
+	DEFAULT_GEN 0) :
+	{
+	done = YES;
+	Make_File = $FILEL
+	};
+
+    EOL :
+	{
+	done = YES;
+	Make_File = "MakeFile.."
+	}
+    )
+    UNTIL done = YES;
+
+    IF Verbose_Flag >= 2 THEN
+    {
+	DISPLAY "Action = {" + "}";
+	IF Dry_Run = YES
+	THEN DISPLAY "Dry_Run : YES"
+	ELSE DISPLAY "Dry_Run : NO";
+	DISPLAY "Task = {" + Task_Name + "}"
+    };
+
+    Make_File_Id = $Open(Make_File,$INPUT);
+
+    Make_Line= $Read(Make_File_Id);
+    WHILE $EOF(Make_File_Id) >= 0 DO
+    {
+	DOCOMMAND "Make-Parse-Rule " + Make_Line;
+	IF Verbose_Flag >= 2 THEN
+	{
+	    IF Dep_File <> "" THEN DISPLAY "Dep_File   {" + Dep_File + "}";
+	    IF Make_Rules <> "" THEN DISPLAY "Make_Rules {" + Make_Rules + "}";
+	    IF Task_List <> "" THEN DISPLAY "Task_List   {" + Task_List + "}"
+	};
+	Make_Line= $Read(Make_File_Id)
+    };
+
+    ! Put a search terminator on the  dependency list.  Each line in  it
+    ! is headed  by a  file followed  by a  list of  files on  which  it
+    ! depends, and  each line  is preceded  and followed  by a  CRLF  to
+    ! simplify the search.
+
+    Dep_File = Dep_File + $CRLF;
+
+    ! Attach our  defaults to  user's rules.   The first  rule found  is
+    ! used, so the user's rules can override the defaults.
+
+    Make_Rules = Make_Rules + Default_Make_Rules;
+
+    IF Verbose_Flag = 1 THEN
+	{
+	    IF Dep_File <> "" THEN DISPLAY "Dep_File   {" + Dep_File + "}";
+	    IF Make_Rules <> "" THEN DISPLAY "Make_Rules {" + Make_Rules + "}";
+	    IF Task_List <> "" THEN DISPLAY "Task_List   {" + Task_List + "}"
+	};
+    ! Now comes the tedious part...doing all the file time/date
+    ! comparisons and issuing commands....INCOMPLETE....
+
+    ! Now search for the selected /TASK:name /ACTION:string to
+    ! find the desired action string.
+
+    k1 = $SearchRaised(Task_List,"/TASK:"+Task_Name,1);
+    IF k1 = 0 THEN
+	ABORT "Task ``" + Task_Name + "'' not found in " + Make_File + "!";
+
+    k1 = k1 + $Length(Task_Name) + 6;
+    k2 = $Search(Task_List,$CRLF,k1);
+    IF k2 = 0 THEN
+	ABORT "Action for task ``" + Task_Name +
+	    "'' not terminated by CRLF in " + Make_File + "!";
+    k3 = $SearchRaised(Task_List[1:k2],"/ACTION:",k1);
+    IF k3 = 0 THEN
+	ABORT "Task ``" + Task_Name + "'' has no action field in "
+	    + Make_File + "!";
+    k3 = k3 + 8;
+    l3 = k2 - k3;	!action in k3..k2-1
+    k2 = k2 - 1;	!Index of character before CRLF
+
+    IF Verbose_Flag > 0 THEN
+	DISPLAY "Selected task rule = ``" + Task_List[k3:l3] + "''";
+
+! Now collect ``words'' from  task rule.  A word  is delimited by  white
+! space, commas, or escape  (\x) sequences.  Each  word is considered  a
+! potential filename, and the dependency  list must be searched to  find
+! rules which must be applied to make the filename.  Some of these words
+! are, of course, not filenames, but  command names or keywords, and  we
+! assume for the time  being that these  never conflict with  filenames.
+! However, we do skip  tokens which do not  begin with a legal  filename
+! character, and we also skip over quoted strings.
+
+    k1 = k3;
+    WHILE k1 <= k2 DO
+    {
+	l1 = Isolate_Token(Task_List[1:k2],k1);
+	IF l1 = 0 THEN EXIT; !all done
+
+	IF Verbose_Flag > 0 THEN
+	    DISPLAY "Word = ``" + Task_List[k1:l1] + "''";
+
+      	! We cannot just use $IsFile here, because the file may not  yet
+      	! exist and have to be built according to the make rules, so  we
+      	! require that its name contain only legal filename  characters.
+
+	k4 = k1;
+	k3 = k1 + l1 - 1;
+	Okay = YES;
+	WHILE Okay = YES DO
+	    IF k4 > k3 THEN
+		Okay = NO
+	    ELSE IF Task_List[k4:1] = "" THEN
+		k4 = k4 + 2	    ! CTL-V quotes any character
+	    ELSE IF $SearchRaised(Legal_File_Chars,Task_List[k4:1]) > 0
+		THEN
+		k4 = k4 + 1
+	    ELSE ! was not legal filename character
+		Okay = NO;
+
+	IF k4 > k3 THEN ! possible file name
+	    IF Check_File_Dependency(Task_List[k1:l1]) = YES THEN
+		DISPLAY "Add code here to update " + Task_List[k1:l1];
+
+	k1 = k1 + l1;
+    };
+} !Make
+
+COMMAND Make_Parse_Rule;
+{
+    EXTERNAL STRING
+	Dep_File,
+	Make_Rules,
+	Tab,
+	Task_List;
+
+    INTEGER
+	done,
+	NO,
+	YES;
+
+    NO = 0;
+    YES = 1;
+    PARSE (
+	SWITCH (WORDS(MAKE::1,TASK::2),STDHELP) :
+	    {
+		CASE $VALUE FROM 1 TO 2 OF
+		{
+		1: {
+		    PARSE (FIELD (HELP "file extension",STDHELP) : Nop);
+		    Make_Rules = Make_Rules + "/MAKE:" + $Atom + Tab;
+		    PARSE (SWITCH(WORDS(FROM:1),STDHELP) : Nop);
+		    PARSE (FIELD (HELP "file extension") :
+			Make_Rules = Make_Rules + "/FROM:" + $Atom + Tab);
+		    PARSE (SWITCH(WORDS(HOW:1),STDHELP) : Nop);
+		    PARSE (QUOTEDSTRING(STDHELP) :
+			Make_Rules = Make_Rules + "/HOW:""" + $Atom + 
+			    """" + $CRLF);
+		    };
+		2:  {
+		    PARSE (FIELD (HELP "task name",STDHELP) : Nop);
+		    Task_List = Task_List + "/TASK:" + $Atom + Tab;
+		    PARSE (SWITCH(WORDS(ACTION:1),STDHELP) : Nop);
+		    PARSE (QUOTEDSTRING(STDHELP));
+		    Task_List = Task_List + "/ACTION:" + $atom + $CRLF;
+		    };
+		};
+	    };
+	FILE (DEFAULT_DEV "DSK",DEFAULT_GEN 0,HELP "target file",
+	    STDHELP) :
+	    {
+		Dep_File = Dep_File + $Xatom;
+                PARSE (FILELIST (DEFAULT_DEV "DSK", DEFAULT_GEN 0,
+		    HELP "dependency file list",STDHELP) :
+    	            {
+    	            Dep_File = Dep_File + Tab;
+    		    DO
+    		        Dep_File = Dep_File + $FILEL + ","
+		    UNTIL $NextFile = 0;
+		    Dep_File = Dep_File[1:$Length(Dep_File)-1] + $CRLF;
+		    });
+	    };
+
+	EOL : Return
+	);
+} ! Make_Parse_Rule
+
+INTEGER PROCEDURE Check_File_Dependency(STRING Filename);
+! ======================================================================
+! Search the  dependency  list  in  the  global  variable  Dep_File  and
+! determine whether  or not  'Filename' is  out of  date.  The  function
+! value on return is  YES if the file  is out of date,  and NO if it  is
+! not.
+! ======================================================================
+{
+    EXTERNAL INTEGER PROCEDURE
+	Check_File_Dependency,
+	Isolate_Token;
+
+    EXTERNAL STRING
+	Dep_File;
+
+    INTEGER
+	k1,
+	k2,
+	l1,
+	NO,
+	YES;
+
+    STRING
+	dependent,
+	target_file,
+	make_ext;
+
+    NO = 0;
+    YES = 1;
+
+    DISPLAY "Checking file dependency of ``" + Filename + "''" + $CRLF;
+
+    target_file = $CRLF + Filename;
+    k1 = $SearchRaised(Dep_File,target_file);
+    IF k1 = 0 THEN RETURN NO;
+    k1 = k1 + $Length(target_file);
+    k2 = $Search(Dep_File,$CRLF,k1);
+    WHILE k1 < k2 DO ! examine dependent file list in Dep_File[k1..k2]
+	{
+	    l1 = Isolate_Token(Dep_File,k1);
+	    IF l1 = 0 THEN RETURN NO;
+	    dependent = Dep_File[k1:l1];
+	    k1 = k1 + l1;
+	    DISPLAY "	Checking dependent file ``" + dependent + "''";
+	    IF $IsFile(dependent) = 1 THEN
+		{
+		IF $FileInfo_I(dependent,$FBWRT) >
+		    $FileInfo_I(Filename,$FBWRT) THEN
+		    DISPLAY $CRLF + "	Must remake ``" + Filename +
+		        "'' because ``" + dependent + "'' is newer." + $CRLF;
+    		    RETURN YES; ! need not scan further
+		}
+	    ELSE ! dependent file does not exist, so it must be made too
+		{
+		DISPLAY "	File ``" + Filename + "'' depends on ``" +
+		    dependent +
+		    "'' which does not exist and must therefore be made";
+		RETURN YES;
+		};
+	};
+    RETURN NO;
+} ! Check_File_Dependency
+
+INTEGER PROCEDURE Isolate_Token(STRING s; INTEGER start_pos);
+! ======================================================================
+! Find the  next  token  in s[start_pos:*],  returning  its  index  in
+! start_pos, and its length as  the function value.  Zero is  returned
+! if no token  is found,  and in  that case,  start_pos is  unchanged.
+! Tokens are character  sequences delimited by  the characters in  the
+! global variable,  Word_Delimiters, or  are quoted  strings:  "string
+! value".   Escape  sequences,   \n,  \1,  etc.   are  recognized   as
+! delimiters.
+! ======================================================================
+{
+    EXTERNAL STRING
+	Word_Delimiters;
+
+    INTEGER
+	k1,
+	k2,
+	slen;
+
+    display "Isolate_Token string = ``" + s[start_pos:*] + "''";
+    display "	String range = " + $String(start_pos) + ":" +
+	$String($Length(s));
+
+    k1 = start_pos;
+    slen = $Length(s);
+
+    WHILE $Search(Word_Delimiters,s[k1:1]) > 0 DO
+        {   ! Advance over word delimiters
+    	IF s[k1:1] = "\" THEN ! advance over escape sequence \x
+    	    k1 = k1 + 2
+	ELSE
+    	    k1 = k1 + 1;
+	    IF k1 >= slen THEN RETURN 0;	! no word found
+        };
+
+    k2 = k1;
+    IF s[k2:1] = """" THEN ! collect quoted string
+        { ! we need not check for doubled quotes, because these will
+          ! simply generate adjacent quoted strings.
+    	k2 = k2 + 1;
+    	IF k2 >= slen THEN GOTO word_found;
+    	WHILE s[k2:1] <> """" DO
+    	    {
+    		IF k2 >= slen THEN
+ 		    ABORT "Unbalanced quoted string in string ``" +
+    		        s + "''!";
+    		k2 = k2 + 1;
+    		IF k2 >= slen THEN GOTO word_found;
+    	    }
+        }
+    ELSE ! not quoted string, so collect up to next token separator
+        WHILE $Search(Word_Delimiters,s[k2+1:1]) = 0 DO
+    	{
+    	    k2 = k2 + 1;
+    	    IF k2 >= slen THEN GOTO word_found;
+    	};
+
+    ! Word now isolated in characters k1..k2
+    word_found:
+    start_pos = k1;
+    display "	Result: k1 = " + $String(k1) + "; k2 = " + $string(k2) +
+        " ``" + s[k1:k2+1-k1] + "''";
+    return k2+1-k1;
+} ! Isolate_Token

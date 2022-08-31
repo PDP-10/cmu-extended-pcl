@@ -1,0 +1,29 @@
+COMMAND Check_Page_Count;
+{
+    integer byte_count;
+    integer byte_size;
+    integer bytes_per_word;
+    integer page_count;
+    integer page_used;
+    integer word;
+    integer word_count;
+
+    PARSE (FILELIST(input));
+    DO
+    {
+        word = $FileInfo_I($Parse,$FBBYV);
+        byte_size = $AND(word,8%007700000000)/8%100000000;
+	page_count = $AND(word,8%777777);
+        byte_count = $FileInfo_I($Parse,$FBSIZ);
+	if byte_size > 0 then
+	{
+	    bytes_per_word = 36/byte_size;
+	    word_count = (byte_count + bytes_per_word - 1)/bytes_per_word;
+	    page_used = (word_count + 512 - 1)/512;
+	    if page_used <> page_count then
+	        DISPLAY $FILEL + " " + $string(page_count) +
+		    " -> " + $string(page_used);
+	}
+    }
+    UNTIL $Nextfile = 0;
+}

@@ -1,0 +1,143 @@
+STRING last_dir_name;
+COMMAND CD;
+!------------------------------------------------------------------------
+! Purpose:
+!	Connect to directory.
+!
+! Usage:
+!	CD <directory>		| Go to specific directory
+!	CD /LAST		| Go to previous connected directory
+!	CD .subdirectory	| Go to subdirectory of current one
+!	CD _			| Go to superior directory   
+!	CD _.subdirectory	| Go to brother directory
+!
+! Remarks:
+!	"_" can be repeated to move up more than one level if desired.
+!	An INFORMATION (ABOUT) JOB command is issued after  connecting
+!	to verify which  directory one  has connected to,  and a  TAKE
+!	UNCONNECT.CMD is issued  before leaving.   The prompt  strings
+!	are updated to reflect the current directory.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[01-Nov-84]
+!
+!------------------------------------------------------------------------
+BEGIN
+EXTERNAL STRING
+    last_dir_name;
+INTEGER
+    done,
+    K,
+    NO,
+    YES;
+STRING
+    command_echo,
+    current_dir_name,
+    dir_name,
+    login_directory,
+    temp_name;
+
+NO = 0;
+YES = 1;
+login_directory = "PS:<" + $UserName + ">";
+current_dir_name = $ConnectedDirectory;
+
+GUIDE "connect to directory";
+
+PARSE(
+SWITCH (WORDS(LAST:1),STDHELP,HELP last_dir_name) : dir_name = last_dir_name;
+
+DIRECTORY (DEFAULT login_directory,STDHELP) : dir_name = $Atom;
+
+TEXT (HELP
+".subdirectory OR 
+subdirectory OR
+_ to go up OR 
+_.subdirectory to go up and then down OR
+/toplevel/sub/sub OR
+~/sub for subdirectory of login directory",STDHELP) :
+    BEGIN
+    dir_name = $Atom;
+
+    k = 2;
+    WHILE k <= $Length(dir_name) DO ! Change unquoted "/" to "." after first
+        BEGIN
+            IF dir_name[k:1] = "/" THEN
+                IF $CVCTI(dir_name[k-1:1]) <> 22 THEN ! Ctl-V
+		    dir_name = dir_name[1:k-1] + "." + dir_name[k+1:*];
+            k = k + 1
+        END;
+
+    IF dir_name[1:1] = "~" THEN	! have ~/sub/sub
+        dir_name = "PS:<" + $UserName + "." + dir_name[2:*] + ">";
+    IF dir_name = " " ! TEXT matches EOL, so we get here instead
+        THEN dir_name = login_directory
+    ELSE IF dir_name = "" ! just in case
+        THEN dir_name = login_directory
+    ELSE IF dir_name[1:1] = "_"
+        THEN BEGIN
+	    current_dir_name = current_dir_name[1:$LENGTH(current_dir_name)-1];
+            DO  BEGIN ! move up one level for each "_" found
+                dir_name = dir_name[2:*];
+		IF $SEARCH(current_dir_name,".") > 0 THEN BEGIN
+                    K = $LENGTH(current_dir_name) + 1;
+                    done = NO;
+                    DO  BEGIN ! Search backward for "."
+                        K = K - 1;
+                        IF K <= 1
+                            THEN ABORT "Already at top-level directory"
+                        ELSE IF current_dir_name[K:1] = "."
+                            THEN done = YES
+                        END
+                    UNTIL done = YES;
+                    current_dir_name = current_dir_name[1:K-1]
+		    END
+                END
+            UNTIL dir_name[1:1] <> "_";
+            dir_name = current_dir_name + dir_name + ">"
+            END
+    ELSE IF dir_name[1:1] = "/"	! had /name.name
+        THEN dir_name = "<" + dir_name[2:*] + ">"
+    ELSE IF dir_name[1:1] = "."	! had .name.name
+        THEN dir_name = current_dir_name[1:$LENGTH(current_dir_name)-1]
+            + dir_name + ">"
+    ELSE	! had name.name
+        dir_name = current_dir_name[1:$LENGTH(current_dir_name)-1]
+            + "." + dir_name + ">"
+    END;
+
+EOL (STDHELP,HELP "to connect to login directory"):
+    dir_name = login_directory
+);
+
+temp_name = dir_name[$Search(dir_name,":<")+1:*];	! name.name>
+
+IF temp_name[2:$Length(temp_name)-2] = $UserName
+THEN 
+   $PromptReg = "root>"
+ELSE 
+   BEGIN
+   $PromptReg = temp_name[2:*];
+   IF $Search($PromptReg,$UserName) = 1 THEN
+       $PromptReg = $PromptReg[$Length($UserName)+1:*]; !Strip username
+   END;
+
+$PromptSub    = $PromptReg + ">";	! name.name>>
+$PromptEnb    = $PromptReg + " $";	! name.name> $
+$PromptEnbSub = $PromptReg + " $$";	! name.name> $$
+
+last_dir_name = $ConnectedDirectory;
+DOCOMMAND ORIGINAL "BLANK";
+DOCOMMAND ORIGINAL "ENABLE";
+IF $Isfile("UNCONNECT.CMD") = 1 THEN
+DOCOMMAND ORIGINAL "TAKE UNCONNECT.CMD" TO command_echo;
+DOCOMMAND ORIGINAL "CONNECT " + dir_name;
+!DOCOMMAND ORIGINAL "INFORMATION JOB";
+DOCOMMAND ORIGINAL "DISABLE"
+
+END; !CD
+

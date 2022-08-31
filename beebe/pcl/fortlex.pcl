@@ -1,0 +1,75 @@
+COMMAND FORTLEX;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute FORTLEX, the FORTRAN lexical analyzer.
+!
+! Usage:
+!	FORTLEX inputfilename {,} {outputfilename}
+!
+! Remarks:
+!	The default extension on the input file is ".FOR" and on the
+!	output file, ".LST".  If the output file is omitted, the name
+!	of the input file is used.  Files FOR05.DAT and FOR06.DAT are
+!	created and deleted.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[17-Jun-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+STRING	infile,
+	outfile,
+	help_string,
+	default_device,
+	default_directory,
+	default_name;
+
+GUIDE "FORTRAN lexical analysis of";
+
+PARSE (FILE
+	(INPUT,
+	DEFAULT_EXT "FOR",
+	HELP "FORTRAN source file"
+	) : infile = $FILEL);
+
+default_device = $File_Dev($Parse) + ":";
+
+default_directory = "<" + $File_Dir($Parse) + ">";
+
+default_name = $File_Nam($Parse);
+
+help_string = "FORTLEX listing file {default = " + default_device + 
+		default_directory + default_name + ".LST}";
+
+PARSE (
+EOL	(HELP help_string) : outfile = default_device + default_directory 
+		+ default_name + ".LST";
+
+FILE	(OUTPUT,
+	DEFAULT_DEV default_device,
+	DEFAULT_DIR default_directory,
+	DEFAULT_NAM default_name,
+	DEFAULT_EXT "LST"
+	) : outfile = $FILEL
+); !end of PARSE
+
+DISPLAY "FORTRAN source file:  " + infile;
+DISPLAY "FORTLEX listing file: " + outfile;
+
+
+DOCOMMAND ORIGINAL "DEFINE 5: DSK:";
+DOCOMMAND ORIGINAL "DEFINE 6: DSK:";
+
+DOCOMMAND ORIGINAL "COPY " + infile + " FOR05.DAT";
+
+DOCOMMAND ORIGINAL "FLX:FORTLEX";
+
+DOCOMMAND ORIGINAL "DELETE FOR05.DAT";
+DOCOMMAND ORIGINAL "RENAME FOR06.DAT " + outfile
+
+END; !FORTLEX

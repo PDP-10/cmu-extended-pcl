@@ -1,0 +1,87 @@
+COMMAND Pipe;
+!-----------------------------------------------------------------------
+! Purpose:
+!	Provide a  Unix-style pipe  facility,  since PCC-20  does  not
+!	provide it.
+!
+! Usage:
+!	PIPE command | command | command | ... command | command
+!
+! Remarks:
+!	Each command is  run as a  separate step, and  the command  is
+!	echoed to the terminal at each step.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[10-Jun-86]
+!-----------------------------------------------------------------------
+{
+    STRING cmd,unix_cmd;
+    STRING tmpfile;
+    INTEGER k,m,n,process;
+
+    PARSE (
+	TEXT (HELP "command | command | ... | command") : cmd = $Atom;
+	EOL : NOP);
+
+    tmpfile = "SCR:PIPE$$$." + $String($TermNumber);
+    docommand original "copy nul: " + tmpfile + ".-1";
+    docommand original "set file generation-retention-count (of files) " +
+	tmpfile + ".* (to) 2";
+    docommand original "define unix: unix:,sys:";
+
+    process = 1;
+    DO
+    {
+        k = 1;
+	while cmd[k:1] <= " " DO
+	    k = k + 1;
+	cmd = cmd[k:*];
+	IF cmd = "" THEN
+	{
+	    docommand original "define unix:";
+	    EXIT;
+	};
+	k = $SEARCH(cmd,"|");
+	m = $SEARCH(cmd," ");
+	n = $SEARCH(cmd,$CVITC(9));
+	IF m > n THEN
+	    IF n > 0 THEN
+	        m = n;	! index of first whitespace on line
+	IF k > 0 THEN	! still piping
+	{
+	    IF m > k THEN
+	        m = k;
+	    IF process > 1 THEN
+		unix_cmd = cmd[1:m] + " <" + tmpfile + ".0 " +
+		    ">" + tmpfile + ".-1 "
+	    ELSE
+		unix_cmd = cmd[1:m] + " >" + tmpfile + ".-1 ";
+	    unix_cmd = "unix:" + unix_cmd + cmd[m+1:k-m-1];
+	}
+	else	! no more piping--just output to stdout
+	{
+	    IF m = 0 THEN
+		m = $LENGTH(cmd);
+	    IF process > 1 THEN
+		unix_cmd = cmd[1:m] + " <" + tmpfile + ".0 "
+	    ELSE
+		unix_cmd = cmd[1:m];
+	    unix_cmd = "unix:" + unix_cmd + cmd[m+1:*];
+	    cmd = "";
+	};
+	DISPLAY "[" + unix_cmd + "]";
+	DOCOMMAND unix_cmd;
+	k = k + 1;	! step past pipe
+	cmd = cmd[k+1:*];
+	if cmd = "" THEN
+	    k = 0;
+	process = process + 1;
+    }
+    UNTIL k = 0;
+    docommand original "define unix:"
+}
+

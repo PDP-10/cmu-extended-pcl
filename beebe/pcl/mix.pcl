@@ -1,0 +1,234 @@
+PROCEDURE Mix_rgb (STRING filename); 
+{
+	STRING answer;
+	INTEGER fileid,red, green, blue, color, rgb;
+	EXTERNAL STRING PROCEDURE Getc;
+	EXTERNAL INTEGER PROCEDURE Bump;
+	EXTERNAL PROCEDURE Blink,Box;
+
+	fileid = $OPEN(filename,$OUTPUT);
+	CALL $WRITE (fileid,"BTI,");
+
+	color = 1;
+	red = 0;
+	green = 0;
+	blue = 0;
+	rgb = 0;
+
+	answer = Getc;
+	WHILE answer <> $CR DO
+	{
+		SELECT answer OF
+		{
+		"0","1","2","3","4","5","6","7":
+			{
+				CALL $Write(fileid,
+					"J," + $String(color) + "," + 
+					$String(red) + "," +
+					$String(green) + "," +
+					$String(blue) + ",");
+				color = $integer(answer);
+				CASE color FROM 0 to 7 OF 
+				{
+				0: {red =  0; green =  0; blue =  0;};
+				1: {red = 15; green =  0; blue =  0;};
+				2: {red =  0; green = 15; blue =  0;};
+				3: {red = 15; green = 15; blue =  0;};
+				4: {red =  0; green =  0; blue = 15;};
+				5: {red = 15; green =  0; blue = 15;};
+				6: {red =  0; green = 15; blue = 15;};
+				7: {red = 15; green = 15; blue = 15;};
+				};
+			};
+		"":	{
+				IF Getc = "[" THEN
+				{
+					SELECT Getc OF
+					{
+					"A": 	CASE rgb FROM 0 TO 2 OF
+						{
+						0: red = Bump(red,1,0,15);
+						1: green = Bump(green,1,0,15);
+						2: blue = Bump(blue,1,0,15);
+						};
+	
+					! A CASE statement here did not
+					! work because of a PCL compiler bug
+					"B": 	IF rgb = 0 THEN
+							red = Bump(red,-1,0,15)
+						ELSE IF rgb = 1 THEN
+							green = Bump(green,-1,0,15)
+						ELSE IF rgb = 2 THEN
+							blue = Bump(blue,-1,0,15);
+					"C": rgb = Bump(rgb,1,0,2);
+					"D": rgb = Bump(rgb,-1,0,2);
+					};
+				};
+			};
+		OTHERWISE : NOP;
+		};
+		DISPLAY BINARY "J," + $String(color) + "," + 
+			$String(red) + "," +
+			$String(green) + "," +
+			$String(blue) + ",";
+		DISPLAY BINARY "?A[H[K[10CColor: " + $string(color);
+		DISPLAY BINARY "   ";
+		CALL Blink(rgb - 0, "RED: " + $String(red));
+		DISPLAY BINARY "   ";
+		CALL Blink(rgb - 1, "GREEN: " + $String(green));
+		DISPLAY BINARY "   ";
+		CALL Blink(rgb - 2, "BLUE: " + $String(blue));
+		DISPLAY BINARY "BT";
+
+		answer = Getc;
+	};
+	CALL $Write(fileid,
+		"J," + $String(color) + "," + 
+		$String(red) + "," +
+		$String(green) + "," +
+		$String(blue) + ",");
+	CALL $WRITE(fileid,"?A[H[2J");
+	CALL $CLOSE(fileid);
+};
+
+PROCEDURE Mix_hls (STRING filename); 
+{
+	STRING answer;
+	INTEGER fileid, hls, hue, lightness, saturation, color;
+	EXTERNAL STRING PROCEDURE Getc;
+	EXTERNAL INTEGER PROCEDURE Bump;
+	EXTERNAL PROCEDURE Blink,Box;
+
+	fileid = $OPEN(filename,$OUTPUT);
+	CALL $WRITE (fileid,"BTI,");
+
+	hls = 0;
+	hue = 120;
+	lightness = 50;
+	saturation = 100;
+	color = 1;
+
+	answer = Getc;
+	WHILE answer <> $CR DO
+	{
+		SELECT answer OF
+		{
+		"0","1","2","3","4","5","6","7":
+			{
+				CALL $Write(fileid,
+					"G," + $String(color) + "," + 
+					$String(hue) + "," +
+					$String(lightness) + "," +
+					$String(saturation) + ",");
+				color = $integer(answer);
+				CASE color FROM 0 to 7 OF 
+				{
+				0: {hue =   0; lightness =   0; saturation = 100;};
+				1: {hue = 120; lightness =  50; saturation = 100;};
+				2: {hue = 240; lightness =  50; saturation = 100;};
+				3: {hue = 180; lightness =  50; saturation = 100;};
+				4: {hue =   0; lightness =  50; saturation = 100;};
+				5: {hue =  60; lightness =  50; saturation = 100;};
+				6: {hue = 300; lightness =  50; saturation = 100;};
+				7: {hue =   0; lightness = 100; saturation = 100;};
+				};
+			};
+		"":	{
+				IF Getc = "[" THEN
+				{
+					SELECT Getc OF
+					{
+					"A": 	CASE hls FROM 0 TO 2 OF
+						{
+						0: hue = Bump(hue,20,0,359);
+						1: lightness = Bump(lightness,10,0,100);
+						2: saturation = Bump(saturation,25,0,100);
+						};
+	
+					! A CASE statement here did not
+					! work because of a PCL compiler bug
+					"B": 	IF hls = 0 THEN
+							hue = Bump(hue,-20,0,359)
+						ELSE IF hls = 1 THEN
+							lightness = Bump(lightness,-10,0,100)
+						ELSE IF hls = 2 THEN
+							saturation = Bump(saturation,-25,0,100);
+					"C": hls = Bump(hls,1,0,2);
+					"D": hls = Bump(hls,-1,0,2);
+					};
+				};
+			};
+		OTHERWISE : NOP;
+		};
+		DISPLAY BINARY "G," + $String(color) + "," + 
+			$String(hue) + "," +
+			$String(lightness) + "," +
+			$String(saturation) + ",";
+		DISPLAY BINARY "?A[H[K[10CColor: " + $string(color);
+		DISPLAY BINARY "   ";
+		CALL Blink(hls - 0, "Hue: " + $String(hue));
+		DISPLAY BINARY "   ";
+		CALL Blink(hls - 1, "Lightness: " + $String(lightness));
+		DISPLAY BINARY "   ";
+		CALL Blink(hls - 2, "Saturation: " + $String(saturation));
+		DISPLAY BINARY "BT";
+
+		answer = Getc;
+	};
+	CALL $Write(fileid,
+		"G," + $String(color) + "," + 
+		$String(hue) + "," +
+		$String(lightness) + "," +
+		$String(saturation) + ",");
+	CALL $WRITE(fileid,"?A[H[2J");
+	CALL $CLOSE(fileid);
+};
+
+COMMAND MIX;
+{
+	EXTERNAL STRING PROCEDURE Getc;
+	EXTERNAL INTEGER PROCEDURE Bump;
+	EXTERNAL PROCEDURE Blink,Box,Mix_hls,Mix_rgb;
+
+	INTEGER model,width,height,ybase;
+	STRING answer,filename;
+
+	GUIDE "colors on Intecolor VHR-19";
+	PARSE(SWITCH(WORDS(RGB:1,HLS:2),STDHELP,
+		HELP "color model",DEFAULT "/HLS")
+		:  model = $Value);
+	answer = $Username;
+	PARSE(FILE (OUTPUT,
+		DEFAULT_DEV "PS",DEFAULT_DIR answer,DEFAULT_NAM "VHR19",
+		DEFAULT_EXT "COLORS",DEFAULT_GEN +) : filename = $FILEL);
+	PARSE(EOL : NOP);
+
+	width = 100;
+	height = 24;
+	ybase = 880;
+
+	DISPLAY BINARY "?A[H[1m[2JBTI,";
+	DISPLAY BINARY "N,160,4,";	!Pan up
+	CALL BOX(7,0, 60,ybase, width, height);
+	CALL BOX(7,1,180,ybase, width, height);
+	CALL BOX(7,2,300,ybase, width, height);
+	CALL BOX(7,3,420,ybase, width, height);
+	CALL BOX(7,4,540,ybase, width, height);
+	CALL BOX(7,5,660,ybase, width, height);
+	CALL BOX(7,6,780,ybase, width, height);
+	CALL BOX(1,7,900,ybase, width, height);
+
+	DISPLAY BINARY "?A";
+	DISPLAY BINARY "[4H[10CCursor up/down changes intensity level";
+	DISPLAY BINARY "[5H[10CCursor left/right changes primary";
+	DISPLAY BINARY "[6H[10CDigit changes color number";
+	DISPLAY BINARY "[3H[8C0[9C1[9C2[9C3[9C4[9C5[9C6[9C7";
+	DISPLAY BINARY "[1H[10CEnter color number (0..7): ";
+	DISPLAY BINARY "BT";
+
+	IF model = 1 THEN
+		CALL Mix_rgb(filename)
+	ELSE
+		CALL Mix_hls(filename);
+	DISPLAY BINARY "N,0,0,?A[H[2J";
+};

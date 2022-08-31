@@ -1,0 +1,20 @@
+command cv500;
+!------------------------------------------------------------------------
+! Purpose:
+!	Clear Visual 500 display.
+!
+! Usage:
+!	cv500
+!
+! Remarks:
+!	None.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[24-Sep-88]
+!
+!------------------------------------------------------------------------
+	display binary "~~";

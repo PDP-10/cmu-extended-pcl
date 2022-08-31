@@ -1,0 +1,229 @@
+COMMAND TYPE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Type out one or more files to the terminal.
+!
+! Usage:
+!	TYPE [switches] {filespecs}
+!
+! Remarks:
+!	If the  file  specification  is omitted,  then  *.*.*  is
+!	assumed.  This replacement  for the  system command  TYPE
+!	tries harder to find reasonable extensions, so that  most
+!	of the time, one need not give a file extension.  Offline
+!	files and  files  with types  BIN,  :EJ, UNV,  REL,  EXE,
+!	DIRECTORY,  and  ENV  are  automatically  excluded   from
+!	processing.
+!    
+!	The switch /COPIES:nnn may be given if more than one copy
+!	of each file is required.
+!
+!	The switch /OUTPUT:filename may  be used to redirect  the
+!	typeout to an alternate file; if omitted, typeout goes to
+!	the terminal.
+!
+!	The       switches        /SINCE:date_and_time        and
+!	/BEFORE:date_and_time may  be  used to  select  files  by
+!	write date and time.  The switch values may be any  valid
+!	DEC-20 date  and time  strings, or  YESTERDAY, TODAY,  or
+!	TOMORROW (time 00:00:01), or past day of week (MONDAY  ..
+!	SUNDAY), or NOW (current time).  The defaults are
+!
+!	/SINCE:TODAY
+!	and 
+!	/BEFORE:NOW
+!
+!	The switches /LINES:nn and /SKIP:ss will cause the  first
+!	ss lines  to be  skipped, and  the next  nn lines  to  be
+!	typed, and then  processing will continue  with the  next
+!	file.  This is useful for  examining the first few  lines
+!	of a group of files.  The defaults if these switches  are
+!	given without numeric values are /LINES:5 and /SKIP:0.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[10-Aug-83]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+INTEGER
+     before_time_and_date,
+     copies,
+     copy_count,
+     curtad,
+     done,
+     file_count,
+     InFileId,
+     line_number,
+     lines,
+     NO,
+     OutFileId,
+     page_number,
+     page_size,
+     print,
+     select_time_and_date,
+     since_time_and_date,
+     skip,
+     YES;
+
+STRING
+     clock_start,
+     dashes,
+     output_file,
+     record;
+
+NO = 0;
+YES = 1;
+copies = 1;
+curtad = $CURTAD;
+clock_start = $OUTPUTTAD(0);
+done = NO;
+lines = -1;
+output_file = "";
+select_time_and_date = NO;
+since_time_and_date = NO;
+skip = 0;
+
+before_time_and_date = curtad;
+GUIDE "files to terminal";
+
+WHILE done = NO DO PARSE(
+SWITCH( WORDS(
+     BEFORE::1,
+     SINCE::2,
+     COPIES::3,
+     LINES::4,
+     OUTPUT::5,
+     SKIP::6),STDHELP):
+     BEGIN
+     CASE $VALUE FROM 1 TO 6 OF BEGIN
+     [1]:
+        BEGIN
+        before_time_and_date = GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+        select_time_and_date = YES
+        END;
+     [2]:
+        BEGIN
+        since_time_and_date = GENERAL_TIME_AND_DATE_PARSE(curtad,"TODAY",0);
+        select_time_and_date = YES
+        END;
+     [3] : PARSE (NUMBER (DEFAULT "1",STDHELP) : 
+        BEGIN
+        copies = $VALUE;
+        IF copies <= 0 THEN copies = 1
+        END);
+     [4] : PARSE (NUMBER (DEFAULT "5",STDHELP) :
+        BEGIN
+        lines = $VALUE;
+        IF lines <= 0 THEN lines = 0
+        END);
+     [5] : PARSE (FILE(
+        HELP "Output file",
+        OUTPUT,
+        DEFAULT_DEV "DSK:",
+        DEFAULT_NAM "TYPE",
+        DEFAULT_EXT "LST") : output_file = $FILEL);
+
+     [6] : PARSE (NUMBER (DEFAULT "0",STDHELP) : 
+        BEGIN
+        skip = $VALUE;
+        IF skip <= 0 THEN skip = 0
+        END)
+     END  ! CASE
+     END; ! SWITCH
+
+OTHERWISE : done = YES);
+
+PARSE (
+FILELIST 
+    (HELP "List of files to be typed",
+    INPUT,
+    DEFAULT_DEV "DSK",
+    DEFAULT_NAM "*",
+    DEFAULT_EXT "*") : NOP);
+
+dashes = "----------------------------------------" +
+    "----------------------------------------";
+
+IF output_file = "" THEN output_file = "TTY:";
+OutFileId = $Open(output_file,$Output);
+
+DO
+    SELECT $File_Typ($Parse) OF 
+    BEGIN
+    [":EJ"]:	 NOP;
+    ["BIN"]:     NOP;
+    ["DIRECTORY"]:    NOP;
+    ["ENV"]:    NOP;
+    ["EXE"]:    NOP;
+    ["REL"]:    NOP;
+    ["UNV"]:    NOP;
+    [OTHERWISE]:
+            BEGIN ! process this file
+            copy_count = 0;
+            WHILE copy_count < copies DO 
+                BEGIN ! multiple copy loop
+                copy_count = copy_count + 1;
+                IF $FileInfo_I($Parse,$FBWRT) >= since_time_and_date 
+                THEN IF $FileInfo_I($Parse,$FBWRT) < before_time_and_date
+                THEN IF $FileInfo_I($Parse,$FBADR) <> 0 THEN
+                    BEGIN ! file is selected and online
+                    IF lines > 0 THEN ! want partial display
+                        BEGIN
+                        CALL $Write (OutFileId,dashes[1:$LENGTH($FILEL)] +
+                            $CRLF + $FILEL + $CRLF + dashes[1:$LENGTH($FILEL)]
+                            + $CRLF);
+                        line_number = 0;
+                        InFileId = $Open($FILEL,$Input);
+                        record = $Read(InFileId);
+                        IF $Eof(InFileId) = 0 
+                        THEN done = NO
+                        ELSE done = YES;
+                        WHILE done = NO DO 
+                            BEGIN
+                            line_number = line_number + 1;
+                            IF line_number > skip THEN 
+                                CALL $Write(OutFileId,record);
+                            record = $Read(InFileId);
+                            IF $Eof(InFileId) = 0 
+                                THEN done = NO
+                                ELSE done = YES;
+                            IF line_number >= (lines + skip) THEN done = YES;
+                            END;
+                        CALL $Close (InFileId)
+                        END
+                    ELSE ! Do ordinary TYPE/COPY
+                        BEGIN
+                        IF output_file = "TTY:" THEN
+                            BEGIN
+                            DISPLAY dashes[1:$LENGTH($FILEL)] + $CRLF + $FILEL
+                                + $CRLF + dashes[1:$LENGTH($FILEL)] + $CRLF;
+                            DOCOMMAND ORIGINAL "TYPE " + $FILEL
+                            END ! THEN
+                        ELSE ! not terminal output
+                            BEGIN
+                            CALL $Write (OutFileId,dashes[1:$LENGTH($FILEL)] +
+                                $CRLF + $FILEL + $CRLF + 
+                                dashes[1:$LENGTH($FILEL)] + $CRLF);
+                            InFileId = $Open($FILEL,$Input);
+                            record = $Read(InFileId);
+                            WHILE $Eof(InFileId) = 0 DO 
+                                BEGIN
+                                CALL $Write(OutFileId,record);
+                                record = $Read(InFileId)
+                                END;
+                            CALL $Close (InFileId)
+                            END ! ELSE
+                        END ! IF terminal output
+                    END !file is selected and online
+                END ! multiple copy loop
+            END ! process this file
+    END
+UNTIL $Nextfile = 0
+END; ! TYPE

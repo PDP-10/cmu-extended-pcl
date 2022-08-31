@@ -1,0 +1,29 @@
+COMMAND PCL (
+	NOISE "definitions from file(s)";
+	FILELIST (INPUT,
+		DEFAULT_DEV "PCL",
+		DEFAULT_NAM "*",
+		DEFAULT_EXT "PCL")
+	);
+!------------------------------------------------------------------------
+! Purpose:
+!	Short PCL declaration equivalent to DECLARE PCL-ROUTINES.
+!
+! Usage:
+!	PCL filelist
+!
+! Remarks:
+!	None
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[20-Nov-81]
+!
+!------------------------------------------------------------------------
+BEGIN
+DO
+	DOCOMMAND ORIGINAL "DECLARE PCL " + $FILEL
+UNTIL $NextFile = 0
+END; ! PCL 

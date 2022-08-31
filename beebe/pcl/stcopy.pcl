@@ -1,0 +1,260 @@
+COMMAND STCOPY;
+!------------------------------------------------------------------------
+! Purpose:
+!	Copy files  written between  specified dates  and  times,
+!	preserving author name,  account, file  dates and  times,
+!	and generation  numbers.   If the  target  directory/file
+!	contains files with matching  generations, they will  not
+!	be copied unless the  /SUPERCEDE switch is specified,  in
+!	which case they will be overwritten.
+!
+!	This makes it  possible to make  a verbatim structure  or
+!	directory copy.
+!
+!	The /ZERO-REFERENCE-COUNT switch can be used to zero  the
+!	READ reference  count  of  the  output  file  (the  WRITE
+!	reference count is always preserved); this may be  useful
+!	for files  imported  from other  installations  if  local
+!	usage statistics are required.
+!
+!	The /RENAME  switch  may be  specified  to use  a  RENAME
+!	instead of a  COPY; it  is the  user's responsibility  to
+!	ensure that the files are on the same device.
+!
+! Usage:
+!	STCOPY	/SINCE:time_and_date 	-
+!		/BEFORE:time_and_date	-
+!		/{NO}SUPERCEDE		-
+!		/TO:dirspec 		-
+!		/{NO}RENAME		-
+!		/{NO}ZERO-REFERENCE-COUNT -
+!		filespecs
+!
+! Remarks:
+!	The switch values may be  any valid DEC-20 date and  time
+!	strings,  or   YESTERDAY,   TODAY,  or   TOMORROW   (time
+!	00:00:01), or a past week  day, or a file  specification,
+!	which causes the file's  last write date  and time to  be
+!	used.  The defaults are
+!
+!	/BEFORE:NOW
+!	/NOSUPERCEDE
+!	/SINCE:first_day_and_time_of_clock
+!	/NORENAME
+!	/NOZERO-REFERENCE-COUNT
+!
+!	The  filespecs  field  may  contain  any  list  of   file
+!	specifications which  would  be acceptable  to  the  COPY
+!	command.  Because of a limitation in the current  version
+!	of  PCL,  SINCE  and  BEFORE  cannot  be  implemented  as
+!	subcommands, nor can  any other subcommands  be read  for
+!	use by COPY.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[04-Oct-83]
+!
+!------------------------------------------------------------------------
+{
+
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+INTEGER before_time_and_date,
+    curtad,
+    done,
+    Next_JFN,
+    NO,
+    Old_FBCNT,
+    Old_FBREF,
+    Old_FBCRE,
+    Output_File_Id,
+    rename,
+    since_time_and_date,
+    supercede,
+    time_selection,
+    YES,
+    zero_reference_count;
+
+STRING  clock_start,
+    command_name,
+    date_string,
+    Old_FBLWR,
+    Old_FBACT,
+    Old_Name,
+    target_directory,
+    target_file;
+
+NO = 0;
+YES = 1;
+curtad = $CURTAD;
+
+before_time_and_date = curtad;
+clock_start = $OUTPUTTAD(0);
+done = NO;
+rename = NO;
+since_time_and_date = 0;
+supercede = NO;
+target_directory = "";
+time_selection = NO;
+zero_reference_count = NO;
+
+GUIDE "files";
+
+WHILE done = NO DO
+PARSE (
+SWITCH( WORDS(BEFORE::1,SINCE::2,TO::3,NOSUPERCEDE:4,SUPERCEDE:5,
+	NOZERO_REFERENCE_COUNT:6,ZERO_REFERENCE_COUNT:7,NORENAME:8,
+	RENAME:9),
+    HELP "switch or source filespecs",
+    STDHELP):
+    CASE $VALUE FROM 1 TO 9 OF
+    {
+    [1]:    before_time_and_date = GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+    [2]:    since_time_and_date = GENERAL_TIME_AND_DATE_PARSE(curtad,
+    	    clock_start,0);
+    [3]:    PARSE (DIRECTORY(STDHELP) : target_directory = $ATOM);
+    [4]:    supercede = NO;
+    [5]:    supercede = YES;
+    [6]:    zero_reference_count = NO;
+    [7]:    zero_reference_count = YES;
+    [8]:    rename = NO;
+    [9]:    rename = YES
+    }; ! CASE
+OTHERWISE : done = YES);
+
+IF target_directory = "" THEN
+{
+    ABORT "Usage: STCOPY /TO:dirspec {/SINCE:... /BEFORE:... " +
+    "/{NO}SUPERCEDE} sourcefilespec" + $CRLF;
+};
+
+PARSE (
+FILELIST
+    (DEFAULT_DEV "DSK",
+    DEFAULT_NAM "*",
+    DEFAULT_EXT "*",
+    DEFAULT_GEN 0,
+    HELP "source filespecs (default DSK:*.*.0)") : NOP;
+);
+
+IF rename = YES THEN
+{
+    command_name = "RENAME "
+}
+ELSE
+{
+    command_name = "COPY "
+};
+
+IF since_time_and_date <> 0 THEN
+{
+    time_selection = YES
+}
+ELSE
+{
+    IF before_time_and_date <> curtad THEN
+    {
+        time_selection = YES
+    }
+    ELSE
+    {
+        time_selection = NO;
+    }
+};
+
+IF time_selection = YES THEN
+{
+    DISPLAY "STructure COPY of files written
+    SINCE " + $OUTPUTTAD(since_time_and_date) + " and
+    BEFORE " + $OUTPUTTAD(before_time_and_date)
+};
+
+DO
+{
+    Old_Name = $FileL;
+    Next_JFN = $NextFile;	! We need to make a local copy of
+				! the next JFN here because a
+				! RENAME throws away the JFN,
+				! killing any wild-card processing.
+
+    IF $FileInfo_I(Old_Name,12) >= since_time_and_date THEN
+    {
+        IF $FileInfo_I(Old_Name,12) < before_time_and_date THEN
+        {
+	    Old_FBCNT = $FileInfo_I(Old_Name,$FBCNT);
+            Old_FBREF = $FileInfo_I(Old_Name,$FBREF);
+	    Old_FBCRE = $FileInfo_I(Old_Name,$FBCRE);
+	    Old_FBLWR = $FileInfo_S(Old_Name,$FBLWR);
+	    Old_FBACT = $FileInfo_S(Old_Name,$FBACT);
+
+            target_file = target_directory + $File_Nam(Old_Name) + "." +
+                $File_Typ(Old_Name) + "." + $File_Gen(Old_Name);
+
+	    IF $AND($FileInfo_I(Old_Name,$FBCTL),8%002000000000) <> 0 THEN
+            {
+                DISPLAY "% " + Old_Name + " is DIRECTORY -- not copied"
+            }
+            ELSE
+	    {
+	        IF $AND($FileInfo_I(Old_Name,$FBCTL),8%000020000000) <> 0 THEN
+                {
+                    DISPLAY "% " + Old_Name + " is OFFLINE -- not copied"
+                }
+                ELSE
+                {
+
+                    IF $IsFile(target_file) = YES THEN
+                    {
+                        IF supercede = NO THEN
+                        {
+                            DISPLAY "% " + target_file + " already exists -- not copied"
+                        }
+                        ELSE
+                        {
+				DOCOMMAND ORIGINAL command_name
+				    + Old_Name + " " +
+				    target_directory + "*.*.*;A"
+				    + Old_FBACT
+                        }
+                    }
+                    ELSE
+                    {
+                        DOCOMMAND ORIGINAL command_name + Old_Name
+                            + " " + target_directory + "*.*.*;A"
+			    + Old_FBACT
+                    };
+
+                    Output_File_Id = $Open(target_file,$INPUT);
+
+		    IF Output_File_Id = 0 THEN
+		    {
+		    	display "?Cannot open " +
+				target_file + " -- probably invisible";
+		    }
+		    ELSE
+		    {
+                        IF zero_reference_count = YES THEN
+			{
+                             CALL $FileSet (Output_File_Id, $FBCNT, 8%777777, 0)
+		 	}
+    		        ELSE
+			{
+                            CALL $FileSet (Output_File_Id,$FBCNT, -1, Old_FBCNT);
+			    CALL $FileSet (Output_File_Id, $FBLWR, -1, Old_FBLWR);
+			    CALL $FileSet (Output_File_Id, $FBACT, -1, Old_FBACT);
+			    CALL $FileSet (Output_File_Id, $FBCRE, -1, Old_FBCRE);
+			    CALL $FileSet (Output_File_Id, $FBREF, -1, Old_FBREF);
+			    CALL $Close (Output_File_Id)
+			}
+		    }
+		}
+            }
+        }
+    }
+}
+UNTIL Next_JFN = 0
+
+};

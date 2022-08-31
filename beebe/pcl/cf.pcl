@@ -1,0 +1,554 @@
+COMMAND CF;
+!------------------------------------------------------------------------
+! Purpose:
+!	Optionally preprocess and compile a list of files, providing
+!	a more powerful command than COMPILE/LOAD/EXECUTE.
+!
+! Usage:
+!	CF {switches} filelist
+!
+! Remarks:
+!	Switches may be any valid switches for COMPILE/LOAD/EXECUTE
+!	as well as for PASCAL, PFORT, and SFTRAN3.  The special 
+!	additional switches are as follows: 
+!
+!	/BEFORE:{date and time, or date (time 00:00:01), or time (of
+!	today), or TODAY (time 00:00:01), or NOW (current time and
+!	date)} selects files written before a specified time and
+!	date.  The default value is NOW.
+!
+!	/KEEP suppresses deletion of temporary source files created by
+!	a preprocessor.  
+!
+!	/NOCOMPILE suppresses invocation of the compiler after
+!	preprocessing, as well as suppressing deletion of any temporary
+!	source files created by a preprocessor.
+!
+!	/NOKEEP requests deletion of temporary source files created by
+!	a preprocessor.
+!
+!	/PASSGO requests invocation of PASSGO instead of PASCAL for
+!	files with extension ".PAS".
+!
+!	/PFORT invokes the PFORT Verifier for any file with
+!	extension ".FOR" before invoking the compiler.  If the file
+!	came from SFTRAN3, EMACS is used to remove line numbers
+!	before calling the PFORT Verifier.
+!
+!	/SINCE:{date and time, or date (time 00:00:01), or time (of
+!	today), or TODAY (time 00:00:01),} selects files written
+!	since a specified time and date.  The default value is the
+!	start of the clock (16-Nov-1858 17:00:00).
+!
+!	/TAG:filename restarts the CF command at the specified
+!	file in a wild-carded file list.
+!
+!	The /BEFORE and /SINCE switch defaults are such that, if
+!	they are not specified, all files will be included.
+!
+!	The filelist may include wild-card specifications, and at present
+!	may not contain embedded switches.  The default file extension is
+!	"*", with the intention that one can normally type "@CF FOO" or
+!	often, "@CF /SINCE:TODAY FOO", to compile all files named FOO.
+!	Files with certain prohibited extensions, such as ".EXE", ".REL",
+!	".LST", etc are skipped.
+!
+! Languages supported:
+!	All those known to COMPILE/LOAD/EXECUTE + PASCAL + PASSGO.
+!
+! Preprocessors supported:
+!	PFORT, RATFOR, SFTRAN3, UPDATE.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[01-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+STRING	algol_switches,
+	clock_start,
+	cobol_switches,
+	fail_switches,
+	file_device,
+	file_directory,
+	file_extension,
+	file_generation,
+	file_name,
+	fortran_switches,
+	general_switches,
+	keep,
+	no_compile,
+	pascal_switches,
+	passgo,
+	pfort,
+	pfort_switches,
+	ratfor_switches,
+	sail_switches,
+	sftran3_switches,
+	tag,
+	trace,
+	typeout;
+
+INTEGER before_time_and_date,
+	curtad,
+	done,
+	NO,
+	since_time_and_date,
+	YES;
+
+NO = 0;
+YES = 1;
+curtad = $CURTAD;
+
+algol_switches = "";
+before_time_and_date = curtad;
+clock_start = $OUTPUTTAD(0);
+cobol_switches = "";
+done = NO;
+fail_switches = "";
+fortran_switches = "";
+general_switches = "";
+keep = "/keep";
+no_compile = "";
+pascal_switches = "";
+passgo = "";
+pfort = "";
+pfort_switches = "";
+ratfor_switches = "";
+sail_switches = "";
+sftran3_switches = "";
+since_time_and_date = 0;
+tag = "";
+trace = "";
+
+GUIDE "files to compile";
+
+L1: PARSE(
+SWITCH(WORDS(
+! Don't worry that these are not in alphabetical order, PCL fixes that.
+
+! COMPILE/LOAD/EXECUTE switches
+
+	A68COBOL:2,
+	A74COBOL:2,
+	ALGOL:3,
+	BINARY:1,
+	COBOL:2,
+	COMPILE:1,
+	CREF:8,
+	DDT:1,
+	DEBUG:1,
+	FAIL:4,
+	FORTRAN:5,
+	LANGUAGE_SWITCHES::11,
+	LIBRARY:1,
+	LIST:1,
+	MACRO:1,
+	MAP:1,
+	NOBINARY:1,
+	NOCOMPILE:10,
+	NODEBUG:1,
+	NOLIBRARY:1,
+	NOLIST:1,
+	NOOPTIMIZE:1,
+	NOSEARCH:1,
+	NOSYMBOLS:1,
+	OPTIMIZE:1,
+	RELOCATABLE:1,
+	SAIL:7,
+	SEARCH:1,
+	SNOBOL:1,
+	SYMBOLS:1,
+
+! CF's own switches
+
+	BEFORE::17,
+	KEEP:12,
+	NOKEEP:12,
+	PASSGO:16,
+	PFORT:9,
+	SINCE::18,
+	TAG::19,
+	TRACE:13,
+
+! PFORT switches - note that some of these overlap with SFTRAN3
+
+	D:8,
+	R:8,
+
+! SFTRAN3 switches
+
+	C:8,
+	D:8,
+	H:8,
+	I:8,
+	L:8,
+	M:8,
+	N:8,
+	P:8,
+	R:8,
+	W:5,
+
+! PASCAL/PASSGO switches - there is some overlap with COMPILE/LOAD/EXECUTE
+! which is taken care of in the CASE statement below.
+
+	CARD:14,
+	NOCARD:14,
+	CHECK:14,
+	NOCHECK:14,
+	CODE:14,
+	NOCODE:14,
+	CODESIZE::15,
+	COMPILE:1,
+	NOCOMPILE:10,
+	CREF:1,
+	NOCREF:1,
+	DEBUG:1,
+	NODEBUG:1,
+	EXECUTE:14,
+	NOEXECUTE:14,
+	EXTERN:14,
+	NOEXTERN:14,
+	FILE::15,
+	FORTIO:14,
+	LINK:14,
+	NOLINK:14,
+	LIST:1,
+	NOLIST:1,
+	REGISTER::15,
+	RUNCORE::15),
+	HELP "list of files to be compiled, or switch",STDHELP):
+		BEGIN
+		CASE $VALUE FROM 1 TO 19 OF BEGIN
+
+			[1] : BEGIN
+				general_switches = general_switches +
+				 "/" + $ATOM;
+				SELECT $ATOM OF BEGIN
+				["DEBUG"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["NODEBUG"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["LIST"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["NOLIST"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["CREF"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["NOCREF"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				["COMPILE"] : pascal_switches = pascal_switches
+					+ "/" + $ATOM;
+				[OTHERWISE] : NOP
+				END
+				END;
+
+			[2] : cobol_switches = cobol_switches + "/" + $ATOM;
+
+			[3] : algol_switches = algol_switches + "/" + $ATOM;
+
+			[4] : fail_switches = fail_switches + "/" + $ATOM;
+
+			[5] : fortran_switches = fortran_switches +
+				 "/" + $ATOM;
+
+			[6] : ratfor_switches = ratfor_switches + "/" + $ATOM;
+
+			[7] : sail_switches = sail_switches + "/" + $ATOM;
+
+			[8] : BEGIN
+				sftran3_switches = sftran3_switches +
+				 "/" + $ATOM;
+				IF $ATOM = "D" THEN pfort_switches =
+					pfort_switches + "/" + $ATOM
+				ELSE IF $ATOM = "R" THEN pfort_switches =
+					pfort_switches + "/" + $ATOM
+				END;
+
+			[9] : pfort = pfort + "/" + $ATOM;
+
+			[10]: BEGIN
+				no_compile = no_compile + "/" + $ATOM;
+				pascal_switches = 
+					pascal_switches + "/" + $ATOM
+				END;
+
+			[11]: PARSE (QUOTEDSTRING : general_switches =
+				general_switches + "/LANGUAGE-SWITCHES:""" + 
+				$ATOM + """");
+
+			[12]: IF $ATOM = "KEEP" 
+				THEN keep = "/KEEP"
+				ELSE keep = "/NOKEEP";
+
+			[13]: trace = trace + "/" + $ATOM;
+
+			[14]: pascal_switches = pascal_switches + "/" + $ATOM;
+
+			[15]: BEGIN
+				pascal_switches = pascal_switches + "/"
+					 + $ATOM;
+				PARSE (NUMBER : pascal_switches = 
+					pascal_switches + $STRING($VALUE))
+				END;
+
+			[16] : passgo = passgo + "/" + $ATOM;
+
+			[17]: before_time_and_date =
+				GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+			[18]: since_time_and_date = 
+				GENERAL_TIME_AND_DATE_PARSE(curtad,
+				clock_start,0);
+			[19] : PARSE(FILE (HELP "file to restart at") : 
+				tag = $FILEL)
+
+		END; ! CASE
+		GOTO L1
+		END; ! SWITCH Parse
+
+
+EOL	:	ABORT "File specification expected";
+
+OTHERWISE:	BEGIN
+		PARSE(FILELIST (DEFAULT_EXT "*") : NOP);
+		done = 1
+		END
+
+); ! end of PARSE
+		
+IF done = 0 THEN PARSE(FILELIST : NOP);
+
+IF tag <> "" ! Skip through file list to desired starting file
+THEN WHILE tag <> $FILEL DO IF $Nextfile = 0 
+	THEN ABORT "/TAG:" + $FILEL + " not found in file list";
+
+DO ! Loop until each file processed
+	BEGIN
+	file_device = $File_Dev($Parse);
+	file_directory = $File_Dir($Parse);
+	file_name = $File_Nam($Parse);
+	file_extension = $File_Typ($Parse);
+	file_generation = "0";
+
+!------------------------------------------------------------------------
+
+	IF trace <> "" THEN BEGIN
+	DISPLAY "Filename=" + $FILEL + 
+		"	Last Write=" + $OUTPUTTAD ($FILEINFO_I(-1,12));
+	DISPLAY "Device=" + """" + file_device + """";
+	DISPLAY "Directory=" + """" + file_directory + """";
+	DISPLAY "Name=" + """" + file_name + """";
+	DISPLAY "Extension=" + """" + file_extension + """";
+	DISPLAY "Generation=" + """" + file_generation + """";
+	DISPLAY "No_compile=" + """" + No_compile + """";
+	DISPLAY "General_switches=" + """" + general_switches + """";
+	DISPLAY "Cobol_switches=" + """" + cobol_switches + """";
+	DISPLAY "Algol_switches=" + """" + algol_switches + """";
+	DISPLAY "Fail_switches=" + """" + fail_switches + """";
+	DISPLAY "Fortran_switches=" + """" + fortran_switches + """";
+	DISPLAY "Pascal_switches=" + """" + pascal_switches + """";
+	DISPLAY "Ratfor_switches=" + """" + ratfor_switches + """";
+	DISPLAY "Sail_switches=" + """" + sail_switches + """";
+	DISPLAY "Sftran3_switches=" + """" + sftran3_switches + """";
+	DISPLAY "Pfort_switches=" + """" + pfort_switches + """";
+	DISPLAY "Passgo=" + """" + passgo + """";
+	DISPLAY "Pfort=" + """" + pfort + """"
+	END;
+!------------------------------------------------------------------------
+
+	IF $FileInfo_I(-1,12) >= since_time_and_date 
+	THEN IF $FileInfo_I(-1,12) < before_time_and_date
+	THEN SELECT file_extension OF BEGIN
+	["ERR"]:	NOP;
+	["PFL"]:	NOP;
+	["SFL"]:	NOP;
+	["INC"]:	NOP;
+	["CMD"]:	NOP;
+	["REL"]:	NOP;
+	["DAT"]:	NOP;
+	["PCL"]:	NOP;
+	["EXE"]:	NOP;
+	["LST"]:	NOP;
+
+	!************************************************************
+
+	["SF3"]:	BEGIN
+			DISPLAY "SF3:	" + file_name;
+			DOCOMMAND "SYS:SF3 " + sftran3_switches +
+				 " " + file_name;
+			IF pfort <> ""
+			THEN BEGIN
+				DISPLAY "EMACS: " + file_name;
+				INVOKE "SYS:EMACS";
+				TYPEIN "" + file_name + ".FOR";
+				TYPEIN "XStrip";
+				TYPEIN "";
+				DISPLAY "PFORT:	" + file_name;
+				DOCOMMAND "SYS:PFORT " + 
+					pfort_switches + " " + 
+					file_name
+			END;
+			IF no_compile = "" THEN BEGIN
+DOCOMMAND ORIGINAL "!                                                                                ";
+				DOCOMMAND ORIGINAL "COMPILE "
+					+ general_switches
+					+ fortran_switches
+					+ " " + file_name + ".FOR";
+DOCOMMAND ORIGINAL "!                                                                                ";
+				IF keep = "/NOKEEP" THEN 
+				DOCOMMAND ORIGINAL "DELETE " +
+					file_name + ".FOR"
+				END
+			END;
+
+	!************************************************************
+
+	["RAT"]:	BEGIN
+			DISPLAY "RATFOR:	" + file_name;
+			INVOKE "SYS:RATFOR";
+			GETTYPEOUT typeout; 
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN file_name;
+			GETTYPEOUT typeout; 
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN file_name;
+			GETTYPEOUT typeout;
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN file_name;
+			GETTYPEOUT typeout; 
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN "";
+			IF pfort <> ""
+			THEN BEGIN
+				DISPLAY "PFORT:	" + file_name;
+				DOCOMMAND "SYS:PFORT " + pfort_switches
+				+ " " + file_name
+			END;
+			IF no_compile = "" THEN BEGIN
+DOCOMMAND ORIGINAL "!                                                                                ";
+				DOCOMMAND ORIGINAL "COMPILE "
+					+ general_switches
+					+ fortran_switches
+					+ " " + file_name + ".FOR";
+DOCOMMAND ORIGINAL "!                                                                                ";
+				IF keep = "/NOKEEP" THEN
+				DOCOMMAND ORIGINAL "DELETE " + file_name
+					 + ".FOR"
+				END
+			END;
+
+	!************************************************************
+
+	["PAS"]:	IF passgo <> "" THEN BEGIN
+				DISPLAY "PASSGO:	" + file_name;
+				INVOKE	"SYS:PASSGO";
+				GETTYPEOUT typeout; 
+				IF trace <> "" THEN DISPLAY NORETURN typeout;
+				TYPEIN file_name + ".LST" + pascal_switches;
+				GETTYPEOUT typeout; 
+				IF trace <> "" THEN DISPLAY NORETURN typeout;
+				TYPEIN file_name + ".PAS";
+				GETTYPEOUT typeout;
+				DISPLAY typeout;
+				END
+			ELSE BEGIN
+				DISPLAY "PASCAL:	" + file_name;
+				INVOKE "SYS:PASCAL";
+				GETTYPEOUT typeout; 
+				IF trace <> "" THEN DISPLAY NORETURN typeout;
+				TYPEIN file_name + ".REL" + pascal_switches;
+				GETTYPEOUT typeout; 
+				IF trace <> "" THEN DISPLAY NORETURN typeout;
+				TYPEIN file_name + ".LST";
+				GETTYPEOUT typeout; 
+				IF trace <> "" THEN DISPLAY NORETURN typeout;
+				TYPEIN file_name + ".PAS";
+				GETTYPEOUT typeout;
+				DISPLAY typeout;
+				END;
+
+	!************************************************************
+
+	["PGO"]:	BEGIN
+			DISPLAY "PASSGO:	" + file_name;
+			INVOKE	"SYS:PASSGO";
+			GETTYPEOUT typeout; 
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN file_name + ".LST" + pascal_switches;
+			GETTYPEOUT typeout; 
+			IF trace <> "" THEN DISPLAY NORETURN typeout;
+			TYPEIN file_name + ".PGO";
+			GETTYPEOUT typeout;
+			DISPLAY typeout;
+			END;
+
+	!************************************************************
+
+	["UPD"]:	BEGIN
+			DISPLAY "UPDATE:	" + file_name;
+			DOCOMMAND "UTAH:UPDATE " + file_name;
+			IF pfort <> ""
+			THEN BEGIN
+				DISPLAY "PFORT:	" + file_name;
+				DOCOMMAND "SYS:PFORT " + pfort_switches
+				+ " " + file_name
+			END;
+			IF no_compile = "" THEN BEGIN
+DOCOMMAND ORIGINAL "!                                                                                ";
+				DOCOMMAND ORIGINAL "COMPILE "
+					+ general_switches
+					+ fortran_switches
+					+ " " + file_name + ".FOR";
+DOCOMMAND ORIGINAL "!                                                                                ";
+				IF keep = "/NOKEEP" THEN
+				DOCOMMAND ORIGINAL "DELETE " + file_name
+					 + ".FOR"
+				END;
+			END;
+
+	!************************************************************
+
+	[OTHERWISE]:	BEGIN
+			IF file_extension = "FOR" 
+			THEN IF pfort <> "" 
+			THEN BEGIN
+				DISPLAY "PFORT:	" + file_name;
+				DOCOMMAND "SYS:PFORT " +
+				pfort_switches + " " + file_name
+			END;
+			IF no_compile = "" 
+			THEN IF trace <> "" 
+			THEN DISPLAY "COMPILE " + $FILES + " " +
+				general_switches + 
+				cobol_switches + 
+				algol_switches + 
+				fail_switches + 
+				fortran_switches + 
+				sail_switches;
+DOCOMMAND ORIGINAL "!                                                                                ";
+			display " About to do COMPILE on " + $FILES;
+			IF no_compile = ""
+			THEN DOCOMMAND ORIGINAL "COMPILE " + $FILES + " " +
+				general_switches + 
+				cobol_switches + 
+				algol_switches + 
+				fail_switches + 
+				fortran_switches + 
+				sail_switches
+			END
+
+	!************************************************************
+
+	END ! SELECT
+END 
+UNTIL $NEXTFILE = 0;
+DISPLAY "
+[Done]"
+END; ! CF
+

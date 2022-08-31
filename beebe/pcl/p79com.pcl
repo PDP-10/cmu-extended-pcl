@@ -1,0 +1,102 @@
+COMMAND P79COM;
+!------------------------------------------------------------------------
+! Purpose:
+!	Construct source comparison files for <PLOT79>.
+!
+! Usage:
+!	P79COM newfile [oldfile]
+!
+! Remarks:
+!	The oldfile specification can be omitted if its generation number
+!	is one less than that of the newfile.  The difference file is
+!	assigned a name constructed from the newfile directory name and
+!	file name with the same generation number, and is written in
+!	the directory PS:<PLOT79>.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[28-Aug-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER
+	i;
+
+STRING
+	old_file,
+	new_file,
+	difference_file,
+	help_string,
+	work;
+
+help_string = "old version (if generation number is not 1 less" +
+		" than new version), or carriage return";
+
+GUIDE "<PLOT79> source comparisons";
+
+PARSE (
+FILE	(INPUT,
+	HELP "new version",
+	STDHELP,
+	DEFAULT_EXT "FOR") : new_file = $FILEL);
+
+!
+! Convert the directory name to part of the difference file name,
+! removing the angle brackets and replacing "." by "-".
+!
+work = $File_Dir($Parse);
+difference_file = "";
+
+i = 0;
+DO	BEGIN
+	i = i + 1;
+	IF work[i:1] = "."
+	THEN	difference_file = difference_file + "-"
+	ELSE	difference_file = difference_file + work[i:1]
+	END
+UNTIL i >= $LENGTH(work);
+
+difference_file = difference_file + "-" + $File_Nam($Parse) + 
+	"-" + $File_Typ($Parse);
+
+IF $LENGTH(difference_file) > 39 THEN 	! Make sure length is legal.
+	BEGIN
+	difference_file = difference_file[$LENGTH(difference_file)+1-39:39];
+	difference_file = difference_file[$SEARCH(difference_file,"-")+1:*]
+	END;
+
+difference_file = "PS:<PLOT79>" + difference_file +  ".DIF." +
+	$STRING($FileInfo_I($Parse,$FBGEN)/262144);
+
+PARSE (
+FILE	(INPUT,
+	HELP help_string,
+	STDHELP,
+	DEFAULT_EXT "FOR") : old_file = $FILEL;
+
+EOL : BEGIN
+      i = ($FileInfo_I($Parse,$FBGEN)-1)/262144;
+      old_file = $File_Dev($Parse) + ":<" + $File_Dir($Parse) + ">"
+	+ $File_Nam($Parse) + "." + $File_Typ($Parse) + "."
+	+ $STRING(i)
+      END);
+
+DISPLAY "Old: " + old_file;
+DISPLAY "New: " + new_file;
+DISPLAY "Dif: " + difference_file;
+
+INVOKE "SYS:SRCCOM";
+
+TYPEIN	old_file + $CRLF + 
+	new_file + $CRLF + 
+	$CRLF + 		! No marked source file output.
+	difference_file + $CRLF +
+	"F" + $CRLF;		! Switch to ignore changes in spacing and tabs.
+	CLEARTYPEOUT;
+
+DISPLAY "[Done]";
+
+END; ! P79COM

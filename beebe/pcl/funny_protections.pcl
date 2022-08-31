@@ -1,0 +1,20 @@
+command funny_protections;
+begin
+    integer protection;
+    integer should_be;
+
+    parse filelist;
+    do
+    begin
+	protection = $and(8%777777,$fileinfo_i($parse,$fileprotection));
+	if $file_typ($parse) = "DIRECTORY" then
+	    should_be = 8%777742
+	else
+	    should_be = 8%777752;
+	if protection <> should_be then
+	    display "set file prot " + $filel + "	" +
+	        $string(should_be,8) + "	! was " +
+		$string(protection,8); 
+    end
+    until $nextfile = 0;
+end;

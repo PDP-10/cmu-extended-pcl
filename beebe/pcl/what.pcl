@@ -1,0 +1,104 @@
+COMMAND WHAT;
+!------------------------------------------------------------------------
+! Purpose:
+!	Display the logical name(s) (if any) which point to
+!	a specified directory.
+!
+! Usage:
+!	WHAT directoryname
+!
+! Remarks:
+!	None.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[01-Dec-85]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER	Index,
+	I1,
+	I2,
+	Last_Index,
+	Number_Found;
+
+STRING	Command_Echo,
+	Directory_Name;
+
+GUIDE "logical name is attached to directory";
+
+PARSE 
+(
+DIRECTORY : Directory_Name = $ATOM;
+TEXT : Directory_Name = $ATOM
+);
+
+PARSE (EOL : NOP);
+
+Index = $SEARCH(Directory_Name,"<");
+IF Index > 0 THEN
+    Directory_Name = Directory_Name[Index:*];
+
+! DOCOMMAND ORIGINAL "INFORMATION LOGICAL-NAMES ALL" TO Command_Echo;
+DOCOMMAND ORIGINAL "INFORMATION LOGICAL-NAMES JOB" TO Command_Echo;
+
+Command_Echo = $CRLF + Command_Echo;
+Number_Found = 0;
+Index = 1;
+Last_Index = 0;
+WHILE Index <> 0 DO
+	BEGIN
+	Index = $SEARCHRAISED(Command_Echo[Last_Index+1:*],Directory_Name);
+	IF Index > 0 
+	THEN 	BEGIN
+		IF Number_Found = 0 THEN
+		    DISPLAY $CRLF + "Job logical name(s):";
+		Number_Found = Number_Found + 1;
+		Index = Index + Last_Index;
+		Last_Index = Index;
+		I1 = Index - 1;
+		WHILE Command_Echo[I1:2] <> $CRLF DO I1 = I1 - 1;
+		I2 = Index + 1;
+		WHILE Command_Echo[I2:2] <> $CRLF DO I2 = I2 + 1;
+		DISPLAY Command_Echo[I1+2:I2-I1-1];
+		Index = $SEARCHRAISED(Command_Echo[Last_Index+1:*],$CRLF);
+		Last_Index = Index + Last_Index
+		END
+	ELSE	IF Number_Found = 0 THEN
+		    DISPLAY $CRLF + "%No job logical name(s) defined for " + 
+		        Directory_Name
+	END; ! WHILE
+
+DOCOMMAND ORIGINAL "INFORMATION LOGICAL-NAMES SYSTEM" TO Command_Echo;
+
+Command_Echo = $CRLF + Command_Echo;
+Number_Found = 0;
+Index = 1;
+Last_Index = 0;
+WHILE Index <> 0 DO
+	BEGIN
+	Index = $SEARCHRAISED(Command_Echo[Last_Index+1:*],Directory_Name);
+	IF Index > 0 
+	THEN 	BEGIN
+		IF Number_Found = 0 THEN
+		    DISPLAY $CRLF + $CRLF + "System logical name(s):";
+		Number_Found = Number_Found + 1;
+		Index = Index + Last_Index;
+		Last_Index = Index;
+		I1 = Index - 1;
+		WHILE Command_Echo[I1:2] <> $CRLF DO I1 = I1 - 1;
+		I2 = Index + 1;
+		WHILE Command_Echo[I2:2] <> $CRLF DO I2 = I2 + 1;
+		DISPLAY Command_Echo[I1+2:I2-I1-1];
+		Index = $SEARCHRAISED(Command_Echo[Last_Index+1:*],$CRLF);
+		Last_Index = Index + Last_Index
+		END
+	ELSE	IF Number_Found = 0 THEN 
+		    DISPLAY $CRLF + "%No system logical name(s) defined for " + 
+		        Directory_Name
+	END ! WHILE
+END; !WHAT

@@ -1,0 +1,66 @@
+COMMAND Find_Author;
+!------------------------------------------------------------------------
+! Purpose:
+!	Find files with a given author as creator or last writer.
+!
+! Usage:
+!	FIND-AUTHOR /AUTHOR:"username" filespecs
+!	FIND-AUTHOR /AUTHOR:username filespecs
+!
+! Remarks:
+!	The default author  name is the  current user name.   The
+!	quoted string form need only  be used when the author  is
+!	not a user name on the current host.
+!
+! Author:
+!	Nelson H.F. Beebe, Center for Scientific Computing, South
+!	Physics Building, University of Utah, Salt Lake City,  UT
+!	84112.
+!
+! Date:
+!	[25-Sep-88]
+!
+!------------------------------------------------------------------------
+{
+STRING	author,
+	dir_name,
+	last_dir_name,
+	name;
+
+EXTERNAL STRING PROCEDURE strupper;
+
+author = $UserName;
+
+PARSE (
+SWITCH(WORDS(AUTHOR::1),HELP "User who created or last wrote file",STDHELP):
+	CASE $VALUE FROM 1 TO 1 OF BEGIN
+	[1]: PARSE(
+		USERNAME (DEFAULT author) : author = $Atom;
+		QUOTEDSTRING : author = $Atom);
+        END; !CASE
+OTHERWISE : author = $UserName);
+
+PARSE (FILELIST
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	DEFAULT_GEN 0,
+	HELP "list of files (default DSK:*.*.0)") : NOP
+);
+
+author = strupper(author);
+DISPLAY "Files with author """ + author + """";
+last_dir_name = "";
+DO
+{
+    dir_name = $File_Dir($FILEL);
+    IF dir_name <> last_dir_name THEN
+	DISPLAY $File_Dev($FILEL) + ":<" + dir_name + ">";
+    last_dir_name = dir_name;
+    IF author = $FileInfo_S($FILEL,$Author) THEN
+	DISPLAY $CvItC(9) + $Filel
+    ELSE IF author = $FileInfo_S($FILEL,$Writer) THEN
+	DISPLAY $CvItC(9) + $Filel
+}
+UNTIL $Nextfile = 0
+}

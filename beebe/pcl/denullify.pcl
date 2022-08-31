@@ -1,0 +1,40 @@
+!=======================================================================
+! Convert 36-bit text files to 7-bit files with NULLs stripped and file
+! time stamps preserved:
+! Usage:
+!	DENULLIFY filelist
+! Files with extensions "REL" and "EXE" are ignored.
+! [30-Jul-87]
+!=======================================================================
+COMMAND DeNullify;
+{
+	integer bytesize,
+		size,
+		stamp,
+		word;
+	PARSE (FILELIST(input));
+	DO
+	{
+		word = $FileInfo_I($Parse,$FBBYV);
+		bytesize = $AND(word,8%007700000000)/8%100000000;
+		size = $FileInfo_I($Parse,$FBSIZ);
+		IF bytesize = 36 THEN
+		IF $File_Typ($Filel) <> "EXE" THEN
+		IF $File_Typ($Filel) <> "REL" THEN
+		{
+			DISPLAY $Filel;
+			docommand "aps:<beebe.c>denull.exe " + $filel + 
+				" >" + $files + ".-1";
+			stamp = $FileInfo_I($Parse,$FBWRT);
+			call $FileSet ( $files + ".0", $FBWRT, -1, stamp);
+			stamp = $FileInfo_I($Parse,$FBCRV);
+			call $FileSet ( $files + ".0", $FBCRV, -1, stamp);
+			stamp = $FileInfo_I($Parse,$FBCRE);
+			call $FileSet ( $files + ".0", $FBCRE, -1, stamp);
+ 			stamp = $FileInfo_I($Parse,$FBREF);
+			call $FileSet ( $files + ".0", $FBREF, -1, stamp);
+		}
+	}
+	UNTIL $Nextfile = 0;
+	
+}

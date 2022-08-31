@@ -1,0 +1,86 @@
+! RCS merge command.  J.Lepreau 12/83
+! Renamed to "rmerge" because of existing Tops-20 exec's "merge into
+! section" command.
+! The "nocr-" pgms are special version w/ NOCRHACK'ing version of read/write.
+
+command RMERGE;
+begin
+    integer prt, erfd;
+    string s, f1, f1s, f2, f3, d3a, d3b, d3c, d3e, r, foo;
+    external string procedure mktemp;
+
+    prt = 0;
+    guide "3-way file merge";
+
+again:
+    parse (switch (words (  print_to_stdout	:1
+			  )
+		  ): begin
+		prt = 1;
+		parse file(help "target file"): begin
+			f1 = $filen;
+			f1s = $files;
+		end;
+		parse file(help "original file"): f2 = $filen;
+		parse file(help "changed file"): f3 = $filen;
+		parse eol;
+	       end;
+	 file(help "target file") : begin
+		f1 = $filen;
+		f1s = $files;
+		parse file(help "original file"): f2 = $filen;
+		parse file(help "changed file"): f3 = $filen;
+		parse eol;
+	    end;
+	 );
+
+    d3a = mktemp("d3a");
+    d3b = mktemp("d3b");
+    d3c = mktemp("d3c");
+    d3e = mktemp("d3e");
+
+    docommand "unix:diff " + f1 + " " + f3 + " >" + d3a;
+    docommand "unix:diff " + f2 + " " + f3 + " >" + d3b;
+    docommand "<unix.lib>diff3 -E " + d3a + " " + d3b + " " + f1 + " "
+    	+ f2 + " " + f3 + " >" + d3c + " &" + d3e;
+    erfd = $open(d3e, $input);
+    s = $read(erfd);
+    if $length(s) > 0 then begin
+    	r = s[7 : *];
+	if $integer(r) > 1 then
+	    foo = "s"
+	else
+	    foo = "";
+	display "Warning: " + r + " overlap" + foo + " during merge."
+    end;
+    call $close(erfd);
+
+    if prt = 1 then
+      docommand "unix:nocr-echo 1,$p >>" + d3c
+    else
+      docommand "unix:nocr-echo w >>" + d3c;    
+! Use name w/o generation number here so get new generation.
+    docommand "unix:nocr-ed - " + f1s + " <" + d3c;
+
+    docommand "delete " + d3a + "," + d3b + "," + d3c + "," + d3e to $nul;
+end;
+
+!  Build a temporary file name and return it.  Author: J.Lepreau
+string procedure mktemp(string prefix);
+begin
+    string s, c;
+    integer n;
+
+    s = $UserName;
+    if $search(s, ".") <> 0 then begin  ! Use last component only
+	n = $Length(s);
+	do begin			! find last . in user name;
+	    n = n - 1;
+	    if n < 1 then
+		abort "Impossible - lost dot";
+	    c = s[n : 1];
+	end until c = ".";
+	s = s[n+1 : *];
+    end;
+    return "scratch:" + prefix + "-" + $string($jobno) + "." + s;
+end;

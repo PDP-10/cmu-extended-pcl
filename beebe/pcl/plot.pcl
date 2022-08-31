@@ -1,0 +1,64 @@
+COMMAND PLOT;
+!------------------------------------------------------------------------
+! Purpose:
+!	Sent Printronix plot files to printer queue.
+!
+! Usage:
+!	PLOT [switches] filelist
+!
+! Remarks:
+!	If the file specification is omitted, then *.PLT.0 is assumed.
+!	The switch /COPIES:nnn may be given if more than one copy
+!	of each file is required.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[06-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+STRING
+	command_echo,
+	ext,
+	header,
+	output_file,
+	record,
+	temporary_file;
+
+INTEGER
+	copies;
+
+GUIDE "files";
+
+PARSE(
+SWITCH(	WORDS(COPIES::1),HELP "Printronix plot file, or switch ",STDHELP) : 
+	BEGIN
+	CASE $VALUE FROM 1 TO 1 OF 
+		BEGIN
+		[1] : PARSE (NUMBER (DEFAULT "1",STDHELP) : copies = $VALUE);
+		END
+	END;
+
+OTHERWISE : copies = 1);
+
+PARSE (
+FILELIST (HELP "List of files to be plotted",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "PLT",
+	DEFAULT_GEN 0) : NOP);
+
+DO
+	BEGIN
+	DISPLAY "[" + $FILEL + "]";
+	DOCOMMAND ORIGINAL "PRINT /FILE:PLOT /NOHEADER /DELETE /COPIES:" + 
+		$STRING(copies) + " " + $FILEL
+	END
+UNTIL $NextFile = 0
+
+END; ! PLOT

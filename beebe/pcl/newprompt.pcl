@@ -1,0 +1,11 @@
+COMMAND NEWPROMPT;
+! This was an unsuccessful attempt to put VT52/VT100 escape sequences
+! into the prompt strings to get them to appear in inverse video on  a
+! Tektronix 4105 color terminal.  Alas, the EXEC translates ESC to
+! dollar, sigh....
+{
+$PromptEnb =	"<[7m20$ [0m[?2l";
+$PromptEnbSub =	"<[7m20$$ [0m[?2l";
+$PromptReg =	"<[7m20@ [0m[?2l";
+$PromptSub =	"<[7m20@@ [0m[?2l";
+}

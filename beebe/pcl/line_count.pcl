@@ -1,0 +1,155 @@
+COMMAND LINE_COUNT;
+!------------------------------------------------------------------------
+! Purpose:
+!	Count number of lines in one or more files.
+!
+! Usage:
+!	LINE-COUNT -
+!		{/BEGINFILE:filename}-
+!		{/ENDFILE:filename}-
+!		{/LIMIT:linewidth}-
+!		filespecs
+!
+! Remarks:
+!	The  filespecs   field   may   contain  any   list   of   file
+!	specifications  which  would  be  acceptable  to  the   DELETE
+!	command.  The /LIMIT switch may be used to request display  of
+!	lines longer than a specified number of characters.
+!
+!	The /BEGINFILE switch is useful for restarting file  selection
+!	in a long list of files  where use of the /QUERY option  would
+!	be tedious.   /ENDFILE  can  be  specified  to  end  the  list
+!	prematurely.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of  Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[15-Aug-87] -- made "longest" display last for visibility
+!	[18-Nov-85]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+INTEGER
+	average_length,
+	done,
+	file_byte_count,
+	file_line_count,
+	InFileId,
+	limit,
+	maximum_length,
+	NO,
+	total_byte_count,
+	total_line_count,
+	total_maximum_length,
+        YES;
+
+STRING
+	begin_file,
+	end_file,
+	record;
+
+NO = 0;
+YES = 1;
+
+begin_file = "";
+end_file = "";
+limit = 0;
+
+GUIDE "of file(s)";
+
+done = NO;
+WHILE done = NO DO
+PARSE (
+SWITCH(WORDS(LIMIT::1,BEGINFILE::2,ENDFILE::3)) :
+	CASE $Value FROM 1 TO 3 OF BEGIN
+	[1]:	PARSE(NUMBER (STDHELP,
+		HELP "display lines longer than LIMIT value",
+		DEFAULT "0") : limit = $VALUE);
+	[2]:	PARSE (FILE (HELP "starting file in filelist",INPUT) :
+		 begin_file = $FILEL);
+	[3]:	PARSE (FILE (HELP "final file in filelist",INPUT) :
+		 end_file = $FILEL)
+	END; !CASE
+
+OTHERWISE : done = YES);
+
+PARSE (
+FILELIST(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	INPUT,
+	STDHELP) : NOP);
+
+total_byte_count = 0;
+total_line_count = 0;
+total_maximum_length = 0;
+
+IF begin_file <> "" THEN	! Position to starting file in list
+BEGIN
+	done = NO;
+	DO
+		IF begin_file = $FILEL THEN
+			done = YES
+		ELSE IF end_file = $FILEL THEN
+			ABORT "EndFile " + end_file + " precedes BeginFile "
+			+ begin_file + " in file list"
+		ELSE IF $Nextfile = 0 THEN
+			ABORT begin_file + " not found in file list"
+	UNTIL done = YES
+END;
+
+
+done = NO;
+DO
+BEGIN
+	file_byte_count = 0;
+	file_line_count = 0;
+	maximum_length = 0;
+	InFileId = $Open ($FILEL,$Input);
+	IF InFileId <> 0 THEN
+	BEGIN
+		DISPLAY $FILEL;
+		record = $Read (InFileId);
+		WHILE $EOF(InFileId) = 0 DO
+			BEGIN
+			file_byte_count = file_byte_count + $LENGTH(record);
+			IF $LENGTH(record) > maximum_length
+			THEN maximum_length = $LENGTH(record);
+			file_line_count = file_line_count + 1;
+			IF limit > 0
+			THEN IF $LENGTH(record) > limit
+			THEN DISPLAY $STRING(file_line_count) + "=" + record;
+			record = $Read (InFileId)
+			END;
+		CALL $Close (InFileId);
+		IF file_line_count > 0
+		THEN
+			BEGIN
+			total_byte_count = total_byte_count + file_byte_count;
+			total_line_count = total_line_count + file_line_count;
+			if maximum_length > total_maximum_length THEN
+				total_maximum_length = maximum_length;
+			average_length = file_byte_count/file_line_count
+			END
+		ELSE average_length = 0;
+		DISPLAY " Lines = " + $STRING(file_line_count) +
+		",	average = " + $STRING(average_length) +
+		",	longest = " + $STRING(maximum_length);
+	END;
+	IF end_file = $FILEL THEN
+	    done = YES
+	ELSE IF $Nextfile = 0 THEN
+	    done = YES
+END
+UNTIL done = YES;
+
+average_length = total_byte_count/total_line_count;
+DISPLAY $CRLF + "Totals:";
+DISPLAY "Lines = " + $STRING(total_line_count) +
+	",	average = " + $STRING(average_length) +
+	",	longest = " + $STRING(total_maximum_length);
+DISPLAY "[Done]"
+END; !LINE_COUNT

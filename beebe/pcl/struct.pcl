@@ -1,0 +1,331 @@
+COMMAND struct;
+!------------------------------------------------------------------------
+! Purpose:
+!	Run STRUCT,  the  FORTRAN to  RATFOR  converter, to  turn  ugly
+!	spaghetti-code FORTRAN into structured RATFOR.
+!
+! Usage:
+! @STRUCT
+!		{/BEFORE:"date and time, week day, NOW, TODAY, or filename"} -
+!		{/CASE | /NOCASE} -
+!		{/CYCLE-LEVELS:n} -
+!		{/DEBUG:n} -
+!		{/EXIT-LEVELS:n} -
+!		{/EXIT-SIZE:n} -
+!		{/HASH-SIZE:n} -
+!		{/INCREMENT-LABEL:n} -
+!		{/INDENTATION-SIZE:n} -
+!		{/MAX-NODES:n} -
+!		{/OUTPUT-DIRECTORY:dirname} -
+!		{/PROGRESS:n} -
+!		{/START-LABEL:n} -
+!		{/SWITCH-STATEMENTS | /NOSWITCH-STATEMENTS} -
+!		{/QUERY		 | /NOQUERY} -
+!		{/SINCE:"date and time, week day, NOW, TODAY, or filename"} -
+!		{/USER:user_name} -
+!		{file specifications}
+!
+! Remarks:
+!	The defaults are:
+!	/BEFORE:NOW
+!	/CASE
+!	/CYCLE-LEVELS:0
+!	/DEBUG:0
+!	/EXIT-LEVELS:0
+!	/EXIT-SIZE:100
+!	/HASH-SIZE:0		{i.e. use STRUCT's internal default}
+!	/INCREMENT-LABEL:1000
+!	/INDENTATION-SIZE:0     {i.e. use STRUCT's internal default of 5}
+!	/MAX-NODES:0		{i.e. use STRUCT's internal default}
+!	/NOQUERY
+!	/NOSWITCH-STATEMENTS
+!	/OUTPUT-DIRECTORY:DSK:
+!	/PROGRESS:0
+!	/SINCE:first_day_and_time_of_clock
+!	/START-LABEL:1000
+!	/USER:""
+!	*.FOR.0
+!	
+!	The /BEFORE and SINCE switches can be used to select only  those
+!	files last written in a specified time interval.  If a file name
+!	is specified,  the last  write date  of the  file is  used.
+!
+!	The /USER  switch may  be specified  to select  only files  last
+!	written by a specified user.
+!
+! Author:
+!	Nelson H.F. Beebe,  Department of Physics,  University of  Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[02-Mar-85]
+!
+!------------------------------------------------------------------------
+{
+EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+
+INTEGER 
+    before_time_and_date,
+    case_statement,
+    curtad,
+    cycle_levels,
+    debug,
+    done,
+    exit_levels,
+    exit_size,
+    hash_size,
+    increment_label,
+    indentation_size,
+    max_nodes,
+    NO,
+    process,
+    progress,
+    query,
+    QueryFileId,
+    since_time_and_date,
+    start_label,
+    switch_statements,
+    td_selection,
+    YES;
+
+STRING 
+    answer,
+    clock_start,
+    options,
+    output_file,
+    output_dir,
+    temp_file,
+    user_name;
+
+curtad = $CURTAD;
+clock_start = $OUTPUTTAD(0);
+before_time_and_date = -1;
+since_time_and_date = -1;
+NO = 0;
+YES = 1;
+
+GUIDE "FORTRAN to RATFOR Conversion";
+
+case_statement = 1;
+cycle_levels = 0;
+debug = 0;
+exit_levels = 0;
+exit_size = 100;
+hash_size = 0;
+increment_label = 1000;
+indentation_size = 0;
+max_nodes = 0;
+output_dir = "";
+progress = 0;
+query = NO;
+start_label = 1000;
+switch_statements = NO;
+user_name = "";
+
+done = NO;
+WHILE done = NO DO
+PARSE (SWITCH(STDHELP,WORDS(
+    CASE:1,
+    CYCLE_LEVELS::2,
+    DEBUG::3,
+    EXIT_LEVELS::4,
+    EXIT_SIZE::5,
+    HASH_SIZE::6,
+    INCREMENT_LABEL::7,
+    INDENTATION_SIZE::18,
+    MAX_NODES::8,
+    NOCASE:9,
+    OUTPUT_DIRECTORY::10,
+    PROGRESS::11,
+    START_LABEL::12,
+    BEFORE::13,
+    SINCE::14,
+    QUERY:15,
+    NOQUERY:16,
+    USERNAME:17,
+    SWITCH_STATEMENTS:19,
+    NOSWITCH_STATEMENTS:20)) :
+    CASE $VALUE FROM 1 TO 20 OF
+    {
+    [1]:    case_statement = 1;
+    [2]:    PARSE(NUMBER(STDHELP,DEFAULT "99") : cycle_levels = $Value);
+    [3]:    PARSE(NUMBER(STDHELP,HELP
+" Non-zero for debug printing.
+  The structure tree is always printed before and after structuring.
+  Add any of the following option values for additional output:
+  4 -- tokens printed 
+  8 -- line break decisions printed
+ 16 -- Hollerith/string recognitions printed
+ 32 -- depth-first search printing
+ 64 -- vxparts printed at graph nodes
+128 -- structure label printing",DEFAULT "0") : debug = $Value);
+    [4]:    PARSE(NUMBER(STDHELP,DEFAULT "99") : exit_levels = $Value);
+    [5]:    PARSE(NUMBER(STDHELP,DEFAULT "100") : exit_size = $Value);
+    [6]:    PARSE(NUMBER(STDHELP,DEFAULT "0") : hash_size = $Value);
+    [7]:    PARSE(NUMBER(STDHELP,DEFAULT "1000") : increment_label = $Value);
+    [8]:    PARSE(NUMBER(STDHELP,DEFAULT "0") : max_nodes = $Value);
+    [9]:    case_statement = 0;
+    [10]:   PARSE(DIRECTORY(STDHELP,DEFAULT "DSK:") : output_dir = $Atom);
+    [11]:   PARSE(NUMBER(STDHELP,DEFAULT "0") : progress = $Value);
+    [12]:   PARSE(NUMBER(STDHELP,DEFAULT "1000") : start_label = $Value);
+    [13]:   before_time_and_date = 
+            GENERAL_TIME_AND_DATE_PARSE(curtad,"NOW",0);
+    [14]:   since_time_and_date = 
+            GENERAL_TIME_AND_DATE_PARSE(curtad,"TODAY",0);
+    [15]:   query = YES;
+    [16]:   query = YES;
+    [17]:   PARSE (USERNAME(STDHELP) : user_name = $Atom);
+    [18]:   PARSE(NUMBER(STDHELP,DEFAULT "0") : indentation_size = $Value);
+    [19]:   switch_statements = YES;
+    [20]:   switch_statements = NO
+    };
+OTHERWISE : done = YES);
+
+PARSE (
+FILELIST 
+    (DEFAULT_DEV "DSK",
+    DEFAULT_NAM "*",
+    DEFAULT_EXT "FOR",
+    DEFAULT_GEN 0,
+    INPUT,
+    HELP "list of files (default DSK:*.FOR.0)") : NOP;
+);
+options = " -s";
+IF case_statement = 0 
+    THEN options = options + " -i";
+IF switch_statements = YES
+    THEN options = options + " -a";
+IF exit_levels = 0 
+    THEN options = options + " -b";
+IF cycle_levels = 0 
+    THEN options = options + " -n";
+IF increment_label > 0 
+    THEN options = options + " -c" + $String(increment_label);
+IF indentation_size > 1
+    THEN options = options + " -x" + $String(indentation_size);
+IF start_label > 0 
+    THEN options = options + " -t" + $String(start_label);
+IF exit_size > 0
+    THEN options = options + " -e" + $String(exit_size);
+IF hash_size > 0
+    THEN options = options + " -h" + $String(hash_size);
+IF max_nodes > 0
+    THEN options = options + " -m" + $String(max_nodes);
+
+IF debug > 0
+    THEN options = options + " -d" + $String(debug);
+IF progress > 0
+    THEN options = options + " -p" + $String(progress);
+
+IF query = YES
+THEN IF $Batch_Job <> 0 
+THEN
+    {
+    query = NO;
+    DISPLAY "%Query mode ignored in BATCH"
+    };
+
+td_selection = YES;
+IF before_time_and_date = -1 THEN
+    {
+    IF since_time_and_date = -1 THEN td_selection = NO;
+    before_time_and_date = curtad
+    };
+IF since_time_and_date = -1 THEN since_time_and_date = 0;
+
+IF td_selection = YES THEN 
+    {
+    DISPLAY NORETURN "Processing of files written ";
+    IF since_time_and_date > 0 THEN DISPLAY "SINCE " + 
+        $OUTPUTTAD(since_time_and_date) + " and ";
+    DISPLAY "BEFORE " + $OUTPUTTAD(before_time_and_date)
+    };
+
+IF query = YES 
+THEN DISPLAY "Query mode: Respond" + $CRLF +
+"Y to accept" + $CRLF +
+"N to reject" + $CRLF +
+"G to accept and stop further queries" + $CRLF +
+"or" + $CRLF +
+"Q to quit";
+
+DOCOMMAND ORIGINAL "define scratch: scr:";
+DOCOMMAND ORIGINAL "terminal no raise";
+IF query = YES THEN QueryFileId = $Open ("TTY:",$Input);
+done = NO;
+DO
+    {
+    process = YES;
+    IF query = YES
+    THEN 
+    {
+        DO  
+            {
+            DISPLAY NORETURN $FILEL + " Accept? (Y, N, G or Q) ";
+            answer = $Read(QueryFileId)
+            }
+        UNTIL $SEARCHRAISED("YNGQ",answer[1:1]) > 0;
+        IF $SEARCHRAISED(answer[1:1],"Y") = 1 THEN process = YES
+        ELSE IF $SEARCHRAISED(answer[1:1],"N") = 1 THEN process = NO
+        ELSE IF $SEARCHRAISED(answer[1:1],"G") = 1 THEN query = NO
+        ELSE    
+	    {
+            process = NO;
+            query = NO;
+            done = YES
+            }
+    };
+
+    IF $File_Typ($Parse) = "DIRECTORY" 
+        THEN process = NO;
+    IF user_name <> ""
+        THEN IF $FileInfo_S($Parse,$FBLWR) <> user_name
+            THEN process = NO;
+    IF $FileInfo_I(-1,$FBWRT) >= since_time_and_date 
+        THEN IF $FileInfo_I(-1,$FBWRT) < before_time_and_date
+            THEN IF process = YES THEN
+	    {
+	    temp_file = $File_Nam($Parse) + ".TMP";
+	    output_file = $File_Nam($Parse) + ".RAT";
+	    IF output_dir = "" 
+	    THEN output_file = $File_Dev($Parse) + ":<" + $File_Dir($Parse) + 
+	    	">" + output_file
+	    ELSE output_file = output_dir + output_file;
+	    IF output_dir = "" 
+	    THEN temp_file = $File_Dev($Parse) + ":<" + $File_Dir($Parse) + 
+	    	">" + temp_file
+	    ELSE temp_file = output_dir + temp_file;
+	    IF $IsFile(output_file) <> 0
+	    THEN IF $Fileinfo_I(output_file,11) > $Fileinfo_I($Parse,11)
+	    THEN 
+	        {
+		process = NO;
+                DISPLAY $Filel + "	[already converted]"
+		};
+	    IF process = YES 
+	    THEN
+	        {
+	    	DOCOMMAND ORIGINAL "unix:kc " + $Filel;
+            	DOCOMMAND ORIGINAL "unix:struct" + options + " scratch:" +
+                	$File_Nam($Parse) + "." + 
+			$File_Typ($Parse) + " >" + temp_file;
+            	DOCOMMAND ORIGINAL "unix:beauty" + " <" + 
+			temp_file + " >" + output_file;
+            	DOCOMMAND ORIGINAL "DELETE " + temp_file + ", scratch:" +
+                	$File_Nam($Parse) + "." + 
+			$File_Typ($Parse) + "," + $CRLF + "EXPUNGE" +
+			$CRLF TO $NUL;
+		IF $FileInfo_I(output_file,$FBSIZ) > 0
+		THEN DISPLAY " " + $Filel + "	==> " + output_file + "	[OK]"
+		ELSE 
+			{
+			DISPLAY "?" + $Filel + "	[conversion failed]";
+			DOCOMMAND ORIGINAL "DELETE " + output_file + 
+				"," + $CRLF + "EXPUNGE" + $CRLF TO $NUL;
+			}
+		}
+            };
+    IF $Nextfile = 0 THEN done = YES
+    }
+UNTIL done = YES;
+}

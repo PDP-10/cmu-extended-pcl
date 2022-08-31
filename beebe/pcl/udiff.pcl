@@ -1,0 +1,55 @@
+COMMAND udiff (
+	NOISE "files with next lower generation";
+	FILELIST (INPUT,
+		DEFAULT_DEV "DSK",
+		DEFAULT_NAM "*",
+		DEFAULT_EXT "*",
+		DEFAULT_GEN 0)
+	);
+!-----------------------------------------------------------------------
+!
+! Purpose:
+!	Provide a convenient interface to Unix diff for comparing
+!	a file generation with the next lower generation.
+!
+! Usage:
+!	UDIFF filelist (default *.*.0)
+!
+! Remarks:
+!	There is no provision yet for specifying switches to diff.
+!
+! Author:
+!	Nelson H.F. Beebe, Center for Scientific Computing, South
+!	Physics Building, University of Utah, Salt Lake City, UT 84112.
+!
+! Date:
+!	[18-Dec-87]
+!-----------------------------------------------------------------------
+BEGIN
+    STRING old_file;
+    INTEGER gen;
+    DO
+	BEGIN
+	    old_file = $File_Dev($FILEL) + ":" +
+		"<" + $File_Dir($FILEL) + ">" +
+		$File_Nam($FILEL) + "." +
+		$File_Typ($FILEL) + ".";
+	    gen = $Integer($File_Gen($FILEL)) - 1;
+	    WHILE gen > 0 DO
+		BEGIN
+		    IF $IsFile(old_file + $String(gen)) <> 0 THEN
+		    BEGIN
+			DISPLAY $CRLF + $CRLF + "unix:diff " +
+			    old_file + $String(gen) + " " +
+			    $FILEL;
+			DOCOMMAND ORIGINAL "unix:diff " +
+			    old_file + $String(gen) + " " +
+			    $FILEL;
+			gen = 0;
+		    END
+		    ELSE
+			gen = gen - 1;
+		END
+	END
+    UNTIL $NextFile = 0
+END; ! UDIFF

@@ -1,0 +1,31 @@
+COMMAND BELL;
+!------------------------------------------------------------------------
+! Purpose:
+!	Ring the terminal bell.
+!
+! Usage:
+!	BELL ntimes;
+!
+! Remarks:
+!	The bell is rung ntimes times, the default being 5 times;
+!
+! Author:
+!	Nelson H.F. Beebe,  Department of Physics,  University of  Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[28-Apr-84]
+!
+!------------------------------------------------------------------------
+{
+INTEGER ntimes;
+
+PARSE (NUMBER(STDHELP,DEFAULT "5", HELP "bell count") : ntimes = $Value);
+PARSE (EOL);
+
+WHILE ntimes > 0 DO 
+	{
+	DISPLAY BINARY "";
+	ntimes = ntimes - 1;
+	}
+}

@@ -1,0 +1,152 @@
+COMMAND DIRTREE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Make a directory tree listing showing the structure of of
+!	one or more directory hierarchies.
+!
+! Usage:
+!	DIRTREE /OUTPUT:filespec directory_list
+!
+! Remarks:
+!	The default output is to TTY:, and the default  directory
+!	list  list  is  the  connected  directory  and  all   its
+!	subdirectories.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[06-Dec-83]
+!
+!------------------------------------------------------------------------
+{
+    STRING  
+        Dashes,
+        Last_Name,
+	Out_File_Name,
+        Temp,
+        Prefix;
+    
+    INTEGER 
+        CD_DIR,
+        done,
+        k,
+        lendir,
+        Match,
+        NO,
+	Out_File_ID,
+	SC_OPR,
+	SC_CNF,
+	SC_WHL,
+	SC_MNT,
+        YES;
+
+    CD_DIR = 8%400000000000;	! CD%DIR for CRDIR JSYS
+    SC_WHL = 8%000000400000;	! SC%xxx privilege flags (Mon Calls 2.7.1)
+    SC_OPR = 8%000000200000;
+    SC_CNF = 8%000000100000;
+    SC_MNT = 8%000000040000;
+    
+    NO = 0;
+    YES = 1;
+
+    GUIDE "listing of subdirectory hierarchy";
+
+    Temp = $UserName;
+    PARSE (
+	SWITCH (WORDS(OUTPUT::1),STDHELP) :
+	    PARSE (FILE (
+	        STDHELP,
+		OUTPUT,
+	        DEFAULT_DEV "DSK",
+    	        DEFAULT_NAM Temp,
+    	        DEFAULT_EXT "DIRTREE",
+	        DEFAULT_GEN +) : Out_File_Name = $FILEL);
+	OTHERWISE: Out_File_Name = "TTY:";
+	);
+    Temp = $ConnectedDirectory;
+    lendir = $LENGTH(Temp);
+    Temp = Temp[1:lendir-1] + "*>";
+    PARSE (DIRECTORYLIST (DEFAULT Temp,STDHELP) : NOP);
+    Out_File_ID = $Open(Out_File_Name,$OUTPUT);
+    IF Out_File_Name <> "TTY:" THEN ! Write a useful file header
+    {
+        Temp = "Directory Tree Command " + $Date + " " + $Time;
+	IF $LENGTH($Command) > $LENGTH(Temp) 
+	    THEN lendir = $LENGTH($Command)
+	    ELSE lendir = $LENGTH(Temp);
+	Dashes = "";
+	WHILE $LENGTH(Dashes) < lendir DO Dashes = Dashes + "=";
+        CALL $WRITE (OUT_FILE_ID,Dashes);
+        CALL $WRITE (OUT_FILE_ID,Temp);
+        CALL $WRITE (OUT_FILE_ID,$COMMAND);
+        Call $WRITE (Out_File_Id,Dashes)
+    };
+    Last_Name = ""; 
+    DO 
+    {
+        lendir = $LENGTH($Directory) - 1;
+        done = NO;
+        WHILE done = NO DO
+        {
+            Match = $Search($Directory,Last_Name);
+	    IF Match > 0 THEN
+	    {
+	        Match = $Length(Last_Name) + 1;
+                IF $Directory[Match:1] = "." THEN NOP
+		ELSE IF $Directory[Match:1] = ">" THEN NOP
+		ELSE Match = 0; !Must have had common string, but not subdir
+	    };
+            IF Match > 0 THEN ! Common parent
+            {
+                Prefix = "";
+                k = 0;
+                WHILE k < lendir DO ! Make prefix for indentation
+                {
+                    k = k + 1;
+                    IF $Directory[k:1] = "." THEN Prefix = Prefix + "   "
+                };
+		IF Prefix <> "" THEN Prefix = Prefix + "..";
+                Prefix = Prefix + $Directory[$LENGTH(Last_Name)+1:
+		    lendir-$LENGTH(Last_Name)];
+                done = YES
+            }
+            ELSE    ! Back up to previous dot, exiting if not found
+            {
+                k = $LENGTH(Last_Name);
+                WHILE k > 0 DO 
+                {
+                    IF Last_Name[k:1] = "." THEN GOTO exitw;
+                    k = k - 1
+                };
+                exitw:
+                IF k = 0 THEN  ! no common parent, show it all
+                {
+                    done = YES; 
+                    lendir = $LENGTH($Directory) - 1;
+                    prefix = $Directory
+                } 
+                ELSE ! chop off last subdirectory name
+                    Last_Name = Last_Name[1:k-1]
+            }
+        };
+	IF $AND($DirectoryInfo_I($Directory,$CDMOD),CD_DIR) <> CD_DIR THEN
+        { !Not FILES-ONLY directory
+            Prefix = Prefix + " {login}";
+	    IF $AND($DirectoryInfo_I($Directory,$CDPRV),SC_WHL) = SC_WHL THEN
+	        Prefix = Prefix + " {WHEEL}";
+	    IF $AND($DirectoryInfo_I($Directory,$CDPRV),SC_OPR) = SC_OPR THEN
+	        Prefix = Prefix + " {OPERATOR}";
+	    IF $AND($DirectoryInfo_I($Directory,$CDPRV),SC_CNF) = SC_CNF THEN
+	        Prefix = Prefix + " {CONFIDENTIAL-INFORMATION-ACCESS}";
+	    IF $AND($DirectoryInfo_I($Directory,$CDPRV),SC_MNT) = SC_MNT THEN
+	        Prefix = Prefix + " {MAINTENANCE}"
+	};
+	Call $WRITE (Out_File_Id,Prefix);
+        Last_Name = $Directory[1:lendir]
+        }
+    UNTIL $NextDirectory = 0;
+    Call $CLOSE (Out_file_Id);
+} !Command DIRTREE
+

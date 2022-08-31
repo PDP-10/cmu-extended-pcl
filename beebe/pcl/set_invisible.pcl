@@ -1,0 +1,74 @@
+COMMAND SET_INVISIBLE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Set OFFLINE files invisible.
+!
+! Usage:
+!	SET-INVISIBLE filespecs
+!
+! Remarks:
+!	The filespecs field may contain any list of file
+!	specifications which would be acceptable to the DIRECTORY
+!	command.  This command remedies the deficiency of the 
+!	SET INVISIBLE command, which does not permit wild-card
+!	specifications.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[06-Nov-80]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL STRING PROCEDURE
+	filedevice,
+	filedirectory;
+STRING
+	command_echo,
+	directory_entry,
+	directory_file,
+	file_name,	
+	file_prefix;
+
+GUIDE "OFFLINE files only";
+
+PARSE (FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	HELP "list of files (default DSK:*.*.*)",
+	WILD) : NOP);
+
+DO BEGIN ! Make directory listing and set listed OFFLINE files invisible
+	file_prefix = filedevice($FILEL) + filedirectory($FILEL);
+	directory_file = "TMPCOR-DATA-BASE-" + $STRING($TERMNUMBER)
+		 + "SI.LST";
+	DOCOMMAND ORIGINAL "DIRECTORY " + $FILEL + ",
+	OUTPUT " + directory_file + "
+	SEPARATE
+	NO HEAD
+	NO SUMMARY
+	
+	";
+	DOCOMMAND ORIGINAL "OPR:WAIT";
+	CALL $OpenInput (directory_file);
+	directory_entry = $READ;
+	WHILE $EOF = 0 DO
+		BEGIN
+		IF $SEARCH(directory_entry,";OFFLINE") > 0 THEN
+			BEGIN
+			file_name = directory_entry[2:
+				$SEARCH(directory_entry,";")-2];
+			DOCOMMAND ORIGINAL "SET FILE INVISIBLE " + 
+				file_prefix + file_name;
+			END;
+		directory_entry = $READ;
+		END; !WHILE
+	CALL $CloseInput (directory_file);
+	DOCOMMAND ORIGINAL "DELETE " + directory_file TO command_echo
+	END
+UNTIL $Nextfile = 0
+END; !Set_Invisible

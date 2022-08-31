@@ -1,0 +1,34 @@
+COMMAND FIT;
+BEGIN
+INTEGER	FITOPT,NFIT,K1,KN,KEXTRA;
+
+NFIT=-1;K1=-1;KN=-1;KEXTRA=-1;
+
+GUIDE "subsequent polygons and polylines";
+
+PARSE (	KEYWORD(WORDS(B_SPLINE:1,BEZIER:2,TENSIONED_SPLINE:3),
+	STDHELP,HELP "fitting method",DEFAULT "B-SPLINE") : FITOPT=$VALUE);
+
+PARSE (	NUMBER(STDHELP,
+	HELP "number of points to interpolate",DEFAULT "100") : NFIT = $VALUE);
+
+PARSE (	NUMBER(STDHELP,
+	HELP "number of extra times to implicitly replicate point 1",
+	DEFAULT "0") : K1 = $VALUE);
+
+PARSE (	NUMBER(STDHELP,
+	HELP "number of extra times to implicitly replicate point 1",
+	DEFAULT "0") : KN = $VALUE);
+
+PARSE (	NUMBER(STDHELP,
+	HELP "number of points to wrap last point around on",
+	DEFAULT "0") : KEXTRA = $VALUE);
+
+PARSE (EOL : NOP);
+
+DISPLAY " FITOPT = " + $STRING(FITOPT);
+DISPLAY " NFIT = " + $STRING(NFIT);
+DISPLAY " K1 = " + $STRING(K1);
+DISPLAY " KN = " + $STRING(KN);
+DISPLAY " KEXTRA = " + $STRING(KEXTRA);
+END;

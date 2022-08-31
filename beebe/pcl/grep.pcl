@@ -1,0 +1,68 @@
+command EGREP;			! simulates globbing for unix (e)grep
+begin				! Author: Lepreau
+    external procedure dogrep;
+
+    guide "Search for full Regular Exprs";
+    call dogrep("unix:egrep.exe");
+end;
+
+command GREP;
+begin
+    external procedure dogrep;
+
+    guide "Search for limited Regular Exprs";
+    call dogrep("unix:grep.exe");
+end;
+
+procedure dogrep(string prog);
+begin
+    string s, pat, opt, opts;
+    integer more;
+
+! For some reason this damn pcl screws up unless quotedstring is first
+    parse(quotedstring(help "pattern in double quotes"):
+            pat = $quote + $atom + $quote;
+	  field(help "pattern"): pat = $atom;
+	  switch (words( file_with_pattern :: 1)):
+	    begin
+	  	parse(file(input));
+		pat = "-f " + $files;
+	    end;
+	  );
+
+    parse(filelist(help "filelist, then optional /switches", input));
+    do 
+        s = s + " " + $files
+    until $nextfile = 0;
+
+    more = 1;
+    while more=1 do		! Note you won't see these switches to '?'
+	parse (	switch (	! until you type '/' (because of filelist).
+			words(	non_matching	: 1,
+				count_matches	: 2,
+				number_lines	: 3,
+				block_numbers	: 4,
+				status_only	: 5,
+				headers_none	: 6,
+				list_files_only : 7,
+				word_search	: 8,
+				ignore_case	: 9)):
+			begin
+				case $value from 1 to 9 of begin
+				[1]: opt = "v";
+				[2]: opt = "c";
+				[3]: opt = "n";
+				[4]: opt = "b";
+				[5]: opt = "s";
+				[6]: opt = "h";
+				[7]: opt = "l";
+				[8]: opt = "w";
+				[9]: opt = "i";
+				end;
+				opts = opts + " -" + opt;
+		        end;
+		eol: more = 0;
+	   );	!end of switch parse
+
+      docommand original prog + " " + opts + " " + pat + " " + s;
+end;

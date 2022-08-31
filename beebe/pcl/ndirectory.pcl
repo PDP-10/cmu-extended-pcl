@@ -1,0 +1,44 @@
+COMMAND NDIRECTORY;
+!------------------------------------------------------------------------
+! Purpose:
+!	Give a verbose directory listing of new files created today.
+!
+! Usage:
+!	NDIRECTORY {filespec}
+!
+! Remarks:
+!	If the file specification is omitted, then *.*.* is assumed.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[04-Sep-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+STRING command_line;
+
+GUIDE "of files created TODAY";
+
+PARSE (FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	DEFAULT_GEN *,
+	HELP "list of files (default DSK:*.*.*)",
+	WILD) : NOP);
+
+command_line = "";
+
+DO	! Reconstruct command line
+	command_line = command_line + $FILEL + ","
+UNTIL $Nextfile = 0;
+
+DOCOMMAND ORIGINAL "VDIRECTORY " + command_line + $CRLF +
+	"SEPARATE" + $CRLF + "NO PROTECTION" + $CRLF +
+	"SINCE TODAY" + $CRLF + $CRLF
+
+END; !NDIRECTORY

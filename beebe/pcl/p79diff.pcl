@@ -1,0 +1,39 @@
+command p79diff (FILE : fl);
+!-----------------------------------------------------------------------
+! Compare file time stamps on VAX with masters on NHFB:<PLOT79*>.  
+! The input file will have been produced by grep/sed processing of
+! a file from the VAX containing date/time/name information.
+!
+! [05-Sep-85]
+!-----------------------------------------------------------------------
+{
+    string record,fn,dt;
+    integer fp,vaxdt,topsdt,bp;
+
+    fp = $Open(fl,$INPUT);
+    if fp <= 0 then
+        abort "File [" + fl + "] does not exist";
+    docommand original "terminal width 0";
+    record = $read(fp);
+    while $EOF(fp) >= 0 do
+    {
+        if $IsFile(record[48:*]) > 0 then
+        {
+	    dt = record[1:20];	! $MERGETAD() does not have seconds...
+	    bp = $strloc(dt);
+	    bp = $Or(8%777777000000,bp);
+	    if $jsys(8%221 !{IDTIM}!,bp,0) = 0 then
+	        abort "Bad date in record " + record;
+	    vaxdt = $Ac2;
+	    topsdt = $FileInfo_I(record[48:*],$FBWRT);
+            if topsdt >= vaxdt then
+                display "				!!" + 
+		    "TOPS: " + $OutputTAD(topsdt) + " " + 
+		    "VAX: " + $OutputTAD(vaxdt) + " " + 
+		    record[48:*];
+        }
+        else
+            display "--" + record[48:*];
+        record = $read(fp);
+    }
+}

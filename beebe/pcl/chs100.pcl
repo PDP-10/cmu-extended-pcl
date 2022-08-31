@@ -1,0 +1,276 @@
+COMMAND CHS100;
+!------------------------------------------------------------------------
+! Purpose:
+!       Clear Encode HostStation 100 screen.
+!
+! Usage:
+!       @CHS100 {/LARGE    |
+!               /LEDGER    |
+!               /NARROW    |
+!               /SMALL     |
+!               /STANDARD  |
+!               /TEKTRONIX |
+!               /WIDE}
+!
+! Remarks:
+!       @CHS100 /LARGE
+!
+! Author:
+!       Nelson H.F. Beebe, Department of Physics, University of Utah,
+!       Salt Lake City, UT 84112.
+!
+! Date:
+!       [07-Dec-85]
+!	[10-Apr-86] -- add key_labels setting
+!
+!------------------------------------------------------------------------
+{
+integer
+	NO,
+	YES;
+integer
+	columns,
+	control_rows,
+	key_labels,
+	mode,
+	rows;
+string
+	control_window,
+	devstr,
+	main_window;
+
+
+        NO = 0;
+        YES = 1;
+
+	control_rows = 3;
+        mode = 1;
+	main_window = "1";
+	control_window = "2";
+	key_labels = YES;
+
+        parse 
+        (
+        switch (words(large::1, ledger::2, narrow::3, small::4, standard::5, 
+	              tektronix::6, wide::7),
+                default "/large",stdhelp) : 
+		{
+		    mode = $value;
+		    parse (number(default "3", help "control window rows") :
+		        control_rows = $value);
+		};
+        );
+
+	parse (eol : nop);
+
+        IF $TTYPE = 16 THEN     ! VT100 mode
+        {
+	    devstr = "";
+	    devstr = devstr + "1;1;1r2;5;1r3;1;1r";	! HS100,control,HS100
+							! emulation in windows
+	    devstr = devstr + "2;4;" + $String(control_rows) + "r";
+	    devstr = devstr + "1;19;0r2;19;0r3;19;0r";	! numeric keypad in all
+	    display binary "P" + devstr + "\";
+	    devstr = "";
+	    devstr = devstr + "[3g";	! clear all tab stops;
+	    devstr = devstr + "[0;9HH";
+	    devstr = devstr + "[0;17HH";
+	    devstr = devstr + "[0;25HH";
+	    devstr = devstr + "[0;33HH";
+	    devstr = devstr + "[0;41HH";
+	    devstr = devstr + "[0;49HH";
+	    devstr = devstr + "[0;57HH";
+	    devstr = devstr + "[0;65HH";
+	    devstr = devstr + "[0;73HH";
+	    devstr = devstr + "[0;81HH";
+	    devstr = devstr + "[0;89HH";
+	    devstr = devstr + "[0;97HH";
+	    devstr = devstr + "[0;105HH";
+	    devstr = devstr + "[0;113HH";
+	    devstr = devstr + "[0;121HH";
+	    devstr = devstr + "[0;129HH";
+	    devstr = devstr + "[0;137HH";
+	    devstr = devstr + "[0;145HH";
+	    devstr = devstr + "[0;153HH";
+	    devstr = devstr + "[0;161HH";
+	    devstr = devstr + "[0;169HH";
+	    devstr = devstr + "[0;177HH";
+	    devstr = devstr + "[0;185HH";
+	    devstr = devstr + "[0;193HH";
+	    devstr = devstr + "[0;201HH";
+	    devstr = devstr + "[0;209HH";
+	    devstr = devstr + "[0;217HH";
+	    devstr = devstr + "[0;225HH";
+	    devstr = devstr + "[0;233HH";
+	    devstr = devstr + "[0;241HH";
+	    display binary devstr;
+
+	    devstr = "";
+
+	    devstr = devstr + control_window + ";5;1r" +
+	        control_window + ";4;0r";	! Turn off control window;
+
+            CASE mode FROM 1 TO 7 OF
+            {
+            [1]: {                          ! large
+		     rows = 53;
+                     columns = 88;
+		     IF control_rows > 0 THEN
+                         rows = rows - control_rows;
+		     IF key_labels = YES THEN
+		         rows = rows - 5;
+		     devstr = devstr +
+		         main_window + ";1;1r" +
+		         main_window + ";2;3r" +
+		         main_window + ";6;" + $String(columns) + "r" +
+		         main_window + ";4;" + $String(rows) + "r";
+		     IF control_rows > 0 THEN
+		         devstr = devstr + 
+                             control_window + ";5;1r" +
+			     control_window + ";6;132r" +
+			     control_window + ";4;" + $String(control_rows) + "r" +
+			     control_window + ";2;2r";
+		     IF key_labels = YES THEN
+		         devstr = devstr + "0;4;1r";
+		     display binary "P" + devstr + "\";
+                 };
+            [2]: {                          ! ledger
+                     rows = 106;
+                     columns = 176;
+		     IF control_rows > 0 THEN
+                         rows = rows - control_rows;
+		     IF key_labels = YES THEN
+		         rows = rows - 20;
+		     devstr = devstr + 
+		         main_window + ";1;1r" +
+		         main_window + ";2;1r" +
+		         main_window + ";6;" + $String(columns) + "r" +
+		         main_window + ";4;" + $String(rows) + "r";
+		     IF control_rows > 0 THEN
+		         devstr = devstr + 
+                             control_window + ";5;1r" +
+			     control_window + ";6;132r" +
+			     control_window + ";4;" + $String(control_rows) + "r" +
+			     control_window + ";2;2r";
+		     IF key_labels = YES THEN
+		         devstr = devstr + "0;4;1r";
+		     display binary "P" + devstr + "\";
+                 };
+            [3]: {                          ! em100 narrow
+                     rows = 42;
+                     columns = 176;
+		     IF control_rows > 0 THEN
+                         rows = rows - control_rows;
+		     IF key_labels = YES THEN
+		         rows = rows - 5;
+		     devstr = devstr + 
+		         main_window + ";1;1r" +
+		         main_window + ";2;5r" +
+		         main_window + ";6;" + $String(columns) + "r" +
+		         main_window + ";4;" + $String(rows) + "r";
+		     IF control_rows > 0 THEN
+		         devstr = devstr + 
+                             control_window + ";5;1r" +
+			     control_window + ";6;132r" +
+			     control_window + ";4;" + $String(control_rows) + "r" +
+			     control_window + ";2;2r";
+		     IF key_labels = YES THEN
+		         devstr = devstr + "0;4;1r";
+		     display binary "P" + devstr + "\";
+                 };
+            [4]: {                          ! small
+                     rows = 142;
+                     columns = 264;
+		     IF control_rows > 0 THEN
+                         rows = rows - control_rows;
+		     IF key_labels = YES THEN
+		         rows = rows - 30;
+		     devstr = devstr + 
+		         main_window + ";1;1r" +
+		         main_window + ";2;0r" +
+		         main_window + ";6;" + $String(columns) + "r" +
+		         main_window + ";4;" + $String(rows) + "r";
+		     IF control_rows > 0 THEN
+		         devstr = devstr + 
+                             control_window + ";5;1r" +
+			     control_window + ";6;132r" +
+			     control_window + ";4;" + $String(control_rows) + "r" +
+			     control_window + ";2;2r";
+		     IF key_labels = YES THEN
+		         devstr = devstr + "0;4;1r";
+		     display binary "P" + devstr + "\";
+                 };
+            [5]: {                          ! standard
+                     rows = 71;
+                     columns = 132;
+		     IF control_rows > 0 THEN
+                         rows = rows - control_rows;
+		     IF key_labels = YES THEN
+		         rows = rows - 10;
+		     devstr = devstr + 
+		         main_window + ";1;1r" +
+		         main_window + ";2;2r" +
+		         main_window + ";6;" + $String(columns) + "r" +
+		         main_window + ";4;" + $String(rows) + "r";
+		     IF control_rows > 0 THEN
+		         devstr = devstr + 
+                             control_window + ";5;1r" +
+			     control_window + ";6;132r" +
+			     control_window + ";4;" + $String(control_rows) + "r" +
+			     control_window + ";2;2r";
+		     IF key_labels = YES THEN
+		         devstr = devstr + "0;4;1r";
+		     display binary "P" + devstr + "\";
+                 };
+            [6]: {                          ! tektronix with control window
+                     rows = 24;
+                     columns = 80;
+		     devstr = devstr + "0;4;0r";	! turn off function key labels
+		     IF control_rows > 0 THEN
+		         devstr = devstr + 
+                             control_window + ";5;1r" +
+			     control_window + ";6;132r" +
+			     control_window + ";4;" + $String(control_rows) + "r" +
+			     control_window + ";2;2r";
+		     devstr = devstr + 
+		         main_window + ";6;" + $String(columns) + "r" +
+		         main_window + ";4;" + $String(rows) + "r" +
+		         main_window + ";7;1r";
+		     IF key_labels = YES THEN
+		         devstr = devstr + "0;4;1r";
+		     display binary "P" + devstr + "\";
+                 };
+            [7]: {                          ! em100 wide
+                     rows = 42;
+                     columns = 105;
+		     IF control_rows > 0 THEN
+                         rows = rows - control_rows;
+		     IF key_labels = YES THEN
+		         rows = rows - 5;
+		     devstr = devstr + 
+		         main_window + ";1;1r" +
+		         main_window + ";2;4r" +
+		         main_window + ";6;" + $String(columns) + "r" +
+		         main_window + ";4;" + $String(rows) + "r";
+		     IF control_rows > 0 THEN
+		         devstr = devstr + 
+                             control_window + ";5;1r" +
+			     control_window + ";6;132r" +
+			     control_window + ";4;" + $String(control_rows) + "r" +
+			     control_window + ";2;2r";
+		     IF key_labels = YES THEN
+		         devstr = devstr + "0;4;1r";
+		     display binary "P" + devstr + "\";
+                 };
+            };
+
+	    IF columns < 256 THEN
+    	        DOCOMMAND "TERMINAL WIDTH " + $String(columns)
+	    ELSE
+    	        DOCOMMAND "TERMINAL WIDTH 0";	! TOPS-20 has limit of 255;
+
+	    DOCOMMAND "TERMINAL PAGE " + $String(rows);
+        }
+        ELSE
+                DOCOMMAND "BLANK";
+};

@@ -1,0 +1,444 @@
+!SYNONYM S SYSTAT;
+
+!SYNONYM I INFORMATION;
+
+!------------------------------------------------------------------------
+
+STRING PROCEDURE systemlog (STRING filename);
+! Log the username and time and date on the specified file.
+BEGIN
+INTEGER	OutFileId;
+STRING	temporary_file,
+	record,
+	command_echo;
+
+temporary_file = "PS:<TEMP>" + $STRING($TERMNUMBER) + "SL.SysLog;T";
+!temporary_file = "PS:<TEMP>" + $STRING($TERMNUMBER) + "SL.TMP";
+
+OutFileId = $Open(temporary_file,$Output);
+record = $USERNAME + " " + $OUTPUTTAD($CURTAD);
+CALL $Write(OutFileId,record);
+CALL $Close(OutFileId);
+
+DOCOMMAND ORIGINAL "APPEND " + temporary_file + " " + filename TO command_echo;
+DOCOMMAND ORIGINAL "DELETE " + temporary_file TO command_echo;
+
+RETURN record;
+END; !systemlog
+
+!------------------------------------------------------------------------
+
+INTEGER PROCEDURE alphanumeric (STRING character);
+! Return YES if character in ["0".."9","A".."Z","a".."z"] and NO otherwise.
+BEGIN
+INTEGER yes,no;
+yes = 1;
+no = 0;
+IF "0" <= character THEN IF character <= "9" THEN RETURN yes;
+IF "A" <= character THEN IF character <= "Z" THEN RETURN yes;
+IF "a" <= character THEN IF character <= "z" THEN RETURN yes;
+RETURN no
+END;! alphanumeric
+
+!------------------------------------------------------------------------
+
+INTEGER PROCEDURE alphabetic (STRING character);
+! Return YES if character in ["A".."Z","a".."z"] and NO otherwise.
+BEGIN
+INTEGER yes,no;
+yes = 1;
+no = 0;
+IF "A" <= character THEN IF character <= "Z" THEN RETURN yes;
+IF "a" <= character THEN IF character <= "z" THEN RETURN yes;
+RETURN no
+END;! alphabetic
+
+!------------------------------------------------------------------------
+
+INTEGER PROCEDURE numeric (STRING character);
+! Return YES if character in ["0".."9"] and NO otherwise.
+BEGIN
+INTEGER yes,no;
+yes = 1;
+no = 0;
+IF "0" <= character THEN IF character <= "9" THEN RETURN yes;
+RETURN no
+END;! numeric
+
+!------------------------------------------------------------------------
+
+STRING PROCEDURE filenode (STRING file_specification);
+! Return the file node, including the two terminal colons, or a null
+! string if no node is specified, or the node is illegal.
+BEGIN
+EXTERNAL INTEGER PROCEDURE
+	alphanumeric;
+
+INTEGER length,next,done;
+INTEGER yes,no;
+no = 0;
+yes = 1;
+
+next = 1;
+length = $LENGTH(file_specification);
+
+IF length >= next
+THEN	done = no
+ELSE	done = yes;
+
+WHILE done = no DO 
+	BEGIN
+	IF alphanumeric(file_specification[next:1]) = no
+	THEN	done = yes
+	ELSE	next = next + 1;
+	IF next > length THEN	done = yes
+	END;
+
+IF next > length 
+THEN	RETURN ""
+ELSE	IF file_specification[next:2] = "::" 
+	THEN	RETURN file_specification[1:next+1]
+	ELSE	RETURN ""
+
+END; ! filenode
+
+!------------------------------------------------------------------------
+
+STRING PROCEDURE filedevice (STRING file_specification);
+! Return the file device (or logical name), including the terminal
+! colon, or a null string if no device is specified or the device field 
+! is illegal.
+BEGIN
+EXTERNAL STRING PROCEDURE
+	filenode;
+EXTERNAL INTEGER PROCEDURE
+	alphanumeric;
+INTEGER next,done,length,start;
+INTEGER yes,no;
+no = 0;
+yes = 1;
+
+length = $LENGTH(file_specification);
+start = $LENGTH(filenode(file_specification)) + 1;
+next = start;
+done = no;
+
+IF length >= next 
+THEN	done = no
+ELSE	done = yes;
+
+WHILE done = no DO 
+	BEGIN
+	IF alphanumeric(file_specification[next:1]) = no
+	THEN	done = yes
+	ELSE	next = next + 1;
+	IF next > length THEN	done = yes
+	END;
+
+IF next > length 
+THEN	RETURN ""
+ELSE	IF file_specification[next:1] = ":" 
+	THEN	RETURN file_specification[start:next-start+1]
+	ELSE	RETURN ""
+
+END; ! filedevice
+
+!------------------------------------------------------------------------
+
+STRING PROCEDURE filedirectory (STRING file_specification);
+! Return the file directory string, including surrounding angle
+! brackets, or a null string if no directory string is present, or the
+! directory string is illegal.
+BEGIN
+EXTERNAL STRING PROCEDURE
+	filenode,
+	filedevice;
+EXTERNAL INTEGER PROCEDURE
+	alphanumeric;
+INTEGER next,done,length,start,number_of_rb,number_of_lb,illegal;
+INTEGER yes,no;
+no = 0;
+yes = 1;
+
+number_of_rb = 0;
+number_of_lb = 0;
+illegal = no;
+length = $LENGTH(file_specification);
+start = $LENGTH(filenode(file_specification)
+	+ filedevice(file_specification)) + 1;
+next = start;
+done = no;
+
+IF length >= next
+THEN	BEGIN
+	IF file_specification[next:1] = "<" 
+	THEN	done = no
+	ELSE	done = yes
+	END
+ELSE	done = yes;
+
+WHILE done = no DO
+	BEGIN
+	IF file_specification[next:1] = "<" 
+	THEN	BEGIN
+		number_of_lb = number_of_lb + 1;
+		next = next + 1
+		END
+	ELSE	IF file_specification[next:1] = ">"
+		THEN	BEGIN
+			done = yes;
+			number_of_rb = number_of_rb + 1
+			END
+		ELSE	IF $SEARCH(".-_%*",file_specification[next:1]) > 0
+			THEN	next = next + 1
+			ELSE IF alphanumeric(file_specification[next:1]) = yes
+				THEN	next = next + 1
+				ELSE	BEGIN
+					illegal = yes;
+					done = yes
+					END;
+	IF next > length THEN done = yes
+	END;
+IF illegal = yes
+THEN	RETURN ""
+ELSE	IF next <= length 
+	THEN	IF number_of_lb = 1
+		THEN	IF number_of_rb = 1
+			THEN	IF file_specification[next:1] = ">" 
+				THEN	RETURN file_specification
+						[start:next-start+1]
+				ELSE	RETURN ""
+			ELSE	RETURN ""
+		ELSE	RETURN ""
+	ELSE	RETURN ""
+END; ! filedirectory
+
+!------------------------------------------------------------------------
+
+STRING PROCEDURE filename (STRING file_specification);
+! Return the file name from a file string, or a null string if no file
+! name is present, or the file name is illegal.
+BEGIN
+EXTERNAL STRING PROCEDURE
+	filenode,
+	filedevice,
+	filedirectory;
+EXTERNAL INTEGER PROCEDURE
+	alphanumeric;
+INTEGER next,done,length,start,illegal;
+INTEGER yes,no;
+no = 0;
+yes = 1;
+
+length = $LENGTH(file_specification);
+start = $LENGTH(filenode(file_specification) + filedevice(file_specification)
+	+ filedirectory(file_specification)) + 1;
+next = start;
+done = no;
+
+IF length >= start
+THEN	done = no
+ELSE	done = yes;
+
+WHILE done = no DO
+	BEGIN
+	IF file_specification[next:1] = "."
+	THEN	done = yes
+	ELSE	IF file_specification[next:1] = ":"
+	THEN	done = yes
+	ELSE	IF $SEARCH("-_$*%",file_specification[next:1]) > 0
+	THEN	next = next + 1
+	ELSE	IF alphanumeric(file_specification[next:1]) = yes
+	THEN	next = next + 1
+	ELSE	illegal = yes;
+	IF next > length THEN done = yes
+	END;
+IF illegal = yes
+THEN	RETURN ""
+ELSE	IF next > length 
+	THEN	RETURN file_specification[start:*]
+	ELSE	RETURN file_specification[start:next-start]
+
+END; ! filename
+
+!------------------------------------------------------------------------
+
+STRING PROCEDURE fileextension (STRING file_specification);
+! Return the file extension from a file string, or a null string if no file
+! extension is present, or the extension is illegal.
+BEGIN
+EXTERNAL STRING PROCEDURE
+	filenode,
+	filedevice,
+	filedirectory,
+	filename;
+EXTERNAL INTEGER PROCEDURE
+	alphanumeric;
+INTEGER next,done,length,start,illegal;
+INTEGER yes,no;
+no = 0;
+yes = 1;
+
+length = $LENGTH(file_specification);
+start = $LENGTH(filenode(file_specification) + filedevice(file_specification)
+	 + filedirectory(file_specification) + filename(file_specification))
+	 + 2;
+next = start;
+done = no;
+
+IF length >= start
+THEN	done = no
+ELSE	done = yes;
+
+WHILE done = no DO
+	BEGIN
+	IF file_specification[next:1] = "."
+	THEN	done = yes
+	ELSE	IF file_specification[next:1] = ";"
+		THEN	done = yes
+		ELSE	IF $SEARCH("-_*%",file_specification[next:1]) > 0
+			THEN	next = next + 1
+			ELSE	IF alphanumeric(file_specification[next:1])
+					 = yes
+				THEN	next = next + 1
+				ELSE	BEGIN
+					illegal = yes;
+					done = yes
+					END;
+	IF next > length THEN done = yes
+	END;
+IF illegal = yes
+THEN	RETURN ""
+ELSE	IF next > length 
+	THEN	RETURN file_specification[start:*]
+	ELSE	RETURN file_specification[start:next-start]
+
+END; ! fileextension
+
+!------------------------------------------------------------------------
+
+STRING PROCEDURE filegeneration (STRING file_specification);
+! Return the file generation from a file string, or a null string if no file
+! extension is present, or the generation number is illegal.
+BEGIN
+EXTERNAL STRING PROCEDURE
+	filenode,
+	filedevice,
+	filedirectory,
+	filename,
+	fileextension;
+EXTERNAL INTEGER PROCEDURE
+	numeric;
+INTEGER next,done,length,start,illegal;
+INTEGER yes,no;
+no = 0;
+yes = 1;
+
+length = $LENGTH(file_specification);
+start = $LENGTH(filenode(file_specification) + filedevice(file_specification)
+	+ filedirectory(file_specification) + filename(file_specification)
+	+ fileextension(file_specification)) + 3;
+next = start;
+done = no;
+
+IF length >= start
+THEN	done = no
+ELSE	done = yes;
+
+WHILE done = no DO
+	BEGIN
+	IF file_specification[next:1] = ";"
+	THEN	done = yes
+	ELSE	IF $SEARCH("*%",file_specification[next:1]) > 0 
+		THEN next = next + 1	
+		ELSE	IF numeric(file_specification[next:1]) = yes
+			THEN	next = next + 1
+			ELSE	BEGIN
+				illegal = yes;
+				done = yes
+				END;
+	IF next > length THEN done = yes
+	END;
+IF illegal = yes
+THEN	RETURN ""
+ELSE	IF next > length 
+	THEN	RETURN file_specification[start:*]
+	ELSE	RETURN file_specification[start:next-start]
+
+END; ! filegeneration
+
+!------------------------------------------------------------------------
+
+STRING PROCEDURE newgeneration (STRING file_specification);
+! Return a string which is a new generation of the file specification.
+BEGIN
+EXTERNAL STRING PROCEDURE
+	filenode,
+	filedevice,
+	filedirectory,
+	filename,
+	fileextension,
+	filegeneration;
+RETURN	filenode(file_specification)
+	+ filedevice(file_specification)
+	+ filedirectory(file_specification)
+	+ filename(file_specification)
+	+ "." 
+	+ fileextension(file_specification)
+	+ ".-1"
+END; ! newgeneration
+!------------------------------------------------------------------------
+
+STRING PROCEDURE removegeneration (STRING file_specification);
+! Return a string with the file specification minus the generation number.
+BEGIN
+EXTERNAL STRING PROCEDURE
+	filenode,
+	filedevice,
+	filedirectory,
+	filename,
+	fileextension,
+	filegeneration;
+RETURN	filenode(file_specification)
+	+ filedevice(file_specification)
+	+ filedirectory(file_specification)
+	+ filename(file_specification)
+	+ "." 
+	+ fileextension(file_specification)
+
+END; ! removegeneration
+
+COMMAND pcl;
+!------------------------------------------------------------------------
+! Purpose:
+!	Shorthand for DECLARE /NOCONFIRM PCL filespecs
+!
+! Usage:
+!	PCL filespecs
+!
+! Remarks:
+!	Filespecs may be any valid list of file specifications, 
+!	including wild cards.  The default file directory is PCL:, and
+!	the default file extension is ".PCL".
+!
+! Author:
+!	Cedric Griss, College of Science Computer, Department of
+!	Physics, University of Utah, Salt Lake City, UT 84112.
+!
+! Date:
+!	[03-Nov-80]
+!
+!------------------------------------------------------------------------
+BEGIN
+GUIDE "definitions from file(s)";
+PARSE(
+	FILELIST(
+	HELP "command definition file(s) for PCL",
+	DEFAULT_NAM "EXEC",
+	DEFAULT_DEV "PCL",
+	DEFAULT_EXT "PCL") :
+	DO	BEGIN
+		DOCOMMAND ORIGINAL "DECLARE /NOCONFIRM PCL " + $FILEL 
+		END
+	UNTIL $NEXTFILE = 0)
+END; ! pcl

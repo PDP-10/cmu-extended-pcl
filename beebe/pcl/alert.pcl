@@ -1,0 +1,79 @@
+COMMAND alert;
+!------------------------------------------------------------------------
+! Purpose:
+!	Set an alert which survives across login/logout.
+!
+! Usage:
+!	ALERT (me) date_and_time (message) ..text..
+!
+! Remarks:
+!	A SET ALERT command is issued and the command text is appended
+!	to a file ALERT.CMD on the user's login directory.  To ensure
+!	that the alerts are properly set, the LOGIN.CMD file must
+!	contain a command "TAKE ALERT.CMD".
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[01-Oct-82]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE 
+	delta_time,
+	general_time_and_date_parse;
+
+STRING	command_echo,
+	record,
+	temporary_file,
+	alert_file,
+	message;
+
+INTEGER FileId,
+	time_and_date;
+
+alert_file = "PS:<" + $USERNAME + ">ALERT.CMD";
+temporary_file  = "ps:<temp>" + $STRING($TERMNUMBER) + "-alert.tmp;t";
+
+GUIDE "me before";
+
+time_and_date = GENERAL_TIME_AND_DATE_PARSE($CURTAD,"TOMORROW",1);
+
+GUIDE "message text";
+
+PARSE (	TEXT (HELP "alert message text (1..80 characters)") : message = $ATOM);
+
+FileId = $Open (temporary_file,$Output);
+IF FileId = 0 THEN ABORT "Open FAILURE for file " + temporary_file;
+
+record = "SET ALERT " + $OUTPUTTAD(DELTA_TIME(time_and_date,0,-120*60))
+	+ " " + message;
+DOCOMMAND ORIGINAL record TO command_echo;
+CALL $Write (FileId,"! Internal time and date=" + 
+	$STRING(DELTA_TIME(time_and_date,0,-120*60)));
+CALL $Write (FileId,record);
+
+
+record = "SET ALERT " + $OUTPUTTAD(DELTA_TIME(time_and_date,0,-30*60))
+	+ " " + message;
+DOCOMMAND ORIGINAL record TO command_echo;
+CALL $Write (FileId,"! Internal time and date=" + 
+	$STRING(DELTA_TIME(time_and_date,0,-30*60)));
+CALL $Write (FileId,record);
+
+record = "SET ALERT " + $OUTPUTTAD(time_and_date) + " " + message;
+DOCOMMAND ORIGINAL record TO command_echo;
+CALL $Write (FileId,"! Internal time and date=" + $STRING(time_and_date));
+CALL $Write (FileId,record);
+
+CALL $Close (FileId);
+
+DOCOMMAND ORIGINAL "APPEND " + temporary_file + " " + alert_file
+	TO command_echo;
+
+DOCOMMAND ORIGINAL "DELETE " + temporary_file TO command_echo
+
+END; !ALERT

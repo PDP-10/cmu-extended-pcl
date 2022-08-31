@@ -1,0 +1,102 @@
+COMMAND CATYPE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Type Chemical Abstracts log files to terminal,
+!	pausing at end-of-page.
+!
+! Usage:
+!	CATYPE {/CRLF} {/TEK-4105} {/VISUAL-500} filespecs
+!
+! Remarks:
+!	If the switch /CRLF is  given, ASCII CR LF pairs  present
+!	in the file will be sent.  By default, they are stripped.
+!	Wildcarded specifications are permitted.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[30-Nov-83]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER	CRLF,
+	FileId,
+	NO,
+	Plot,
+	TERM_CASE,
+	TermId,
+	YES;
+
+STRING	answer,
+	record;
+
+NO = 0;
+YES = 1;
+
+TERM_CASE = 0;
+CRLF = YES;
+
+GUIDE "files";
+
+PARSE (
+SWITCH(WORDS(CRLF:1,Visual_500:2,Tek_4105:3),STDHELP) : 
+	CASE $VALUE FROM 1 TO 3 OF BEGIN
+	[1]:	CRLF = YES;
+	[2]:	TERM_CASE = 1;
+	[3]:	TERM_CASE = 2;
+	END; ! CASE
+OTHERWISE : NOP);
+
+PARSE (
+FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "PHOTO",
+	DEFAULT_EXT "LOG",
+	DEFAULT_GEN 0,
+	INPUT,
+	HELP "list of files to CATYPE") : NOP;
+);
+
+DO BEGIN
+	TermId = $OPEN("TTY:",$Input);
+	FileId = $OPEN($FILEL,$Input);
+	record = $Read(FileId);
+	WHILE $Eof(FileId) = 0 DO
+	BEGIN
+		Plot = NO;
+		IF $SEARCH(record,"*** CAS ONLINE ***") > 0
+			THEN BEGIN
+				DISPLAY "<CR> for more";
+				answer = $READ(TermId)
+			END
+			ELSE IF $SEARCH(record,"") > 0
+				THEN BEGIN
+					Plot = YES;
+					DISPLAY "<CR> for more";
+					answer = $READ(TermId)
+				END;
+		IF Plot = YES THEN BEGIN
+			IF TERM_CASE = 2
+				THEN display binary "%!0LV0";
+			END;
+		IF CRLF = NO 
+			THEN DISPLAY BINARY record
+			ELSE DISPLAY BINARY record + $CRLF;
+		IF Plot = YES THEN BEGIN
+			DISPLAY "
+<CR> for more";
+			answer = $READ(TermId);
+			IF TERM_CASE = 1 
+				THEN display binary "~~"
+			ELSE IF TERM_CASE = 2
+				THEN display binary "LV1%!3";
+			END;
+		record = $Read(FileId)
+	END
+ END
+UNTIL $Nextfile = 0
+
+END; !CATYPE
+

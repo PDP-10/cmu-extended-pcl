@@ -1,0 +1,100 @@
+COMMAND DEMO;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute a <PLOT79> demonstration program.
+!
+! Usage:
+!	DEMO number [inputfile [library]]
+!
+! Remarks:
+!	The library defaults to PLT:PTXLIB if omitted.  If that
+!	library is specified, then the plot will automatically be
+!	printed on the Printronix 600.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[14-Mar-85]
+!
+!------------------------------------------------------------------------
+BEGIN
+INTEGER
+	done,
+	FileId;
+
+STRING	
+	input_file,
+	library,
+	default_library,
+	demo;
+
+default_library = "PLT:PTXLIB";
+	
+library = default_library;
+
+done = 0;
+
+GUIDE "program number";
+
+PARSE (NUMBER (STDHELP) :
+	IF $VALUE < 1 
+	THEN demo = "DEM01"
+	ELSE IF $VALUE < 10
+	THEN demo = "DEM0" + $STRING($VALUE)
+	ELSE demo = "DEM" + $STRING($VALUE));
+
+PARSE (
+FILE (	HELP "input file",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM demo,
+	DEFAULT_EXT "DAT",
+	DEFAULT_GEN 0) : 
+		BEGIN
+		input_file = $FILES;
+		IF $SEARCHRAISED(input_file,"TTY") > 0 
+		THEN input_file = "TTY:"
+		END;
+EOL (	HELP "carriage return for TTY: and Printronix plot") : 
+		BEGIN
+		input_file = "TTY:";
+		done = 1
+		END
+);
+
+IF done = 0 
+THEN PARSE (
+FILE (	HELP "plot library [default 'PLT:PTXLIB']",
+	INPUT,
+	DEFAULT_DEV "PLT",
+	DEFAULT_NAM "PTXLIB",
+	DEFAULT_EXT "CMD",
+	DEFAULT_GEN 0)	:	library = $FILES;
+EOL (HELP "carriage return for Printronix plot") : done = 1
+);
+
+IF done = 0 THEN PARSE (EOL (STDHELP));
+
+DOCOMMAND ORIGINAL "DELETE M" + demo + ".*";
+
+FileId = $Open("M" + demo + ".FOR",$Output);
+CALL $Write(FileId, "      CALL SYSDEC (5,6)");
+CALL $Write(FileId, "      CALL " + demo + " (5,6)");
+CALL $Write(FileId, "      STOP");
+CALL $Write(FileId, "      END");
+CALL $Close(FileId);
+
+DOCOMMAND ORIGINAL "LOAD M" + demo + ",APS:<BEEBE.PLOT79.DEMO>" +
+	demo + "," + "@" + library;
+DOCOMMAND ORIGINAL "CSAVE " + demo;
+IF input_file = "TTY:"
+THEN DOCOMMAND ORIGINAL "DSK:" + demo + " " + input_file + " " + demo
+ELSE DOCOMMAND ORIGINAL "DSK:" + demo + " " + input_file;
+IF $SEARCHRAISED(library,"PTXLIB") > 0
+THEN	DOCOMMAND ORIGINAL "PRINT /DELETE " + $File_Nam(input_file) + ".PLT";
+DOCOMMAND ORIGINAL "DELETE " + demo + ".EXE," + 
+	demo + ".REL," + 
+	"M" + demo + ".*";
+END; !DEMO

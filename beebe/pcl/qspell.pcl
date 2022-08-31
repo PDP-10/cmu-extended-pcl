@@ -1,0 +1,59 @@
+COMMAND QSPELL;
+!------------------------------------------------------------------------
+! Purpose:
+!	Execute the SPELL spelling correction program with a single
+!	input command line.
+!
+! Usage:
+!	QSPELL inputfile [outputfile]
+!
+! Remarks:
+!	The output file defaults to TTY: unless otherwise specified.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[21-Feb-81]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL STRING PROCEDURE
+	filename;
+
+STRING
+	echo,
+	input_file,
+	output_file;
+
+GUIDE "check of file";
+
+PARSE(
+FILE	(HELP "Input file",
+	INPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "FOO",
+	DEFAULT_EXT "DOC",
+	DEFAULT_GEN 0) : input_file = $FILEL);
+
+PARSE(
+FILE	(HELP "Output exception file",
+	OUTPUT,
+	DEFAULT_DEV "DSK",
+	DEFAULT_EXT "EXCEPTIONS",
+	DEFAULT_GEN 0) : output_file = $FILEL;
+
+EOL	(HELP "carriage return for default of TTY:") : output_file = "TTY:");
+
+INVOKE "SYS:SPELL";
+IF output_file = "TTY:" THEN DISPLAY "Exceptions...";
+TYPEIN "N";
+TYPEIN "Q";
+TYPEIN "";
+TYPEIN input_file;
+TYPEIN output_file;
+TYPEIN "E";
+DISPLAY $CRLF + "[Done]"
+END; ! QSPELL

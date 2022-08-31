@@ -1,0 +1,2 @@
+command bugon;display binary "[3h";
+command bugoff;display binary "[3l";

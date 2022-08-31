@@ -1,0 +1,28 @@
+COMMAND WAIT;
+!------------------------------------------------------------------------
+! Purpose:
+!	Force a real-time command wait.
+!
+! Usage:
+!	WAIT numsecs
+!
+! Remarks:
+!	Further command  processing  is  delayed for  at  least  numsecs
+!	seconds.
+!
+! Author:
+!	Nelson H.F. Beebe,  Department of Physics,  University of  Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[28-Apr-84]
+!
+!------------------------------------------------------------------------
+{
+INTEGER seconds;
+
+PARSE (NUMBER(STDHELP,DEFAULT "5", HELP "seconds to wait") : seconds = $Value);
+PARSE (EOL);
+
+IF seconds > 0 THEN CALL $WAIT(seconds*1000);
+}

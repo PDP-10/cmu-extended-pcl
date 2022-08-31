@@ -1,0 +1,26 @@
+COMMAND To_7_bit_bytes;
+{
+integer bytesize,size,word;
+PARSE (FILELIST(input));
+DO
+
+	{
+	DISPLAY $Filel;
+	word = $FileInfo_I($Parse,$FBBYV);
+	bytesize = $AND(word,8%007700000000)/8%100000000;
+	size = $FileInfo_I($Parse,$FBSIZ);
+	IF bytesize = 36 THEN
+	{
+	call $Jsys1 ( 8%64 !{CHFDB%}!,
+	$Or(8%400000000000,$Or($FBBYV*8%1000000,$And(8%777777,$Jfn($Parse)))),
+	8%007700000000,
+	8%000700000000);
+	call $Jsys1 ( 8%64 !{CHFDB%}!,
+	$Or($FBSIZ*8%1000000,$And(8%777777,$Jfn($Parse))),
+	-1,
+	5*size);
+	}
+	}
+UNTIL $Nextfile = 0;
+
+}

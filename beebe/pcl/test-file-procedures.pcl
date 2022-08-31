@@ -1,0 +1,19 @@
+COMMAND foo;
+BEGIN
+STRING record;
+EXTERNAL STRING PROCEDURE filenode,filedevice,filedirectory,filename,
+fileextension,filegeneration;
+CALL $OpenInput("TTY:");
+record = $READ;
+WHILE $EOF = 0 DO
+	BEGIN
+	DISPLAY "Filenode=	""" + filenode(record) + """";
+	DISPLAY "Filedevice=	""" + filedevice(record) + """";
+	DISPLAY "Filedirectory=	""" + filedirectory(record) + """";
+	DISPLAY "Filename=	""" + filename(record) + """";
+	DISPLAY "Fileextension=	""" + fileextension(record) + """";
+	DISPLAY "Filegeneration=""" + filegeneration(record) + """";
+	record = $READ
+	END;
+CALL $CloseInput("TTY:")
+END;

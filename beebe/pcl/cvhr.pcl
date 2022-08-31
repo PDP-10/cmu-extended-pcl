@@ -1,0 +1,133 @@
+COMMAND CVHR;
+!------------------------------------------------------------------------
+! Purpose:
+!	Clear Intecolor VHR-19 screen, setting foreground and background
+!	colors.
+!
+! Usage:
+!	@CVHR	{/INITIALIZE | /NOINITIALIZE} -
+!		{/CLEAR-GRAPHICS | /NOCLEAR-GRAPHICS} -
+!		{background_color foreground_color}
+!
+! Remarks:
+!	If the /INITIALIZE  switch is  specified, the  color table  is
+!	restored to  its default  at entry.   The default is
+!
+!	@CVHR /INITIALIZE /CLEAR-GRAPHICS green black
+!
+!	Colors may be specified by name or number (0..7).
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[14-Mar-85]
+!
+!------------------------------------------------------------------------
+{
+	integer bc,clear,done,fc,init,NO,YES;
+
+	NO = 0;
+	YES = 1;
+
+	init = NO;
+	clear = YES;
+	done = NO;
+	do
+	parse 
+	(
+	switch (words(initialize:1,noinitialize:0),
+		default "/noinitialize",stdhelp) : 
+			{
+			init = $Value;
+			done = YES;
+			};
+	otherwise: done = YES
+	) until done = YES;
+
+
+	done = NO;
+	do 
+	parse 
+	(
+	switch (words(clear_graphics:1,noclear_graphics:0),
+		default "/clear-graphics",stdhelp) : 
+			{
+			clear = $Value;
+			done = YES;
+			};
+
+	otherwise: done = YES
+	) until done = YES;
+
+	done = NO;
+	do
+	parse
+	(
+	keyword(
+		help "background color",
+		default "green",
+		words(	0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8,
+			black:1,
+			red:2,
+			green:3,
+			yellow:4,
+			blue:5,
+			magenta:6,
+			cyan:7,
+			white:8),
+		stdhelp):
+			{
+			bc = 39 + $value;
+			done = YES
+			};
+
+	otherwise: done = YES
+	) until done = YES;
+
+	done = NO;
+	do
+	parse
+	(
+	keyword(
+		help "foreground color",
+		default "black",
+		words(	0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8,
+			black:1,
+			red:2,
+			green:3,
+			yellow:4,
+			blue:5,
+			magenta:6,
+			cyan:7,
+			white:8),
+		stdhelp):
+			{
+			fc = 29 + $value;
+			done = YES
+			};
+
+	otherwise: done = YES
+	) until done = YES;
+
+	parse (EOL : NOP);
+
+	IF $TTYPE = 16 THEN	! VT100 mode
+	{
+		IF clear = YES THEN
+			DISPLAY BINARY "C";
+		DISPLAY BINARY "BT";
+		IF init = YES THEN
+			DISPLAY BINARY "I";
+		DISPLAY BINARY "?A[H(B)B";
+		DISPLAY BINARY "[";
+		DISPLAY BINARY $String(bc);
+		DISPLAY BINARY ";";
+		DISPLAY BINARY $String(fc);
+		DISPLAY BINARY "m[2J";
+		DISPLAY BINARY "[1;32r";
+	}
+	ELSE
+		DOCOMMAND "BLANK";
+};

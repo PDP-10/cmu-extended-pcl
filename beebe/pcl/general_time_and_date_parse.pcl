@@ -1,0 +1,189 @@
+INTEGER PROCEDURE GENERAL_TIME_AND_DATE_PARSE (
+	INTEGER current_time_and_date;
+	STRING default_time_and_date;
+	INTEGER future_week_day);
+!------------------------------------------------------------------------
+! Purpose:
+!	Parse a general  date/time value.  The input  may be
+!
+!	* any valid  DEC-20  date  and  time  string,  or
+!
+!	* YESTERDAY or time 00:00:01), or
+!
+!	* TODAY (time 00:00:01), or
+!
+!	* TOMORROW (time 00:00:01), or
+!
+!	* a week day (MONDAY .. SUNDAY), or
+!
+!	* an input  file  specification,  which causes the file's
+!	  last write date and time to be used.
+!
+!	YESTERDAY, TODAY,  TOMORROW,  and MONDAY  ..  SUNDAY  may
+!	optionally be followed by a  time string hh:mm:ss if  the
+!	default 00:00:01 is not wanted.
+!
+!	The       first       INTEGER       argument       value,
+!	'current_time_and_date', should be  the current date  and
+!	time in internal system format.   It is passed this  way,
+!	rather than  determined  internally  by  a  reference  to
+!	$CURTAD, so  that if  more than  one date/time  parse  is
+!	performed   by   the   caller,   the   same   value   for
+!	'current_time_and_date' can be used.
+!
+!	The       second       STRING       argument       value,
+!	'default_date_and_time', should contain the default value
+!	to be used  for the  parse if no  parse option  succeeds.
+!	Unfortunately, because of  the way  default parse  values
+!	are implemented by the COMND JSYS, it is not possible  to
+!	make this default  value visible  in response to  a ?  or
+!	<ESC> without causing subsequent parses of delta times to
+!	fail.
+!
+!	The  third  INTEGER  argument,  'future_week_day',  is  0
+!	(FALSE) if  a past  day is  implied by  a week  day,  and
+!	non-zero (TRUE) is a  future week day  is implied.  0  is
+!	the usual case for file dates/times, and non-zero may  be
+!	used in e.g. setting future alerts, job submissions, etc.
+!
+! Usage:
+!	Insert in the declaration statement group the statement
+!
+!	EXTERNAL INTEGER PROCEDURE general_time_and_date_parse;
+!
+!	Then where a date/time PARSE statement would normally  be
+!	required, replace it  by a  simple assignment  statement,
+!	such as:
+!
+!	time_and_date_value = GENERAL_TIME_AND_DATE_PARSE($CURTAD,"TODAY",0);
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[01-Jul-85]
+!
+!------------------------------------------------------------------------
+BEGIN
+
+EXTERNAL INTEGER PROCEDURE Delta_Time;
+
+INTEGER date_half,
+	day,
+	delta,
+	hour,
+	minute,
+	month,
+	month_day,
+	time_and_date,
+	time_half,
+	week_day,
+	year;
+
+STRING	date_string;
+
+PARSE (
+TOKEN "-" (HELP "-hh:mm:ss before now") :
+	PARSE (DAYTIME (TIME,STDHELP) :
+	BEGIN
+	time_and_date = $INPUTTAD($DATE + " " + $ATOM);
+	CALL $EXPANDTAD (time_and_date,year,month,month_day,
+		week_day,hour,minute);
+	time_and_date = Delta_Time(current_time_and_date,0,
+		-3600*hour-60*minute)
+	END);
+
+TOKEN "+" (HELP "+hh:mm:ss from now") :
+	PARSE (DAYTIME (TIME,STDHELP) :
+	BEGIN
+	time_and_date = $INPUTTAD($DATE + " " + $ATOM);
+	CALL $EXPANDTAD (time_and_date,year,month,month_day,
+		week_day,hour,minute);
+	time_and_date = Delta_Time(current_time_and_date,0,
+		3600*hour+60*minute)
+	END);
+
+	
+KEYWORD(WORDS(
+	MONDAY:1,
+	TUESDAY:2,
+	WEDNESDAY:3,
+	THURSDAY:4,
+	FRIDAY:5,
+	SATURDAY:6,
+	SUNDAY:7,
+	NOW:8,
+	YESTERDAY:9,
+	TODAY:10,
+	TOMORROW:11),
+	STDHELP) :
+	BEGIN
+	day = -1;
+	CALL $EXPANDTAD (current_time_and_date,year,month,month_day,
+		week_day,hour,minute);
+	CASE $VALUE FROM 1 TO 11 OF BEGIN
+	[1] :	day = 0;
+	[2] :	day = 1;
+	[3] :	day = 2;
+	[4] :	day = 3;
+	[5] :	day = 4;
+	[6] :	day = 5;
+	[7] :	day = 6;
+	[8] :	time_and_date = current_time_and_date;
+	[9] :	IF future_week_day = 0
+		THEN ! past week day requested
+			day = week_day + 6
+		ELSE ! future week day requested
+			day = week_day - 8;
+	[10] :	time_and_date = $INPUTTAD($DATE + " 00:00:01");
+	[11] :	IF future_week_day = 0
+		THEN ! past week day requested
+			day = week_day + 8
+		ELSE ! future week day requested
+			day = week_day + 1;
+	END; ! CASE
+	IF day+1 > 0
+	THEN	BEGIN
+		delta = day - week_day;
+		IF future_week_day = 0 THEN ! past week day requested
+			BEGIN IF delta >= 0 THEN delta = delta - 7; END
+		ELSE ! future week day requested
+			BEGIN IF delta <=0 THEN delta = delta + 7; END;
+
+		date_half = current_time_and_date/262144;
+		time_half = current_time_and_date - 262144*date_half;
+		time_and_date = time_half + (date_half + delta)*262144;
+		CALL $EXPANDTAD (time_and_date,year,month,month_day,
+			week_day,hour,minute);
+		time_and_date = $MERGETAD(year,month,month_day,0,0) + 3
+		END;
+	PARSE (	DAYTIME (TIME,STDHELP,DEFAULT "00:00:01") :
+			BEGIN
+			date_string = $OUTPUTTAD(time_and_date);
+			IF date_string[1:1] = " " THEN ! supply leading 0
+				date_string = "0" + date_string[2:*];
+			date_string =
+				date_string[1:$SEARCH(date_string," ")];
+			time_and_date = $INPUTTAD(date_string + $ATOM)
+			END;
+		OTHERWISE : NOP)
+	END;
+
+DAYTIME (STDHELP) : time_and_date = $INPUTTAD($ATOM);
+
+DAYTIME (DATE,HELP "date (at time 00:00:01)") :
+	time_and_date = $INPUTTAD($ATOM+" 00:00:01");
+
+DAYTIME (TIME,HELP "time (of today)") :
+	time_and_date = $INPUTTAD($DATE + " " + $ATOM);
+
+INPUTFILE (
+	HELP "input filespec (and use its last write date)") :
+	time_and_date = $FileInfo_I($Parse,$FBWRT);
+
+OTHERWISE: time_and_date = $INPUTTAD(default_time_and_date)
+);
+
+RETURN time_and_date;
+END;

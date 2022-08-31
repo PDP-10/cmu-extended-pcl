@@ -1,0 +1,68 @@
+COMMAND Fix_User;
+!------------------------------------------------------------------------
+! Purpose:
+!	Set the author and/or  last-writer user name  strings of one  or
+!	more files.
+!
+! Usage:
+!	FIX-USER /AUTHOR:"username" /LAST-WRITER:"username" filespecs
+!
+! Remarks:
+!	This command  requires  WHEEL  or OPERATOR  capability.   It  is
+!	primarily intended for  the use of  system personnel in  setting
+!	user names on files imported  from other sites.  The user  names
+!	need not be valid  ones at the current  site, and are  therefore
+!	parsed simply as quoted text strings, not as COMND JSYS username
+!	field types.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[15-Mar-84]
+!
+!------------------------------------------------------------------------
+{
+INTEGER done,
+	NO,
+	YES;
+STRING	author,
+	last_writer;
+
+NO = 0;
+YES = 1;
+
+author = "";
+last_writer = "";
+
+GUIDE "of file(s)";
+
+done = NO;
+WHILE done = NO DO
+PARSE (
+SWITCH(WORDS(AUTHOR::1,LAST_WRITER::2),STDHELP): 
+	CASE $VALUE FROM 1 TO 2 OF BEGIN
+	[1]: PARSE(QUOTEDSTRING : author = $Atom);
+	[2]: PARSE(QUOTEDSTRING : last_writer = $Atom)
+        END; !CASE
+OTHERWISE : done = YES);
+
+PARSE (FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	DEFAULT_GEN 0,
+	HELP "list of files (default DSK:*.*.0)") : NOP
+);
+
+DO
+	{
+	DISPLAY $Filel;
+	IF author <> "" THEN
+		CALL $FILESET($FILEL,$FBAUT,-1,author);
+	IF last_writer <> "" THEN
+		CALL $FILESET($FILEL,$FBLWR,-1,last_writer)
+	}
+UNTIL $Nextfile = 0
+}

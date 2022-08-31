@@ -1,0 +1,144 @@
+!------------------------------------------------------------------------
+! Purpose:
+!	Parse an integer arithmetic expression.
+!
+! Usage in PCL routine:
+!	EXTERNAL INTEGER PROCEDURE Parse_Expr;
+!	...
+!	integer_value = Parse_Expr;
+!
+! Remarks:
+!	The parse need not be the last item on a line.  It will continue
+!	until a  valid expression  is  found, or  will return  with  the
+!	result of a partial expression leaving the input pointer at  the
+!	next unparsed token, or will abort  the parse in the event of  a
+!	missing right parenthesis.
+!
+!	The  usual  simple   expression  grammar  with   multiplication,
+!	division, and modulus having  higher priority than addition  and
+!	subtraction  is  supported;  parenthesized  subexpressions   are
+!	evaluated first.  The grammar is the following simple one  taken
+!	from B.W.   Kernighan  and  P.J.  Plauger,  "Software  Tools  in
+!	Pascal" (Addison-Wesley 1981), pp. 299-300):
+!
+!	expr :== term + term
+!	       | term - term
+!
+!	term :== factor * factor
+!	       | factor / factor
+!	       | factor % factor	( % means modulus)
+!
+!	factor :== number
+!	         | ( expr )
+!
+!	The modulus operation is defined by
+!
+!	a % b = a - trunc(a / b)
+!
+!	Spaces around the operators are in general required, because the
+!	NUMBER parse fails when an integer is immediately followed by  a
+!	sign.
+!
+!	The expression grammar  is actually somewhat  more general  than
+!	the above  rules  would  imply; specifically,  the  same  binary
+!	operator may appear several times  in a row without  parentheses
+!	being required, as 3 * 4 * 5 * 6 or 3 + 2 - 4 + 7.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[28-Mar-84]
+!
+!------------------------------------------------------------------------
+
+INTEGER PROCEDURE Parse_Expr;
+{
+EXTERNAL INTEGER PROCEDURE Parse_Term;
+
+INTEGER result;
+INTEGER done,YES,NO;
+
+YES = 1;
+NO = 0;
+done = NO;
+
+result = Parse_Term;
+
+WHILE done = NO DO
+PARSE (
+TOKEN "+" (HELP "+ TERM") : result = result + Parse_Term;
+TOKEN "-" (HELP "- TERM,
+or nothing for bare TERM") : result = result - Parse_Term;
+OTHERWISE : done = YES
+);
+RETURN result
+}
+
+INTEGER PROCEDURE Parse_Factor;
+{
+EXTERNAL INTEGER PROCEDURE Parse_Expr;
+
+INTEGER level,result;
+
+level = 0;
+
+PARSE (
+TOKEN "(" (HELP "(EXPRESSION)"):
+	{
+	level = level + 1;
+	result = Parse_Expr;
+	PARSE (TOKEN ")" (STDHELP) : level = level - 1)
+	};
+NUMBER(STDHELP) : result = $Value
+);
+
+IF level <> 0 THEN
+	ABORT "?Incomplete expression";
+
+RETURN result
+}
+
+INTEGER PROCEDURE Parse_Term;
+{
+EXTERNAL INTEGER PROCEDURE Parse_Factor;
+
+INTEGER divisor,quotient,result;
+INTEGER done,NO,YES;
+
+YES = 1;
+NO = 0;
+done = NO;
+
+result = Parse_Factor;
+WHILE done = NO DO
+PARSE(
+TOKEN "*" (HELP "* FACTOR") : result = result * Parse_Factor;
+TOKEN "/" (HELP "/ FACTOR") : result = result / Parse_Factor;
+TOKEN "%" (HELP "% (modulus operator) FACTOR,
+or + TERM,
+or - TERM,
+or "")"" to close parenthesized expression,
+or nothing for bare FACTOR") :
+	{
+	divisor = Parse_Factor;
+	quotient = result / divisor;
+	result = result - quotient*divisor
+	};
+OTHERWISE : done = YES
+);
+RETURN result
+}
+
+COMMAND EXPRESSION;
+{
+INTEGER result;
+EXTERNAL INTEGER PROCEDURE Parse_Expr;
+
+result = Parse_Expr;
+
+PARSE(EOL (STDHELP) : NOP);
+display "
+Expression = " + $STRING(result)
+}

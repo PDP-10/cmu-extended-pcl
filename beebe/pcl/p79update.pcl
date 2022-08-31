@@ -1,0 +1,204 @@
+COMMAND P79UPDATE;
+!-----------------------------------------------------------------------
+!
+! Purpose:
+!	Find files in old directory which are newer than matching files,
+!	or not found, in new directory.  Build a file list of such names
+!	and  then  execute  a  specified  command  with  the  file  list
+!	appended.  This can  be used to  bring a distribution  directory
+!	up-to-date.  In order to avoid  EXEC buffer overflows  with long
+!	file lists, the command may be executed several times with small
+!	groups of files.
+!
+! Usage:
+! 	@P79UPDATE -
+!		{ /OLD:directory } -
+!		{ /NEW:directory } -
+!		{ /QUERY } -
+!		{ /NOQUERY } -
+!		{ /SELECT-MISSING } -
+!		{ /SKIP-MISSING } -
+!		{ /COMMAND-STRING:"command string" } -
+!		{ /NODO } -
+!		{ /DO } -
+!		oldfilelist
+!
+!	The /OLD and  /NEW switches should  be specified; otherwise  the
+!	current directory will be assumed for both of them.
+!
+!	If the  /QUERY switch  is  specified, any  old files  which  are
+!	missing from the new directory  will result in a terminal  query
+!	for their inclusion in the  selected file list.  The default  is
+!	/NOQUERY.
+!	
+!	If the /SELECT-MISSING switch is specified, any old files  which
+!	are  missing  from  the  new  directory  will  be  automatically
+!	included in the selected file  list.  Any /QUERY switch is  then
+!	ignored.  The default is /SKIP-MISSING (in which case any /QUERY
+!	will be honored).
+!
+!	The /COMMAND-STRING  switch defines  the  command string  to  be
+!	executed; the list of  selected files will  be appended to  this
+!	string.  In most  cases, this string  should run the  XDIRECTORY
+!	command to handle  complex formatting  and execution  of a  .MIC
+!	file.  Before the command string is executed, a CONNECT  command
+!	to the old directory and an ENABLE will be issued, and after,  a
+!	CONNECT will be made to the initial directory.
+!
+!	The /DO switch is the default, and selects the execution of  the
+!	command string; if /NODO is  specified, the command string  that
+!	would have been executed is only typed to the terminal.  This is
+!	useful for making "dry  runs" to verify  the correctness of  the
+!	selected files.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[27-Mar-84]
+!
+!------------------------------------------------------------------------
+{
+INTEGER
+	docmd,
+	done,
+	found_files,
+	MISSING,
+	new_file_status,
+	NO,
+	OKAY,
+	OUT_OF_DATE,
+	query,
+	QueryFileId,
+	select_missing,
+	YES;
+STRING
+	answer,
+	cmd_string,
+	initial,
+	new,
+	new_file,
+	old,
+	selected_files;
+
+NO = 0;
+YES = 1;
+
+OKAY = 1;
+OUT_OF_DATE = 2;
+MISSING = 3;
+
+query = NO;
+docmd = YES;
+select_missing = NO;
+found_files = NO;
+selected_files = "";
+initial = $ConnectedDirectory;
+done = NO;
+
+QueryFileId = $Open("TTY:",$Input);
+
+GUIDE "files";
+
+WHILE done = NO DO 
+PARSE (	SWITCH(	WORDS(OLD::1,NEW::2,QUERY:3,NOQUERY:4,SELECT_MISSING:5,
+		SKIP_MISSING:6,COMMAND_STRING::7,NODO::8,DO::9),STDHELP):
+		CASE $VALUE FROM 1 TO 9 OF BEGIN
+		[1]:	PARSE(DIRECTORY : old = $Atom);
+		[2]:	PARSE(DIRECTORY : new = $Atom);
+		[3]:	query = YES;
+		[4]:	query = NO;
+		[5]:	select_missing = YES;
+		[6]:	select_missing = NO;
+		[7]:	PARSE(QUOTEDSTRING : cmd_string = $Atom);
+		[8]:	docmd = NO;
+		[9]:	docmd = YES
+		END; ! CASE
+	OTHERWISE : done = YES);
+
+PARSE (FILELIST 
+	(DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	DEFAULT_GEN 0,
+	HELP "list of files (default DSK:*.*.0)") : NOP
+	);
+
+DOCOMMAND "CONNECT " + old;
+
+DO
+	{
+	new_file = new + $File_Nam($FILEL) + "." + $File_Typ($FILEL);
+	IF $Isfile(New_file) = YES THEN
+		{
+		IF $FileInfo_I(new_file,$FBWRT) >=
+			$FileInfo_I($FILEL,$FBWRT) THEN
+			{
+			new_file_status = OKAY
+			}
+		ELSE
+			{
+			new_file_status = OUT_OF_DATE
+			}
+		}
+	ELSE ! File does not exist
+		new_file_status = MISSING;
+
+	IF new_file_status = MISSING THEN
+		{
+		IF select_missing = YES THEN
+			new_file_status = OUT_OF_DATE
+		ELSE IF query = YES THEN
+			{
+			DO	
+				{
+				DISPLAY NORETURN $FILEL +
+					" [new] -- Select? (Y or N) ";
+				answer = $Read(QueryFileId)
+				}
+			UNTIL $SEARCHRAISED("YN",answer[1:1]) > 0;
+			IF $SEARCHRAISED(answer[1:1],"Y") = 1 THEN
+				new_file_status = OUT_OF_DATE
+			}
+		ELSE ! No query
+			DISPLAY $Filel + " [missing]"
+		};
+
+	IF new_file_status = OUT_OF_DATE THEN
+		{
+		found_files = YES;
+		selected_files = selected_files + "," + $FILEs		
+		};
+
+	IF $Length(selected_files) > 200 THEN 
+		{	! do it before EXEC buffer overflows
+		IF docmd = YES THEN
+			{
+			DOCOMMAND "ENABLE";
+			DOCOMMAND "CONNECT " + old;
+			DOCOMMAND cmd_string + " " + selected_files[2:*]
+			}
+		ELSE
+			DISPLAY "[Command]: " + cmd_string +
+				" " + selected_files[2:*];
+		selected_files = ""
+		}
+}
+UNTIL $Nextfile = 0;
+IF found_files = NO THEN
+	DISPLAY "[All files up-to-date]"
+ELSE IF $Length(selected_files) < 2 THEN
+	NOP
+ELSE	
+	{
+	IF docmd = YES THEN
+		{
+		DOCOMMAND "ENABLE";
+		DOCOMMAND "CONNECT " + old;
+		DOCOMMAND cmd_string + " " + selected_files[2:*]
+		}
+	ELSE
+		DISPLAY "[Command]: " + cmd_string + " " + selected_files[2:*]
+	}
+}; !P79UPDATE

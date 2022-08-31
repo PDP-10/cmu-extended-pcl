@@ -1,0 +1,15 @@
+COMMAND CHFDB;
+{
+integer bytesize,size,word;
+PARSE (FILELIST(input));
+DO
+{
+	DISPLAY $Filel;
+	call $Jsys1 ( 8%64 !{CHFDB%}!,
+	$Or(8%400000000000,$Or($FBUSW*8%1000000,$And(8%777777,$Jfn($Parse)))),
+	-1,
+	8%644543002223); ! magical .FBUSR word for EMACS
+}
+UNTIL $Nextfile = 0;
+
+}

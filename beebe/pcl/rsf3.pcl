@@ -1,0 +1,147 @@
+COMMAND RSF3;
+!-----------------------------------------------------------------------
+! Purpose:
+!	This PCL command  is written  to be  used to  create a  file
+!	which contains the names of new  files which need to be  run
+!	through the SFTRAN preprocessor.
+!
+! Usage:
+!	RSF3 {/DO} {/PFORT} filespecs
+!
+! Remarks:
+!	Each invocation  of SF3  is preceded  by a  tag line  for
+!	BATCH and MIC restarts.  The  SF3.MIC file is deleted  on
+!	completion.   The  /DO  switch  causes  the  file  to  be
+!	executed immediately.  The /PFORT switch causes PFORT  to
+!	be run after SF3 preprocessing.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[13-Dec-85]
+!	
+!-----------------------------------------------------------------------
+BEGIN
+
+STRING 
+    FOR_Name,
+    FortranName,
+    Line,
+    List,
+    Micfile,
+    SftranName;
+
+
+INTEGER
+    empty,
+    Date_FOR,
+    Date_SF3,
+    do_pfort,
+    do_sf3,
+    done,
+    NO,
+    Out_chn,
+    YES;
+
+YES = 1;
+NO = 0;
+
+do_pfort = NO;
+do_sf3 = NO;
+
+done = NO;
+WHILE done = NO
+DO PARSE (
+SWITCH (WORDS(DO:1,PFORT:2),STDHELP) :
+    CASE $Value FROM 1 TO 2 OF
+    {
+    1:  do_sf3 = YES;
+    2:  do_pfort = YES;
+    };
+OTHERWISE:  PARSE (FILELIST 
+    (HELP "List of files to be preprocessed by SFTRAN",
+    DEFAULT_DEV "DSK",
+    DEFAULT_NAM "*",
+    DEFAULT_EXT "SF3") : done = YES);
+);
+
+Micfile = "SF3.MIC";
+
+Out_chn = $Open(Micfile,$OUTPUT);
+IF Out_chn = 0 THEN
+    ABORT "Open failure for output on file [" + MicFile + "]";
+
+List = "";
+
+empty = YES;
+DO
+    SELECT $File_Typ($Parse) OF 
+    BEGIN
+    ["ENV"]:    NOP;
+    ["EXE"]:    NOP;
+    ["REL"]:    NOP;
+    ["BIN"]:    NOP;
+    ["PLT"]:    NOP;
+
+    ["FOR"]:    BEGIN
+            FortranName = $File_Nam($Parse);
+            Date_FOR = $Fileinfo_I($Parse, $FBCRV);
+            END;
+
+    ["SF3"]:    BEGIN
+            SftranName = $File_Nam($Parse);
+            Date_SF3 = $Fileinfo_I($Parse, $FBCRV);
+            FOR_Name = $File_Dev($Parse) + ":<" +
+                $File_Dir($Parse) + ">" + 
+                $File_Nam($Parse)+".FOR";
+            IF $Isfile(FOR_Name) = 1 THEN
+                Date_FOR = $Fileinfo_I(FOR_Name, $FBCRV)
+            ELSE
+                    Date_FOR = 0;
+!
+!   Test if the names are the same, if so then test if  Date_SF3
+!   > Date_FOR, if so then write the name to the output file for
+!   processing.
+!
+
+            If Date_SF3 > Date_FOR THEN BEGIN
+                List = List + "," + SftranName;
+                Line = SftranName + "::";
+                CALL $Write(Out_chn,Line);
+                Line = "@NOERROR";
+                CALL $Write(Out_chn,Line);
+                Line = "@SF3 " + SftranName;
+                CALL $Write(Out_chn,Line);
+                IF do_pfort = YES THEN
+                {
+                    Line = "@PFORT /D/S " + SftranName;
+                    CALL $Write(Out_chn,Line);
+                    };
+                DISPLAY NORETURN $CRLF + SftranName + " [ok]";
+                empty = NO
+                END
+            ELSE
+                DISPLAY NORETURN ".";
+            END;
+
+    [OTHERWISE]:    NOP;
+    END
+UNTIL $Nextfile = 0;
+
+Line = "@COMPILE " + List[2:*];
+CALL $Write(Out_chn,Line);
+Line = "@DELETE " + MicFile;
+CALL $Write(Out_chn,Line);
+CALL $Close(Out_chn);
+DISPLAY $CRLF + "[done]";
+
+IF do_sf3 = YES THEN
+    IF empty = NO THEN
+        DOCOMMAND ORIGINAL "DO SF3.MIC";
+
+IF empty = YES THEN
+    DOCOMMAND ORIGINAL "DELETE " + MicFile TO line;
+
+END;   ! RSF3

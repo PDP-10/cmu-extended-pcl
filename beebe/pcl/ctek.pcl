@@ -1,0 +1,20 @@
+command ctek;
+!------------------------------------------------------------------------
+! Purpose:
+!	Clear Tektronix display.
+!
+! Usage:
+!	ctek
+!
+! Remarks:
+!	none
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[24-Sep-88]
+!
+!------------------------------------------------------------------------
+	display binary "";

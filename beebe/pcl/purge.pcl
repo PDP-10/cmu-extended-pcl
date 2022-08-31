@@ -1,0 +1,46 @@
+COMMAND PURGE;
+!------------------------------------------------------------------------
+! Purpose:
+!	Delete all but the highest generation of all or selected files
+!	in the connected directory, as well as all TMPCOR-DATA-BASE.TMP,
+!	EMACS-AUTO-SAVE and _^RSV..* EMACS files on the connected 
+!	directory, and PASCAL OUTPUT..* files.
+!
+! Usage:
+!	PURGE {filespec}
+!
+! Remarks:
+!	If the file specification is omitted, then *.*.* is assumed.
+!
+! Author:
+!	Nelson H.F. Beebe, Department of Physics, University of Utah,
+!	Salt Lake City, UT 84112.
+!
+! Date:
+!	[20-Mar-84]
+!
+!------------------------------------------------------------------------
+BEGIN
+STRING	devstr;
+
+GUIDE "all but highest file generation";
+PARSE (
+FILELIST 
+	(HELP "List of files to be purged to 1 generation (default DSK:*.*.*)",
+	DEFAULT_DEV "DSK",
+	DEFAULT_NAM "*",
+	DEFAULT_EXT "*",
+	WILD) : NOP);
+
+devstr = $File_Dev($Parse) + ":<" + $File_Dir($Parse) + ">";
+
+DO	DOCOMMAND ORIGINAL "DELETE " + $FILES + "," + $CRLF 
+	+ "KEEP 1 (GENERATION)" + $CRLF + " " + $CRLF
+UNTIL $Nextfile = 0;
+
+DOCOMMAND ORIGINAL "DELETE " + devstr +
+	"%%%TMPCOR-DATA-BASE.TMP.*," + devstr +
+	"EMACS-AUTO-SAVE.*.*," + devstr +
+	"_^RSV..*," + devstr +
+	"OUTPUT..*"
+END; ! purge
